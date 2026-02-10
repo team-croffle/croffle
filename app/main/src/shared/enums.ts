@@ -48,7 +48,8 @@ export enum AppEventType {
   SCHEDULE_DELETE = 'schedule:delete',
 
   // Tag
-  TAG_GET = 'tag:get',
+  TAG_GET = 'tag:getAll',
+  TAG_GET_BY_NAME = 'tag:getByName',
   TAG_CREATE = 'tag:create',
   TAG_UPDATE = 'tag:update',
   TAG_DELETE = 'tag:delete',
@@ -63,39 +64,32 @@ export enum AppEventType {
 
   // Plugin Storage
   PLUGIN_STORAGE_GET = 'pluginStorage:get',
-  PLUGIN_STORAGE_CREATE = 'pluginStorage:create',
-  PLUGIN_STORAGE_UPDATE = 'pluginStorage:update',
+  PLUGIN_STORAGE_SET = 'pluginStorage:set',
   PLUGIN_STORAGE_DELETE = 'pluginStorage:delete',
 
   // Settings
   SETTINGS_GET = 'settings:get',
-  SETTINGS_CREATE = 'settings:create',
+  SETTINGS_GET_OF = 'setttings:getOf',
   SETTINGS_UPDATE = 'settings:update',
-  SETTINGS_DELETE = 'settings:delete',
 
   // Window
-  WINDOW_CREATE = 'window:create',
-  WINDOW_CLOSE = 'window:close',
   WINDOW_MINIMIZE = 'window:minimize',
-  WINDOW_MAXIMIZE = 'window:maximize',
   WINDOW_RESTORE = 'window:restore',
-  WINDOW_FOCUS = 'window:focus',
-  WINDOW_BLUR = 'window:blur',
-  WINDOW_CLOSE_ALL = 'window:closeAll',
+  WINDOW_MAXIMIZE = 'window:maximize',
+  WINDOW_CLOSE = 'window:close',
+  WINDOW_EXIT = 'window:exit',
+  WINDOW_CHECK_FOR_UPDATES = 'window:checkForUpdates',
+  WINDOW_SHOW = 'window:show',
+  WINDOW_HIDE = 'window:hide',
 
   // OS Service
-  OS_SERVICE_GET = 'osService:get',
-  OS_SERVICE_CREATE = 'osService:create',
-  OS_SERVICE_UPDATE = 'osService:update',
-  OS_SERVICE_DELETE = 'osService:delete',
+  NATIVE_OS_NOTIFICATION = 'nativeOs:notification',
+  NATIVE_OS_CLIPBOARD_GET = 'nativeOs:clipboard:get',
+  NATIVE_OS_CLIPBOARD_SET = 'nativeOs:clipboard:set',
 
   // HTTP Service
   HTTP_SERVICE_GET = 'httpService:get',
   HTTP_SERVICE_POST = 'httpService:post',
-
-  // Event
-  EVENT_EMIT = 'event:emit',
-  EVENT_ON = 'event:on',
 
   // Plugin
   PLUGIN_INSTALL = 'plugin:install',

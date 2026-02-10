@@ -1,5 +1,7 @@
 import { BrowserWindow, ipcMain, IpcMainInvokeEvent } from 'electron';
 import { windowService } from '../core/window/service/WindowService';
+import { eventService } from '../core/events/service/EventService';
+import { AppEventType } from '../shared/enums';
 
 const validateSender = (event: IpcMainInvokeEvent): BrowserWindow => {
   const window = BrowserWindow.fromWebContents(event.sender);
@@ -23,20 +25,32 @@ export function registerWindowIpcHandlers() {
   ipcMain.handle('window:minimize', (event) => {
     const window = validateSender(event);
     window.minimize();
+
+    // Add app event emit
+    eventService.emit(AppEventType.WINDOW_MINIMIZE, window);
   });
 
   ipcMain.handle('window:maximize', (event) => {
     const window = validateSender(event);
     if (window.isMaximized()) {
       window.unmaximize();
+
+      // Add app event emit
+      eventService.emit(AppEventType.WINDOW_RESTORE, window);
     } else {
       window.maximize();
+
+      // Add app event emit
+      eventService.emit(AppEventType.WINDOW_MAXIMIZE, window);
     }
   });
 
   ipcMain.handle('window:close', (event) => {
     const window = validateSender(event);
     window.close();
+
+    // Add app event emit
+    eventService.emit(AppEventType.WINDOW_CLOSE, window);
   });
 
   ipcMain.handle('window:exitApp', (event) => {
@@ -47,6 +61,9 @@ export function registerWindowIpcHandlers() {
   ipcMain.handle('window:checkForUpdates', async (event) => {
     validateSender(event);
     await windowService.checkForUpdates();
+
+    // Add app event emit
+    eventService.emit(AppEventType.WINDOW_CHECK_FOR_UPDATES, event);
   });
 
   ipcMain.handle('window:setCloseToTrayMode', (event, enabled: boolean) => {

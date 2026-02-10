@@ -1,6 +1,8 @@
 import { app, BrowserWindow, Menu, Tray, nativeImage, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'path';
+import { eventService } from '../../events/service/EventService';
+import { AppEventType } from '../../../shared/enums';
 
 class WindowService {
   private mainWindow: BrowserWindow | null = null;
@@ -50,8 +52,7 @@ class WindowService {
 
       if (this.shouldCloseToTray) {
         event.preventDefault();
-        this.mainWindow?.hide();
-        console.info('[WindowService] Window hidden to tray');
+        this.hideWindow();
       } else {
         this.isQuitting = true;
         return true;
@@ -89,26 +90,45 @@ class WindowService {
       this.tray.setToolTip('CROFFLE');
 
       const contextMenu = Menu.buildFromTemplate([
-        { label: '열기', click: () => this.mainWindow?.show() },
+        { label: '열기', click: () => this.showWindow() },
         { type: 'separator' },
         { label: '종료', click: () => this.exitApp() },
       ]);
 
       this.tray.setContextMenu(contextMenu);
-      this.tray.on('double-click', () => this.mainWindow?.show());
+      this.tray.on('double-click', () => this.showWindow());
     } catch (err) {
       console.error('[WindowService] Tray error:', err);
     }
   }
 
+  public showWindow(): void {
+    this.mainWindow?.show();
+
+    // Add app event emit
+    eventService.emit(AppEventType.WINDOW_SHOW, this.mainWindow);
+  }
+
+  public hideWindow(): void {
+    this.mainWindow?.hide();
+
+    // Add app event emit
+    eventService.emit(AppEventType.WINDOW_HIDE, this.mainWindow);
+  }
+
   public exitApp(): void {
     this.isQuitting = true;
     app.quit();
+
+    // Add app event emit
+    eventService.emit(AppEventType.WINDOW_EXIT, this.mainWindow);
   }
 
   public async checkForUpdates(): Promise<void> {
     if (!app.isPackaged) return;
     await autoUpdater.checkForUpdatesAndNotify();
+
+    eventService.emit(AppEventType.WINDOW_CHECK_FOR_UPDATES, this.mainWindow);
   }
 }
 
