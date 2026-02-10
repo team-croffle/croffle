@@ -266,8 +266,13 @@
     align-items: center;
   }
 
+  :deep(.fc-event-main) {
+    overflow: hidden;
+  }
+
   /* 이벤트 제목 (긴 제목 처리) */
   :deep(.fc-event-title) {
+    display: block;
     white-space: nowrap;
     overflow: hidden; /* 넘치면 숨김 */
     text-overflow: ellipsis; /* ... 으로 표시 */
