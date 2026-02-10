@@ -25,9 +25,9 @@
     side="right"
     collapsible="icon"
     :open="open"
-    class="border-croffle-border bg-croffle-sidebar relative h-full border-l pt-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
+    class="border-croffle-border bg-croffle-sidebar relative flex h-screen flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
   >
-    <SidebarHeader class="bg-croffle-sidebar px-4 pb-0">
+    <SidebarHeader class="bg-croffle-sidebar shrink-0 px-4 pb-0">
       <div
         class="mb-2 flex h-10 items-center group-data-[collapsible=icon]:justify-center"
         :class="state === 'expanded' ? 'justify-between' : 'justify-center'"
@@ -52,7 +52,7 @@
       <div class="bg-croffle-border mb-2 h-px w-full group-data-[collapsible=icon]:hidden"></div>
     </SidebarHeader>
 
-    <SidebarContent class="bg-croffle-sidebar gap-6 overflow-hidden p-4 pt-0">
+    <SidebarContent class="bg-croffle-sidebar no-scrollbar min-h-0 flex-1 overflow-y-auto p-4 pt-0">
       <div class="mt-2 flex justify-center">
         <Button
           class="bg-croffle-primary hover:bg-croffle-hover h-11 w-full rounded-lg border-none font-medium text-white shadow-sm transition-all duration-300 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
@@ -77,7 +77,7 @@
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent class="text-croffle-text flex h-25 items-center justify-center text-sm">
+          <CardContent class="text-croffle-text flex min-h-25 items-center justify-center text-sm">
             <span v-if="!hasTodayEvent">오늘 일정이 없습니다</span>
             <span v-else>일정 리스트</span>
           </CardContent>
@@ -90,14 +90,14 @@
               <span>다가오는 일정</span>
             </CardTitle>
           </CardHeader>
-          <CardContent class="text-croffle-text flex h-25 items-center justify-center text-sm">
+          <CardContent class="text-croffle-text flex min-h-25 items-center justify-center text-sm">
             다가오는 일정이 없습니다
           </CardContent>
         </Card>
       </div>
     </SidebarContent>
 
-    <SidebarFooter class="bg-croffle-sidebar flex flex-col items-center justify-center p-4">
+    <SidebarFooter class="bg-croffle-sidebar shrink-0 flex-col items-center justify-center pb-4">
       <div
         class="border-croffle-border mb-4 flex w-full flex-col items-center justify-center rounded-xl border bg-white/50 p-4 shadow-sm group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
       >
@@ -112,3 +112,14 @@
     </SidebarFooter>
   </Sidebar>
 </template>
+
+<style scoped>
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+</style>
