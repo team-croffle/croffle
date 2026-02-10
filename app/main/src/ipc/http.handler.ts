@@ -17,10 +17,11 @@ export const registerHttpIpcHandlers = (): void => {
         throw new Error('[HTTP] Invalid URL.');
       }
 
-      // Add app event emit
-      eventService.emit(AppEventType.HTTP_SERVICE_GET, url, params, headers);
+      const result = await httpService.get(url, params, headers);
 
-      return httpService.get(url, params, headers);
+      // Add app event emit
+      eventService.emit(AppEventType.HTTP_SERVICE_GET, { url, params, headers, result });
+      return result;
     }
   );
 
@@ -36,10 +37,11 @@ export const registerHttpIpcHandlers = (): void => {
         throw new Error('[HTTP] Invalid URL.');
       }
 
-      // Add app event emit
-      eventService.emit(AppEventType.HTTP_SERVICE_POST, url, body, headers);
+      const result = await httpService.post(url, body, headers);
 
-      return httpService.post(url, body, headers);
+      // Add app event emit
+      eventService.emit(AppEventType.HTTP_SERVICE_POST, { url, body, headers, result });
+      return result;
     }
   );
 };

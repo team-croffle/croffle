@@ -6,10 +6,11 @@ import { AppEventType } from '../shared/enums';
 
 export const registerSettingsIpcHandlers = (): void => {
   ipcMain.handle('settings:getAll', async (): Promise<AppSettings> => {
+    const result = settingService.get();
     // Add app event emit
-    eventService.emit(AppEventType.SETTINGS_GET);
+    eventService.emit(AppEventType.SETTINGS_GET, result);
 
-    return settingService.get();
+    return result;
   });
 
   ipcMain.handle(
@@ -19,20 +20,24 @@ export const registerSettingsIpcHandlers = (): void => {
         throw new Error('[Settings] Key must be a string.');
       }
 
-      // Add app event emit
-      eventService.emit(AppEventType.SETTINGS_GET_OF, key);
+      const result = settingService.getOf(key);
 
-      return settingService.getOf(key);
+      // Add app event emit
+      eventService.emit(AppEventType.SETTINGS_GET_OF, key, result);
+
+      return result;
     }
   );
 
   ipcMain.handle(
     'settings:update',
     async (_, partialSettings: Partial<AppSettings>): Promise<AppSettings> => {
-      // Add app event emit
-      eventService.emit(AppEventType.SETTINGS_UPDATE, partialSettings);
+      const newSettings = settingService.update(partialSettings);
 
-      return settingService.update(partialSettings);
+      // Add app event emit
+      eventService.emit(AppEventType.SETTINGS_UPDATE, newSettings);
+
+      return newSettings;
     }
   );
 };

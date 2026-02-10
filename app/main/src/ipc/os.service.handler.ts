@@ -7,30 +7,32 @@ import { AppEventType } from '../shared/enums';
 export const registerOsIpcHandlers = (): void => {
   // 1. 알림
   ipcMain.handle('os:showNotification', (_, title, body) => {
-    osService.showNotification(title, body);
+    const result = osService.showNotification(title, body);
 
     // Add app event emit
     eventService.emit(AppEventType.NATIVE_OS_NOTIFICATION, title, body);
 
-    return;
+    return result;
   });
 
   // 2. 클립보드 읽기
   ipcMain.handle('os:getClipboard', (): ClipboardResult => {
-    // Add app event emit
-    eventService.emit(AppEventType.NATIVE_OS_CLIPBOARD_GET);
+    const result = osService.getClipboard();
 
-    return osService.getClipboard();
+    // Add app event emit
+    eventService.emit(AppEventType.NATIVE_OS_CLIPBOARD_GET, result);
+
+    return result;
   });
 
   // 3. 클립보드 쓰기
   ipcMain.handle(
     'os:setClipboard',
     (_, data: { type: 'text'; value: string } | { type: 'image'; value: Buffer }): void => {
+      osService.setClipboard(data);
+
       // Add app event emit
       eventService.emit(AppEventType.NATIVE_OS_CLIPBOARD_SET, data);
-
-      osService.setClipboard(data);
     }
   );
 };
