@@ -58,9 +58,9 @@ export enum AppEventType {
   PLUGIN_INFO_GET_INSTALLED = 'pluginInfo:getInstalled',
   PLUGIN_INFO_GET_ENABLED = 'pluginInfo:getEnabled',
   PLUGIN_INFO_GET_BY_NAME = 'pluginInfo:getByName',
-  PLUGIN_INFO_CREATE = 'pluginInfo:create',
-  PLUGIN_INFO_UPDATE = 'pluginInfo:update',
-  PLUGIN_INFO_DELETE = 'pluginInfo:delete',
+  PLUGIN_INFO_INSTALL = 'pluginInfo:install',
+  PLUGIN_INFO_TOGGLE = 'pluginInfo:toggle',
+  PLUGIN_INFO_UNINSTALL = 'pluginInfo:uninstall',
 
   // Plugin Storage
   PLUGIN_STORAGE_GET = 'pluginStorage:get',
