@@ -184,16 +184,34 @@ declare module 'croffle' {
     ): Promise<HttpResponse>;
   }
 
+  export namespace event {
+    /**
+     * Send event to all windows
+     * @param type event type
+     * @param payload event payload
+     */
+    export function emit(type: string, payload: unknown): void;
+    /**
+     * Listen to event from all windows
+     * @param type event type
+     * @param callback callback function
+     * @returns unsubscribe function
+     */
+    export function on(type: string, callback: (payload: unknown) => void): () => void;
+  }
+
   export const base: {
     windows: typeof windows;
     tags: typeof tags;
     schedules: typeof schedules;
     pluginInfo: typeof pluginInfo;
     settings: typeof settings;
-    os: typeof os;
   };
 
   export const app: {
+    os: typeof os;
+    http: typeof http;
     storage: typeof pluginStorage;
+    event: typeof event;
   };
 }
