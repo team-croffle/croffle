@@ -15,10 +15,10 @@ export const eventApi = {
       }
     };
 
-    ipcRenderer.on('event:on', subscription);
+    ipcRenderer.on('croffle:app:event', subscription);
 
     return () => {
-      ipcRenderer.off('event:on', subscription);
+      ipcRenderer.off('croffle:app:event', subscription);
     };
   },
 } satisfies EventApi;
