@@ -18,7 +18,7 @@ export const useCalendarStore = defineStore('calendar', () => {
       backgroundColor: schedule.colorLabel,
       borderColor: schedule.colorLabel,
       textColor: '#FFFFFF',
-
+      display: schedule.isAllDay ? 'auto' : 'block',
       extendedProps: {
         description: schedule.description,
         location: schedule.location,
