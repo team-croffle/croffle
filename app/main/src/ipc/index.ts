@@ -6,6 +6,7 @@ import { registerSettingsIpcHandlers } from './settings.handler';
 import { registerOsIpcHandlers } from './os.service.handler';
 import { registerPluginStorageIpcHandlers } from './pluginStorage.handler';
 import { registerHttpIpcHandlers } from './http.handler';
+import { registerEventIpcHandlers } from './event.handler';
 
 export function registerAllIpcHandlers() {
   // Window IPC Handlers
@@ -31,9 +32,13 @@ export function registerAllIpcHandlers() {
 
   // OS Service IPC Handlers
   registerOsIpcHandlers();
+
   // Plugin Storage IPC Handlers
   registerPluginStorageIpcHandlers();
 
   // HTTP IPC Handlers
   registerHttpIpcHandlers();
+
+  // Event IPC Handlers
+  registerEventIpcHandlers();
 }

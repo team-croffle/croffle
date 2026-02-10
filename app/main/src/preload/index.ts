@@ -7,6 +7,7 @@ import { scheduleApi } from './api/schedule.api';
 import { osApi } from './api/os.api';
 import { httpApi } from './api/http.api';
 import { pluginStorageApi } from './api/pluginStorage.api';
+import { eventApi } from './api/event.api';
 
 const croffleApi = {
   base: {
@@ -15,11 +16,12 @@ const croffleApi = {
     schedules: scheduleApi,
     pluginInfo: pluginInfoApi,
     settings: settingsApi,
-    os: osApi,
-    http: httpApi,
   },
   app: {
+    os: osApi,
+    http: httpApi,
     storage: pluginStorageApi,
+    event: eventApi,
   },
 };
 
