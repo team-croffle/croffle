@@ -71,7 +71,7 @@
     displayEventTime: false,
 
     events: events.value, // pinia store의 events 사용
-    editable: true, // 이벤트 드래그 가능
+    editable: false, // 이벤트 드래그 가능
     selectable: true, // 날짜 선택 가능
     dateClick: (info) => handleDoubleClick(info.dateStr), // 날짜 클릭 핸들러
 
