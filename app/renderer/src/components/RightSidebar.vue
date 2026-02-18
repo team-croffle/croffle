@@ -4,33 +4,44 @@
   import { Badge } from '@/components/ui/badge';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
   import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
+  import { useUiStore } from '@/stores/uiStore';
+  import { storeToRefs } from 'pinia';
   import { computed } from 'vue';
+  import { useScheduleStore } from '@/stores/scheduleStore';
 
-  const props = defineProps<{
-    todayCount?: number;
-    hasTodayEvent?: boolean;
-    hasUpcomingEvent?: boolean;
-    open: boolean;
-  }>();
+  const emit = defineEmits(['click-add-schedule']);
 
-  const emit = defineEmits(['click-add-schedule', 'toggle']);
+  const uiStore = useUiStore();
+  const scheduleStore = useScheduleStore();
 
-  const state = computed(() => {
-    return props.open ? 'expanded' : 'collapsed';
+  const { rightSidebarOpen, selectedDate } = storeToRefs(uiStore);
+
+  // 선택된 날짜에 해당하는 일정만 스토어에서 가져옴
+  const selectedSchedules = computed(() => {
+    if (!selectedDate.value) return [];
+
+    return scheduleStore.schedules.filter((schedule) =>
+      // 예: '2026-02-17'로 시작하는 일정 찾기
+      schedule.startDate.startsWith(selectedDate.value as string)
+    );
   });
+
+  // 화면에 보여줄 상태값들을 computed로 자동 계산
+  const todayCount = computed(() => selectedSchedules.value.length);
+  const hasTodayEvent = computed(() => todayCount.value > 0);
 </script>
 
 <template>
   <Sidebar
     side="right"
     collapsible="icon"
-    :open="open"
+    :open="rightSidebarOpen"
     class="border-croffle-border bg-croffle-sidebar relative flex h-screen flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
   >
     <SidebarHeader class="bg-croffle-sidebar shrink-0 px-4 pb-0">
       <div
         class="mb-2 flex h-10 items-center group-data-[collapsible=icon]:justify-center"
-        :class="state === 'expanded' ? 'justify-between' : 'justify-center'"
+        :class="rightSidebarOpen ? 'justify-between' : 'justify-center'"
       >
         <div
           class="space-y-1 overflow-hidden text-left transition-all duration-300 group-data-[collapsible=icon]:hidden"
@@ -43,7 +54,7 @@
           variant="ghost"
           size="icon"
           class="text-muted-foreground h-7 w-7"
-          @click="emit('toggle')"
+          @click="uiStore.toggleRightSidebar"
         >
           <PanelRight class="h-4 w-4" />
         </Button>
@@ -58,7 +69,7 @@
           class="bg-croffle-primary hover:bg-croffle-hover h-11 w-full rounded-lg border-none font-medium text-white shadow-sm transition-all duration-300 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
           @click="emit('click-add-schedule')"
         >
-          <Plus class="h-5 w-5 transition-all" :class="state === 'expanded' ? 'mr-1' : ''" />
+          <Plus class="h-5 w-5 transition-all" :class="rightSidebarOpen ? 'mr-1' : ''" />
           <span class="group-data-[collapsible=icon]:hidden">새 일정 추가</span>
         </Button>
       </div>
