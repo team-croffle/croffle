@@ -8,6 +8,9 @@
   import { storeToRefs } from 'pinia';
   import { computed } from 'vue';
   import { useScheduleStore } from '@/stores/scheduleStore';
+  import dayjs from 'dayjs';
+  import isBetween from 'dayjs/plugin/isBetween';
+  dayjs.extend(isBetween);
 
   const emit = defineEmits(['click-add-schedule']);
 
@@ -20,10 +23,16 @@
   const selectedSchedules = computed(() => {
     if (!selectedDate.value) return [];
 
-    return scheduleStore.schedules.filter((schedule) =>
-      // 예: '2026-02-17'로 시작하는 일정 찾기
-      schedule.startDate.startsWith(selectedDate.value as string)
-    );
+    // 중간 날짜를 클릭했을 때도 해당 일정이 보여야 하므로, 일정의 시작과 끝을 포함하는지 확인
+    // 단순 문자열 비교 시 발생할 수 있는 문제를 방지하기 위해 dayjs로 날짜 비교
+    const target = dayjs(selectedDate.value, 'YYYY-MM-DD');
+
+    return scheduleStore.schedules.filter((schedule) => {
+      const start = dayjs(schedule.startDate, 'YYYY-MM-DD');
+      const end = schedule.endDate ? dayjs(schedule.endDate, 'YYYY-MM-DD') : start;
+
+      return target.isBetween(start, end, 'day', '[]');
+    });
   });
 
   // 화면에 보여줄 상태값들을 computed로 자동 계산
