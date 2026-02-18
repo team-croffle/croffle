@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { onMounted, onBeforeUnmount, reactive, ref } from 'vue';
+  import { reactive, ref } from 'vue';
   import type { CalendarOptions } from '@fullcalendar/core';
   import ContextMenu from './ui/context-menu/ContextMenu.vue';
   import ContextMenuTrigger from './ui/context-menu/ContextMenuTrigger.vue';
@@ -8,55 +8,32 @@
   import FullCalendar from '@fullcalendar/vue3';
   import dayGridPlugin from '@fullcalendar/daygrid';
   import interactionPlugin from '@fullcalendar/interaction';
-  import { useCalendarStore } from '@/stores/calendarStore';
+  import { useScheduleStore } from '@/stores/scheduleStore';
   import { storeToRefs } from 'pinia';
+  import { useCalendarLogic } from '@/composables/useCalendarLogic';
 
   // pinia store 연결
-  const store = useCalendarStore();
-  const { events } = storeToRefs(store);
+  const scheduleStore = useScheduleStore();
+  const { events } = storeToRefs(scheduleStore);
 
   // 날짜 위치 저장 변수(우클릭 시 컨텍스트 메뉴 위치 지정용)
   const selectedDate = ref<string | null>(null);
 
-  // 캘린더 화면 조정 메서드
   const fullCalendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
   const calendarContainerRef = ref<HTMLElement | null>(null);
-  let resizeObserver: ResizeObserver | null = null;
 
-  // 캘린더 리사이징 최적화
-  onMounted(() => {
-    if (calendarContainerRef.value && fullCalendarRef.value) {
-      let animationFrameId: number | null = null;
+  const { setupCalendarResize, getClickedDate, handleDoubleClick } = useCalendarLogic();
 
-      resizeObserver = new ResizeObserver(() => {
-        if (animationFrameId !== null) return;
-
-        animationFrameId = requestAnimationFrame(() => {
-          fullCalendarRef.value?.getApi().updateSize();
-          animationFrameId = null;
-        });
-      });
-
-      resizeObserver.observe(calendarContainerRef.value);
-    }
-  });
-
-  // 메모리 정리
-  onBeforeUnmount(() => {
-    resizeObserver?.disconnect();
-  });
+  // 캘린더 리사이징
+  setupCalendarResize(calendarContainerRef, fullCalendarRef);
 
   // 우클릭 핸들러
   const handleContextMenu = (e: MouseEvent) => {
     // 클릭된 요소가 날짜인지 확인
-    const target = e.target as HTMLElement;
-    const dayCell = target.closest('.fc-daygrid-day');
+    const date = getClickedDate(e);
 
-    if (dayCell) {
-      const date = dayCell.getAttribute('data-date');
-      if (date) {
-        selectedDate.value = date;
-      }
+    if (date) {
+      selectedDate.value = date;
     } else {
       // 날짜 영역 밖은 컨텍스트 메뉴 비활성화
       selectedDate.value = null;
@@ -96,9 +73,10 @@
     events: events.value, // pinia store의 events 사용
     editable: true, // 이벤트 드래그 가능
     selectable: true, // 날짜 선택 가능
+    dateClick: (info) => handleDoubleClick(info.dateStr), // 날짜 클릭 핸들러
+
     windowResizeDelay: 0,
     handleWindowResize: false, // 수동으로 크기 조정 처리
-
     locale: 'ko', // 한국어 설정
   });
 </script>
@@ -120,6 +98,7 @@
     </ContextMenuTrigger>
     <ContextMenuContent>
       <ContextMenuItem>일정 추가 ({{ selectedDate }})</ContextMenuItem>
+      <ContextMenuItem>일정 수정</ContextMenuItem>
       <ContextMenuItem>일정 삭제</ContextMenuItem>
     </ContextMenuContent>
   </ContextMenu>
