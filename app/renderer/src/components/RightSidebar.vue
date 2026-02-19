@@ -4,33 +4,53 @@
   import { Badge } from '@/components/ui/badge';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
   import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
+  import { useUiStore } from '@/stores/uiStore';
+  import { storeToRefs } from 'pinia';
   import { computed } from 'vue';
+  import { useScheduleStore } from '@/stores/scheduleStore';
+  import dayjs from 'dayjs';
+  import isBetween from 'dayjs/plugin/isBetween';
+  dayjs.extend(isBetween);
 
-  const props = defineProps<{
-    todayCount?: number;
-    hasTodayEvent?: boolean;
-    hasUpcomingEvent?: boolean;
-    open: boolean;
-  }>();
+  const emit = defineEmits(['click-add-schedule']);
 
-  const emit = defineEmits(['click-add-schedule', 'toggle']);
+  const uiStore = useUiStore();
+  const scheduleStore = useScheduleStore();
 
-  const state = computed(() => {
-    return props.open ? 'expanded' : 'collapsed';
+  const { rightSidebarOpen, selectedDate } = storeToRefs(uiStore);
+
+  // 선택된 날짜에 해당하는 일정만 스토어에서 가져옴
+  const selectedSchedules = computed(() => {
+    if (!selectedDate.value) return [];
+
+    // 중간 날짜를 클릭했을 때도 해당 일정이 보여야 하므로, 일정의 시작과 끝을 포함하는지 확인
+    // 단순 문자열 비교 시 발생할 수 있는 문제를 방지하기 위해 dayjs로 날짜 비교
+    const target = dayjs(selectedDate.value, 'YYYY-MM-DD');
+
+    return scheduleStore.schedules.filter((schedule) => {
+      const start = dayjs(schedule.startDate, 'YYYY-MM-DD');
+      const end = schedule.endDate ? dayjs(schedule.endDate, 'YYYY-MM-DD') : start;
+
+      return target.isBetween(start, end, 'day', '[]');
+    });
   });
+
+  // 화면에 보여줄 상태값들을 computed로 자동 계산
+  const todayCount = computed(() => selectedSchedules.value.length);
+  const hasTodayEvent = computed(() => todayCount.value > 0);
 </script>
 
 <template>
   <Sidebar
     side="right"
     collapsible="icon"
-    :open="open"
-    class="border-croffle-border bg-croffle-sidebar relative h-full border-l pt-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
+    :open="rightSidebarOpen"
+    class="border-croffle-border bg-croffle-sidebar relative flex h-screen flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
   >
-    <SidebarHeader class="bg-croffle-sidebar px-4 pb-0">
+    <SidebarHeader class="bg-croffle-sidebar shrink-0 px-4 pb-0">
       <div
         class="mb-2 flex h-10 items-center group-data-[collapsible=icon]:justify-center"
-        :class="state === 'expanded' ? 'justify-between' : 'justify-center'"
+        :class="rightSidebarOpen ? 'justify-between' : 'justify-center'"
       >
         <div
           class="space-y-1 overflow-hidden text-left transition-all duration-300 group-data-[collapsible=icon]:hidden"
@@ -43,7 +63,7 @@
           variant="ghost"
           size="icon"
           class="text-muted-foreground h-7 w-7"
-          @click="emit('toggle')"
+          @click="uiStore.toggleRightSidebar"
         >
           <PanelRight class="h-4 w-4" />
         </Button>
@@ -52,13 +72,13 @@
       <div class="bg-croffle-border mb-2 h-px w-full group-data-[collapsible=icon]:hidden"></div>
     </SidebarHeader>
 
-    <SidebarContent class="bg-croffle-sidebar gap-6 overflow-hidden p-4 pt-0">
+    <SidebarContent class="bg-croffle-sidebar no-scrollbar min-h-0 flex-1 overflow-y-auto p-4 pt-0">
       <div class="mt-2 flex justify-center">
         <Button
           class="bg-croffle-primary hover:bg-croffle-hover h-11 w-full rounded-lg border-none font-medium text-white shadow-sm transition-all duration-300 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
           @click="emit('click-add-schedule')"
         >
-          <Plus class="h-5 w-5 transition-all" :class="state === 'expanded' ? 'mr-1' : ''" />
+          <Plus class="h-5 w-5 transition-all" :class="rightSidebarOpen ? 'mr-1' : ''" />
           <span class="group-data-[collapsible=icon]:hidden">새 일정 추가</span>
         </Button>
       </div>
@@ -77,9 +97,28 @@
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent class="text-croffle-text flex h-25 items-center justify-center text-sm">
+          <CardContent class="text-croffle-text flex min-h-25 items-center justify-center text-sm">
             <span v-if="!hasTodayEvent">오늘 일정이 없습니다</span>
-            <span v-else>일정 리스트</span>
+            <div v-else class="mt-2 flex w-full flex-col gap-1">
+              <div
+                v-for="todo in selectedSchedules"
+                :key="todo.id"
+                class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-slate-100"
+              >
+                <input type="checkbox" class="h-4 w-4 shrink-0 cursor-pointer" />
+
+                <span class="flex-1 truncate text-sm text-slate-700">
+                  {{ todo.title }}
+                </span>
+
+                <Badge
+                  variant="outline"
+                  class="h-4 shrink-0 px-1.5 py-0 text-[10px] text-slate-500"
+                >
+                  보통
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -90,14 +129,14 @@
               <span>다가오는 일정</span>
             </CardTitle>
           </CardHeader>
-          <CardContent class="text-croffle-text flex h-25 items-center justify-center text-sm">
+          <CardContent class="text-croffle-text flex min-h-25 items-center justify-center text-sm">
             다가오는 일정이 없습니다
           </CardContent>
         </Card>
       </div>
     </SidebarContent>
 
-    <SidebarFooter class="bg-croffle-sidebar flex flex-col items-center justify-center p-4">
+    <SidebarFooter class="bg-croffle-sidebar shrink-0 flex-col items-center justify-center pb-4">
       <div
         class="border-croffle-border mb-4 flex w-full flex-col items-center justify-center rounded-xl border bg-white/50 p-4 shadow-sm group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
       >
@@ -112,3 +151,14 @@
     </SidebarFooter>
   </Sidebar>
 </template>
+
+<style scoped>
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+</style>

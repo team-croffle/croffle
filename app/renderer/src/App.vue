@@ -6,7 +6,9 @@
   import LeftSidebar from './components/LeftSidebar.vue';
   import RightSidebar from './components/RightSidebar.vue';
   import Button from './components/ui/button/Button.vue';
-  import { ref } from 'vue';
+  import { useUiStore } from './stores/uiStore';
+
+  const uiStore = useUiStore();
 
   // Electron 윈도우 제어 함수
   const minimizeWindow = async () => {
@@ -18,10 +20,6 @@
   const closeWindow = async () => {
     croffle.base.windows.close();
   };
-
-  // 사이드바 상태 관리
-  const leftOpen = ref(true);
-  const rightOpen = ref(false);
 </script>
 
 <template>
@@ -36,7 +34,7 @@
             variant="ghost"
             size="icon"
             class="no-drag h-7 w-7 text-gray-500"
-            @click="leftOpen = !leftOpen"
+            @click="uiStore.toggleLeftSidebar()"
           >
             <PanelLeft class="h-4 w-4" />
           </Button>
@@ -78,14 +76,14 @@
     <div class="relative min-h-0 flex-1">
       <!-- 사이드바 및 캘린더 -->
       <SidebarProvider class="h-full min-h-full w-full">
-        <LeftSidebar :open="leftOpen" />
+        <LeftSidebar />
         <SidebarInset class="bg-croffle-bg flex h-full flex-col">
           <!-- 캘린더 영역 -->
           <div class="flex-1 overflow-hidden p-4">
             <Calendar />
           </div>
         </SidebarInset>
-        <RightSidebar :open="rightOpen" @toggle="rightOpen = !rightOpen" />
+        <RightSidebar />
       </SidebarProvider>
     </div>
     <Toaster />
