@@ -99,7 +99,26 @@
           </CardHeader>
           <CardContent class="text-croffle-text flex min-h-25 items-center justify-center text-sm">
             <span v-if="!hasTodayEvent">오늘 일정이 없습니다</span>
-            <span v-else>일정 리스트</span>
+            <div v-else class="mt-2 flex w-full flex-col gap-1">
+              <div
+                v-for="todo in selectedSchedules"
+                :key="todo.id"
+                class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-slate-100"
+              >
+                <input type="checkbox" class="h-4 w-4 shrink-0 cursor-pointer" />
+
+                <span class="flex-1 truncate text-sm text-slate-700">
+                  {{ todo.title }}
+                </span>
+
+                <Badge
+                  variant="outline"
+                  class="h-4 shrink-0 px-1.5 py-0 text-[10px] text-slate-500"
+                >
+                  보통
+                </Badge>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
