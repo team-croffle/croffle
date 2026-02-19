@@ -69,7 +69,7 @@ export enum AppEventType {
 
   // Settings
   SETTINGS_GET = 'settings:get',
-  SETTINGS_GET_OF = 'setttings:getOf',
+  SETTINGS_GET_OF = 'settings:getOf',
   SETTINGS_UPDATE = 'settings:update',
 
   // Window

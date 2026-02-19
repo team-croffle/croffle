@@ -4,11 +4,11 @@ import { ipcRenderer } from 'electron';
 type PluginStorageAPI = typeof pluginStorage;
 
 export const pluginStorageApi = {
-  get: (key: string) => {
-    return ipcRenderer.invoke('app:storage:get', key);
+  get: (pluginId: string, key: string) => {
+    return ipcRenderer.invoke('app:storage:get', { pluginId, key });
   },
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  set: (key: string, value: any) => {
-    return ipcRenderer.invoke('app:storage:set', { key, value });
+  set: (pluginId: string, key: string, value: any) => {
+    return ipcRenderer.invoke('app:storage:set', { pluginId, key, value });
   },
 } satisfies PluginStorageAPI;

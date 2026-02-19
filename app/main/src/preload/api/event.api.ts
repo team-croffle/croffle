@@ -4,14 +4,14 @@ import { ipcRenderer, IpcRendererEvent } from 'electron';
 type EventApi = typeof event;
 
 export const eventApi = {
-  emit: (eventName: string, payload?: unknown) => {
-    ipcRenderer.send('event:emit', eventName, payload);
+  emit: (eventName: string, ...args: unknown[]) => {
+    ipcRenderer.send('event:emit', eventName, ...args);
   },
 
-  on: (eventName: string, callback: (payload: unknown) => void) => {
-    const subscription = (_: IpcRendererEvent, eventType: string, payload: unknown) => {
+  on: (eventName: string, callback: (...args: unknown[]) => void) => {
+    const subscription = (_: IpcRendererEvent, eventType: string, ...args: unknown[]) => {
       if (eventType === eventName) {
-        callback(payload);
+        callback(...args);
       }
     };
 

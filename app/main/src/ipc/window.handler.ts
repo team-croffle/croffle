@@ -59,11 +59,11 @@ export function registerWindowIpcHandlers() {
   });
 
   ipcMain.handle('window:checkForUpdates', async (event) => {
-    validateSender(event);
+    const window = validateSender(event);
     await windowService.checkForUpdates();
 
     // Add app event emit
-    eventService.emit(AppEventType.WINDOW_CHECK_FOR_UPDATES, event);
+    eventService.emit(AppEventType.WINDOW_CHECK_FOR_UPDATES, window.id);
   });
 
   ipcMain.handle('window:setCloseToTrayMode', (event, enabled: boolean) => {

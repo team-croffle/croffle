@@ -53,6 +53,11 @@ export const registerPluginInfoIpcHandlers = (): void => {
   ipcMain.handle(
     'pluginInfo:togglePlugin',
     async (_, name: string, enable: boolean): Promise<PluginInfo | null> => {
+      validatePluginName(name);
+      if (typeof enable !== 'boolean') {
+        throw new Error('[PluginInfo] Invalid enable value provided.');
+      }
+
       const entity = await pluginService.togglePlugin(name, enable);
 
       // Add app event emit
