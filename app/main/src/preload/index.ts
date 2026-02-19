@@ -8,6 +8,7 @@ import { osApi } from './api/os.api';
 import { httpApi } from './api/http.api';
 import { pluginStorageApi } from './api/pluginStorage.api';
 import { eventApi } from './api/event.api';
+import { pluginSessionApi } from './api/pluginSession.api';
 
 const croffleApi = {
   base: {
@@ -22,6 +23,7 @@ const croffleApi = {
     http: httpApi,
     storage: pluginStorageApi,
     event: eventApi,
+    session: pluginSessionApi,
   },
 };
 

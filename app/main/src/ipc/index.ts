@@ -7,6 +7,7 @@ import { registerOsIpcHandlers } from './os.service.handler';
 import { registerPluginStorageIpcHandlers } from './pluginStorage.handler';
 import { registerHttpIpcHandlers } from './http.handler';
 import { registerEventIpcHandlers } from './event.handler';
+import { registerPluginSessionIpcHandlers } from './pluginSession.handler';
 
 export function registerAllIpcHandlers() {
   // Window IPC Handlers
@@ -41,4 +42,7 @@ export function registerAllIpcHandlers() {
 
   // Event IPC Handlers
   registerEventIpcHandlers();
+
+  // Plugin Session IPC Handlers
+  registerPluginSessionIpcHandlers();
 }
