@@ -1,5 +1,6 @@
 import EventEmitter from 'events';
 import { BrowserWindow } from 'electron';
+import Logger from 'electron-log';
 
 class EventService extends EventEmitter {
   constructor() {
@@ -19,7 +20,13 @@ class EventService extends EventEmitter {
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed()) {
         // send event through a single ipc channel with 'croffle:app:event'
-        win.webContents.send('croffle:app:event', eventName, ...args);
+        try {
+          win.webContents.send('croffle:app:event', eventName, ...args);
+        } catch (err) {
+          Logger.info(
+            `[EventService] Failed to send event ${eventName} to window ${win.id}: ${err}`
+          );
+        }
       }
     });
 
