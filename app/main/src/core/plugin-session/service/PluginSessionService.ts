@@ -1,6 +1,6 @@
-const storage: Map<string, Map<string, any>> = new Map();
+const storage: Map<string, Map<string, unknown>> = new Map();
 
-const getStore = (pluginId: string): Map<string, any> => {
+const getStore = (pluginId: string): Map<string, unknown> => {
   if (!storage.has(pluginId)) {
     storage.set(pluginId, new Map());
   }
@@ -16,7 +16,7 @@ export const PluginSessionService = {
 
   get: <T = unknown>(pluginId: string, key: string): T | null => {
     const store = getStore(pluginId);
-    return store.get(key) ?? null;
+    return (store.get(key) as T) ?? null;
   },
 
   delete: (pluginId: string, key: string): boolean => {
