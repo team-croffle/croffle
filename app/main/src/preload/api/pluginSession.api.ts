@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 import type { PluginSessionAPI } from 'croffle';
 
-export const pluginSessionAPI = {
+export const pluginSessionApi = {
   get: <T = unknown>(pluginId: string, key: string): Promise<T | null> => {
     return ipcRenderer.invoke('sessionStorage:get', { pluginId, key });
   },
