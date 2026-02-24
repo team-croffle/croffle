@@ -1,6 +1,8 @@
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { ref, computed } from 'vue';
+
   import { DEFAULT_MENU_ITEMS } from '@/data/dummyMenu';
+
   import {
     Sidebar,
     SidebarContent,
@@ -12,8 +14,12 @@
     SidebarGroup,
     SidebarGroupContent,
   } from '@/components/ui/sidebar';
+
   import { Bell, CircleHelp, Settings } from 'lucide-vue-next';
+
   import logoImg from '@/assets/Logo2Only.png';
+
+  import HelpModal from './HelpModal.vue';
 
   const props = defineProps<{
     open: boolean;
@@ -22,6 +28,8 @@
   const isSidebarExpanded = computed(() => props.open);
 
   const menuItems = computed(() => DEFAULT_MENU_ITEMS);
+
+  const isHelpModalOpen = ref(false);
 </script>
 
 <template>
@@ -52,6 +60,7 @@
           <span class="font-logo text-croffle-primary text-2xl leading-none font-bold"
             >CROFFLE</span
           >
+
           <span class="text-croffle-text text-xs leading-none">할일 달력</span>
         </div>
       </div>
@@ -75,6 +84,7 @@
                 class="hover:bg-croffle-hover rounded-lg bg-transparent ring-0 transition-all duration-200 outline-none"
                 :class="[
                   { 'bg-croffle-primary hover:bg-croffle-primary': item.active },
+
                   isSidebarExpanded ? 'mr-2 ml-0' : 'mx-0 justify-center',
                 ]"
                 :tooltip="item.title"
@@ -97,6 +107,7 @@
                     >
                       {{ item.title }}
                     </span>
+
                     <span
                       class="text-croffle-text text-xs leading-none"
                       :class="{ 'text-white/80': item.active }"
@@ -137,10 +148,13 @@
           size="sm"
           class="hover:bg-croffle-hover flex aspect-square h-9 w-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
           tooltip="도움말"
+          @click="isHelpModalOpen = true"
         >
           <CircleHelp class="text-croffle-text h-5 w-5" />
         </SidebarMenuButton>
       </div>
     </SidebarFooter>
   </Sidebar>
+
+  <HelpModal v-model:open="isHelpModalOpen" />
 </template>
