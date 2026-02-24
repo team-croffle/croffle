@@ -180,8 +180,8 @@ declare module 'croffle' {
 
     // Plugin Session Storage
     PLUGIN_SESSION_STORAGE_GET = 'sessionStorage:get',
-    PLUGIN_SESSION_STORAGE_CREATE = 'sessionStorage:create',
-    PLUGIN_SESSION_STORAGE_UPDATE = 'sessionStorage:update',
+    PLUGIN_SESSION_STORAGE_SET = 'sessionStorage:set',
+    PLUGIN_SESSION_STORAGE_CLEAR = 'sessionStorage:clear',
     PLUGIN_SESSION_STORAGE_DELETE = 'sessionStorage:delete',
 
     // Background works
@@ -285,5 +285,13 @@ declare module 'croffle' {
     http: typeof http;
     storage: typeof pluginStorage;
     event: typeof event;
+    session: PluginSessionAPI;
   };
+
+  export interface PluginSessionAPI {
+    get: <T = unknown>(pluginId: string, key: string) => Promise<T | null>;
+    set: <T = unknown>(pluginId: string, key: string, value: T) => Promise<void>;
+    delete: (pluginId: string, key: string) => Promise<boolean>;
+    clear: (pluginId: string) => Promise<void>;
+  }
 }

@@ -1,25 +1,19 @@
 import { ipcRenderer } from 'electron';
+import type { PluginSessionAPI } from 'croffle';
 
-export interface PluginSessionAPI {
-  get: (pluginId: string, key: string) => Promise<any>;
-  set: (pluginId: string, key: string, value: any) => Promise<void>;
-  delete: (pluginId: string, key: string) => Promise<boolean>;
-  clear: (pluginId: string) => Promise<void>;
-}
-
-export const pluginSessionApi: PluginSessionAPI = {
-  get: (pluginId: string, key: string) => {
+export const pluginSessionAPI = {
+  get: <T = unknown>(pluginId: string, key: string): Promise<T | null> => {
     return ipcRenderer.invoke('sessionStorage:get', { pluginId, key });
   },
-  set: (pluginId: string, key: string, value: any) => {
+  set: <T = unknown>(pluginId: string, key: string, value: T): Promise<void> => {
     return ipcRenderer.invoke('sessionStorage:set', { pluginId, key, value });
   },
 
-  delete: (pluginId: string, key: string) => {
+  delete: (pluginId: string, key: string): Promise<boolean> => {
     return ipcRenderer.invoke('sessionStorage:delete', { pluginId, key });
   },
 
-  clear: (pluginId: string) => {
+  clear: (pluginId: string): Promise<void> => {
     return ipcRenderer.invoke('sessionStorage:clear', { pluginId });
   },
-};
+} satisfies PluginSessionAPI;
