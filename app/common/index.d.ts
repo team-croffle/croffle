@@ -183,6 +183,7 @@ declare module 'croffle' {
     PLUGIN_SESSION_STORAGE_SET = 'sessionStorage:set',
     PLUGIN_SESSION_STORAGE_CLEAR = 'sessionStorage:clear',
     PLUGIN_SESSION_STORAGE_DELETE = 'sessionStorage:delete',
+    PLUGIN_SESSION_STORAGE_CLEAR_ALL = 'sessionStorage:clearAll',
 
     // Background works
     SCHEDULER_REGISTER = 'scheduler:register',
@@ -293,5 +294,6 @@ declare module 'croffle' {
     set: <T = unknown>(pluginId: string, key: string, value: T) => Promise<void>;
     delete: (pluginId: string, key: string) => Promise<boolean>;
     clear: (pluginId: string) => Promise<void>;
+    clearAll: () => Promise<void>;
   }
 }

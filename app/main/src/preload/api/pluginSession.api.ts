@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-import type { PluginSessionAPI } from 'croffle';
+import { PluginSessionAPI } from 'croffle';
 
 export const pluginSessionApi = {
   get: <T = unknown>(pluginId: string, key: string): Promise<T | null> => {
@@ -15,5 +15,9 @@ export const pluginSessionApi = {
 
   clear: (pluginId: string): Promise<void> => {
     return ipcRenderer.invoke('sessionStorage:clear', { pluginId });
+  },
+
+  clearAll: (): Promise<void> => {
+    return ipcRenderer.invoke('sessionStorage:clearAll');
   },
 } satisfies PluginSessionAPI;

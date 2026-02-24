@@ -13,9 +13,7 @@ const validateArgs = (
 
   // 객체임이 확인되었으므로 안전하게 Record로 캐스팅
   const data = payload as Record<string, unknown>;
-  const pluginId = data.pluginId;
-  const key = data.key;
-  const value = data.value;
+  const { pluginId, key, value } = data;
 
   if (typeof pluginId !== 'string' || pluginId.trim() === '') {
     throw new Error('Invalid pluginId');
@@ -36,6 +34,7 @@ export const registerPluginSessionIpcHandlers = () => {
     try {
       const { pluginId, key } = validateArgs(payload, true);
       const value = PluginSessionService.get(pluginId, key as string);
+      eventService.emit('sessionStorage:get', { pluginId, key });
       return value;
     } catch (error) {
       console.error('[PluginSession] Get error:', error);
@@ -73,6 +72,16 @@ export const registerPluginSessionIpcHandlers = () => {
       eventService.emit('sessionStorage:clear', { pluginId });
     } catch (error) {
       console.error('[PluginSession] Clear error:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('sessionStorage:clearAll', async () => {
+    try {
+      PluginSessionService.clearAll();
+      eventService.emit('sessionStorage:clearAll', {});
+    } catch (error) {
+      console.error('[PluginSession] ClearAll error:', error);
       throw error;
     }
   });
