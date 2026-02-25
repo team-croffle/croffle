@@ -98,9 +98,10 @@ export enum AppEventType {
 
   // Plugin Session Storage
   PLUGIN_SESSION_STORAGE_GET = 'sessionStorage:get',
-  PLUGIN_SESSION_STORAGE_CREATE = 'sessionStorage:create',
-  PLUGIN_SESSION_STORAGE_UPDATE = 'sessionStorage:update',
+  PLUGIN_SESSION_STORAGE_SET = 'sessionStorage:set',
   PLUGIN_SESSION_STORAGE_DELETE = 'sessionStorage:delete',
+  PLUGIN_SESSION_STORAGE_CLEAR = 'sessionStorage:clear',
+  PLUGIN_SESSION_STORAGE_CLEAR_ALL = 'sessionStorage:clearAll',
 
   // Background works
   SCHEDULER_REGISTER = 'scheduler:register',
