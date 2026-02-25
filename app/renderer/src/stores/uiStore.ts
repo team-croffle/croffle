@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import dayjs from 'dayjs';
 import { ref } from 'vue';
 
 export const useUiStore = defineStore('ui', () => {
@@ -16,7 +17,7 @@ export const useUiStore = defineStore('ui', () => {
   };
 
   const openRightSidebarWithDate = (date: string) => {
-    selectedDate.value = date;
+    selectedDate.value = dayjs(date).format('YYYY-MM-DD');
     rightSidebarOpen.value = true;
   };
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { Calendar, Clock, Plus, Home, PanelRight } from 'lucide-vue-next';
+  import { Calendar, Clock, CheckSquare, Plus, Home, PanelRight } from 'lucide-vue-next';
   import { Button } from '@/components/ui/button';
   import { Badge } from '@/components/ui/badge';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,11 +25,11 @@
 
     // 중간 날짜를 클릭했을 때도 해당 일정이 보여야 하므로, 일정의 시작과 끝을 포함하는지 확인
     // 단순 문자열 비교 시 발생할 수 있는 문제를 방지하기 위해 dayjs로 날짜 비교
-    const target = dayjs(selectedDate.value, 'YYYY-MM-DD');
+    const target = dayjs(selectedDate.value);
 
     return scheduleStore.schedules.filter((schedule) => {
-      const start = dayjs(schedule.startDate, 'YYYY-MM-DD');
-      const end = schedule.endDate ? dayjs(schedule.endDate, 'YYYY-MM-DD') : start;
+      const start = dayjs(schedule.startDate);
+      const end = schedule.endDate ? dayjs(schedule.endDate) : start;
 
       return target.isBetween(start, end, 'day', '[]');
     });
@@ -38,6 +38,15 @@
   // 화면에 보여줄 상태값들을 computed로 자동 계산
   const todayCount = computed(() => selectedSchedules.value.length);
   const hasTodayEvent = computed(() => todayCount.value > 0);
+
+  // 더미 핸들러 - 실제로는 일정 토글/편집 로직이 들어가야 함
+  const handleToggleTodo = (scheduleId: string) => {
+    console.log('일정 토글:', scheduleId);
+  };
+
+  const handleEditTodo = (scheduleId: string) => {
+    console.log('일정 편집:', scheduleId);
+  };
 </script>
 
 <template>
@@ -101,14 +110,18 @@
             <span v-if="!hasTodayEvent">오늘 일정이 없습니다</span>
             <div v-else class="mt-2 flex w-full flex-col gap-1">
               <div
-                v-for="todo in selectedSchedules"
-                :key="todo.id"
+                v-for="schedule in selectedSchedules"
+                :key="schedule.id"
                 class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-slate-100"
+                @click="handleEditTodo(schedule.id)"
               >
-                <input type="checkbox" class="h-4 w-4 shrink-0 cursor-pointer" />
+                <CheckSquare
+                  class="text-muted-foreground h-4 w-4 shrink-0"
+                  @click.stop="handleToggleTodo(schedule.id)"
+                />
 
                 <span class="flex-1 truncate text-sm text-slate-700">
-                  {{ todo.title }}
+                  {{ schedule.title }}
                 </span>
 
                 <Badge

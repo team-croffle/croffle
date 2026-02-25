@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { reactive, ref } from 'vue';
+  import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import type { CalendarOptions } from '@fullcalendar/core';
   import ContextMenu from './ui/context-menu/ContextMenu.vue';
   import ContextMenuTrigger from './ui/context-menu/ContextMenuTrigger.vue';
@@ -22,10 +22,17 @@
   const fullCalendarRef = ref<InstanceType<typeof FullCalendar> | null>(null);
   const calendarContainerRef = ref<HTMLElement | null>(null);
 
-  const { setupCalendarResize, getClickedDate, handleDoubleClick } = useCalendarLogic();
+  const { startResizeObserver, stopResizeObserver, handleDoubleClick, getClickedDate } =
+    useCalendarLogic();
 
   // 캘린더 리사이징
-  setupCalendarResize(calendarContainerRef, fullCalendarRef);
+  onMounted(() => {
+    startResizeObserver(calendarContainerRef, fullCalendarRef);
+  });
+
+  onBeforeUnmount(() => {
+    stopResizeObserver();
+  });
 
   // 우클릭 핸들러
   const handleContextMenu = (e: MouseEvent) => {
@@ -70,15 +77,26 @@
     // 이벤트 시간 숨기기
     displayEventTime: false,
 
-    events: events.value, // pinia store의 events 사용
+    events: [],
+
     editable: false, // 이벤트 드래그 가능
     selectable: true, // 날짜 선택 가능
     dateClick: (info) => handleDoubleClick(info.dateStr), // 날짜 클릭 핸들러
+    eventClick: (info) => handleDoubleClick(info.event.startStr), // 이벤트 클릭 핸들러
 
     windowResizeDelay: 0,
     handleWindowResize: false, // 수동으로 크기 조정 처리
     locale: 'ko', // 한국어 설정
   });
+
+  // 스토어의 일정 데이터가 변경될 때마다 캘린더에 반영
+  watch(
+    () => events.value,
+    (newEvents) => {
+      calendarOptions.events = newEvents;
+    },
+    { immediate: true, deep: true } // 초기 로드 시에도 반영, 배열 내부 변경 감지
+  );
 </script>
 
 <template>
@@ -243,6 +261,8 @@
     color: var(--foreground);
     display: flex;
     align-items: center;
+    cursor: default;
+    user-select: none;
   }
 
   :deep(.fc-event-main) {
