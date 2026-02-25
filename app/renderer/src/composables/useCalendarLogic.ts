@@ -1,34 +1,39 @@
 import { useUiStore } from '@/stores/uiStore';
 import type FullCalendarComponent from '@fullcalendar/vue3';
-import { onBeforeUnmount, onMounted, type Ref } from 'vue';
+import { type Ref } from 'vue';
 
 export function useCalendarLogic() {
   const uiStore = useUiStore();
 
+  let resizeObserver: ResizeObserver | null = null;
+  let animationFrameId: number | null = null;
+
   // 캘린더 리사이징 최적화 로직
-  const setupCalendarResize = (
+  const startResizeObserver = (
     containerRef: Ref<HTMLElement | null>,
     calendarRef: Ref<InstanceType<typeof FullCalendarComponent> | null>
   ) => {
-    let resizeObserver: ResizeObserver | null = null;
+    if (!containerRef.value || !calendarRef.value) return;
 
-    onMounted(() => {
-      if (containerRef.value && calendarRef.value) {
-        let animationFrameId: number | null = null;
-        resizeObserver = new ResizeObserver(() => {
-          if (animationFrameId !== null) return;
-          animationFrameId = requestAnimationFrame(() => {
-            calendarRef.value?.getApi().updateSize();
-            animationFrameId = null;
-          });
-        });
-        resizeObserver.observe(containerRef.value);
-      }
+    resizeObserver = new ResizeObserver(() => {
+      if (animationFrameId !== null) return;
+      animationFrameId = requestAnimationFrame(() => {
+        calendarRef.value?.getApi().updateSize();
+        animationFrameId = null;
+      });
     });
+    resizeObserver.observe(containerRef.value);
+  };
 
-    onBeforeUnmount(() => {
-      resizeObserver?.disconnect();
-    });
+  const stopResizeObserver = () => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
   };
 
   const getClickedDate = (e: MouseEvent): string | null => {
@@ -36,32 +41,43 @@ export function useCalendarLogic() {
     const target = e.target as HTMLElement;
     const dayCell = target.closest('.fc-daygrid-day');
 
-    if (dayCell) {
-      return dayCell.getAttribute('data-date');
-    }
-
-    return null;
+    return dayCell ? dayCell.getAttribute('data-date') : null;
   };
 
   // 더블클릭 핸들러
   let clickCount = 0;
   let clickTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastClickedDate: string | null = null; // 추가
 
   const handleDoubleClick = (dateStr: string) => {
+    // 이전 클릭과 다른 날짜를 누르면 카운트 초기화
+    if (lastClickedDate !== dateStr) {
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+      }
+      clickCount = 0;
+      lastClickedDate = dateStr;
+    }
+
     clickCount++;
 
     if (clickCount === 1) {
-      // 단일 클릭: 아무 동작도 하지 않고 0.3초 동안 다음 클릭을 기다리기만 함
       clickTimer = setTimeout(() => {
-        clickCount = 0; // 0.3초 안에 안 누르면 그냥 무시
+        clickCount = 0;
+        lastClickedDate = null;
+        clickTimer = null;
       }, 300);
     } else if (clickCount === 2) {
-      // 0.3초 안에 두 번 눌렀을 때만 작동
-      if (clickTimer) clearTimeout(clickTimer);
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+      }
       clickCount = 0;
+      lastClickedDate = null;
 
       uiStore.openRightSidebarWithDate(dateStr);
     }
   };
-  return { getClickedDate, setupCalendarResize, handleDoubleClick };
+  return { getClickedDate, startResizeObserver, stopResizeObserver, handleDoubleClick };
 }
