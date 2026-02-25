@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { PluginSessionService } from '../core/plugin-session/service/PluginSessionService';
 import { eventService } from '../core/events/service/EventService';
+import { AppEventType } from '../shared/enums';
 
 const validateArgs = (
   payload: unknown,
@@ -34,7 +35,7 @@ export const registerPluginSessionIpcHandlers = () => {
     try {
       const { pluginId, key } = validateArgs(payload, true);
       const value = PluginSessionService.get(pluginId, key as string);
-      eventService.emit('sessionStorage:get', { pluginId, key });
+      eventService.emit(AppEventType.PLUGIN_SESSION_STORAGE_GET, { pluginId, key });
       return value;
     } catch (error) {
       console.error('[PluginSession] Get error:', error);
@@ -46,7 +47,7 @@ export const registerPluginSessionIpcHandlers = () => {
     try {
       const { pluginId, key, value } = validateArgs(payload, true);
       PluginSessionService.set(pluginId, key as string, value);
-      eventService.emit('sessionStorage:set', { pluginId, key });
+      eventService.emit(AppEventType.PLUGIN_SESSION_STORAGE_SET, { pluginId, key });
     } catch (error) {
       console.error('[PluginSession] Set error:', error);
       throw error;
@@ -57,7 +58,7 @@ export const registerPluginSessionIpcHandlers = () => {
     try {
       const { pluginId, key } = validateArgs(payload, true);
       const result = PluginSessionService.delete(pluginId, key as string);
-      eventService.emit('sessionStorage:delete', { pluginId, key, result });
+      eventService.emit(AppEventType.PLUGIN_SESSION_STORAGE_DELETE, { pluginId, key, result });
       return result;
     } catch (error) {
       console.error('[PluginSession] Delete error:', error);
@@ -69,7 +70,7 @@ export const registerPluginSessionIpcHandlers = () => {
     try {
       const { pluginId } = validateArgs(payload, false);
       PluginSessionService.clear(pluginId);
-      eventService.emit('sessionStorage:clear', { pluginId });
+      eventService.emit(AppEventType.PLUGIN_SESSION_STORAGE_CLEAR, { pluginId });
     } catch (error) {
       console.error('[PluginSession] Clear error:', error);
       throw error;
@@ -79,7 +80,7 @@ export const registerPluginSessionIpcHandlers = () => {
   ipcMain.handle('sessionStorage:clearAll', async () => {
     try {
       PluginSessionService.clearAll();
-      eventService.emit('sessionStorage:clearAll', {});
+      eventService.emit(AppEventType.PLUGIN_SESSION_STORAGE_CLEAR_ALL, {});
     } catch (error) {
       console.error('[PluginSession] ClearAll error:', error);
       throw error;
