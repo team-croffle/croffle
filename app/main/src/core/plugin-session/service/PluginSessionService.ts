@@ -19,9 +19,10 @@ export const PluginSessionService = {
   },
 
   get: <T = unknown>(pluginId: string, key: string): T | null => {
-    const store = getStore(pluginId);
+    const store = getStore(pluginId, false);
     if (!store) return null;
-    return (store.get(key) as T) ?? null;
+    if (!store.has(key)) return null;
+    return store.get(key) as T;
   },
 
   delete: (pluginId: string, key: string): boolean => {
