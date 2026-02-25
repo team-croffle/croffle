@@ -31,6 +31,16 @@
       const start = dayjs(schedule.startDate);
       const end = schedule.endDate ? dayjs(schedule.endDate) : start;
 
+      /**
+       * [FullCalendar vs Store 날짜 정책 차이]
+       * FullCalendar : 종료일을 실제 마지막 날 + 1일(Exclusive)로 처리
+       *   ex) 2/18~2/20 일정 → FullCalendar 내부 end = '2/21'
+       * scheduleStore: 실제 마지막 날(Inclusive)로 저장
+       *   ex) 2/18~2/20 일정 → endDate = '2/20'
+       *
+       * 스토어 기준으로 필터링하므로 isBetween에 '[]'(양끝 포함)을 사용해야
+       * 마지막 날 클릭 시 해당 일정이 정상적으로 조회됨
+       */
       return target.isBetween(start, end, 'day', '[]');
     });
   });
