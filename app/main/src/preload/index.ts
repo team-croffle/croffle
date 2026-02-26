@@ -2,6 +2,7 @@ import { contextBridge } from 'electron';
 import { windowApi } from './api/window.api';
 import { tagApi } from './api/tag.api';
 import { pluginInfoApi } from './api/pluginInfo.api';
+import { searchApi } from './api/search.api';
 import { settingsApi } from './api/settings.api';
 import { scheduleApi } from './api/schedule.api';
 import { osApi } from './api/os.api';
@@ -17,6 +18,7 @@ const croffleApi = {
     schedules: scheduleApi,
     pluginInfo: pluginInfoApi,
     settings: settingsApi,
+    search: searchApi,
   },
   app: {
     os: osApi,
