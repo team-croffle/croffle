@@ -1,6 +1,8 @@
 import { ipcRenderer } from 'electron';
-import type { SearchQuery, Schedule } from 'croffle';
+import type { SearchQuery, Schedule, search } from 'croffle';
 
-export const searchApi = {
-  search: (query: SearchQuery): Promise<Schedule[]> => ipcRenderer.invoke('search:search', query),
+type searchApi = typeof search;
+
+export const searchApi = (query: SearchQuery): Promise<Schedule[]> => {
+  return ipcRenderer.invoke('search:search', query);
 };

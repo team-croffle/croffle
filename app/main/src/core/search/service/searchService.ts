@@ -1,14 +1,7 @@
 import { databaseManager } from '../../../services/DatabaseManager';
 import { Schedule } from '../../schedules/model/Schedule';
-
-export type SearchQuery = {
-  text?: string;
-  dateRange?: {
-    start?: string;
-    end?: string;
-  };
-  tagIds?: string[];
-};
+import { Tag } from '../../tags/model/Tag';
+import { SearchQuery } from 'croffle';
 
 export class SearchService {
   async searchSchedules(query: SearchQuery): Promise<Schedule[]> {
@@ -25,8 +18,8 @@ export class SearchService {
     }
 
     // 날짜 범위 검색
-    const start = query.dateRange?.start;
-    const end = query.dateRange?.end;
+    const start = query.dateRange?.start ? new Date(query.dateRange.start) : null;
+    const end = query.dateRange?.end ? new Date(query.dateRange.end) : null;
 
     if (start && end) {
       qb.andWhere('schedule.endDate >= :start AND schedule.startDate <= :end', { start, end });
@@ -37,14 +30,16 @@ export class SearchService {
     }
 
     // 태그 필터
-    if (query.tagIds?.length) {
-      qb.andWhere('tag.id IN (:...tagIds)', {
-        tagIds: query.tagIds,
-      });
+    if (query.tags?.length) {
+      const validTags = query.tags.filter((tag) => tag?.id);
+      if (validTags.length > 0) {
+        const tagIds = validTags.map((tag: Tag) => tag.id);
+        qb.andWhere('tag.id IN (:...tagIds)', { tagIds });
+      }
     }
 
-    //정렬 및 중복 제거
-    qb.orderBy('schedule.startDate', 'ASC').distinct(true);
+    // 정렬 및 중복 제거
+    qb.orderBy('schedule.startDate', 'ASC');
 
     return qb.getMany();
   }
