@@ -227,6 +227,10 @@ declare module 'croffle' {
     export function uninstall(name: string): Promise<boolean>;
   }
 
+  export namespace search {
+    export function search(query: SearchQuery): Promise<Schedule[]>;
+  }
+
   export namespace settings {
     export function getAll(): Promise<AppSettings>;
     export function getOf(key: string): Promise<AppSettings[keyof AppSettings]>;
@@ -278,6 +282,7 @@ declare module 'croffle' {
     tags: typeof tags;
     schedules: typeof schedules;
     pluginInfo: typeof pluginInfo;
+    search: typeof search;
     settings: typeof settings;
   };
 

@@ -2,6 +2,7 @@ import { registerWindowIpcHandlers } from './window.handler';
 import { registerScheduleIpcHandlers } from './schedule.handler';
 import { registerTagIpcHandlers } from './tag.handler';
 import { registerPluginInfoIpcHandlers } from './pluginInfo.handler';
+import { registerSearchIpcHandlers } from './search.handler';
 import { registerSettingsIpcHandlers } from './settings.handler';
 import { registerOsIpcHandlers } from './os.service.handler';
 import { registerPluginStorageIpcHandlers } from './pluginStorage.handler';
@@ -23,6 +24,7 @@ export function registerAllIpcHandlers() {
   registerPluginInfoIpcHandlers();
 
   // Search IPC Handlers
+  registerSearchIpcHandlers();
 
   // Application Management IPC Handlers
 
