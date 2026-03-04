@@ -128,6 +128,8 @@ declare module 'croffle' {
     SCHEDULE_CREATE = 'schedule:create',
     SCHEDULE_UPDATE = 'schedule:update',
     SCHEDULE_DELETE = 'schedule:delete',
+    SCHEDULE_EXPORT_TO_FILE = 'schedule:exportSchedulesToFile',
+    SCHEDULE_IMPORT_FROM_FILE = 'schedule:importScheduleFromFile',
 
     // Tag
     TAG_GET = 'tag:getAll',
@@ -216,6 +218,13 @@ declare module 'croffle' {
     export function create(data: Partial<Schedule>): Promise<Schedule>;
     export function update(id: string, data: Partial<Schedule>): Promise<Schedule>;
     export function remove(id: string): Promise<boolean>;
+    export function exportSchedulesToFile(period?: {
+      start: string;
+      end: string;
+    }): Promise<{ filePath: string; count: number } | null>;
+    export function importScheduleFromFile(
+      mode?: 'merge' | 'duplicate'
+    ): Promise<{ created: number; updated: number } | null>;
   }
 
   export namespace pluginInfo {

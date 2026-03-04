@@ -19,4 +19,17 @@ export const scheduleApi = {
   remove: async (id: string): Promise<boolean> => {
     return ipcRenderer.invoke('schedule:delete', id);
   },
+
+  exportSchedulesToFile: async (period?: {
+    start: string;
+    end: string;
+  }): Promise<{ filePath: string; count: number } | null> => {
+    return ipcRenderer.invoke('schedule:exportSchedulesToFile', period);
+  },
+
+  importScheduleFromFile: async (
+    mode?: 'merge' | 'duplicate'
+  ): Promise<{ created: number; updated: number } | null> => {
+    return ipcRenderer.invoke('schedule:importScheduleFromFile', mode);
+  },
 } satisfies ScheduleAPI;

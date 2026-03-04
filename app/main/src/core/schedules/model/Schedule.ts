@@ -32,8 +32,8 @@ export class Schedule {
   @Column({ default: false })
   isAllDay: boolean;
 
-  @Column({ type: 'text', nullable: true })
-  recurringRule: string;
+  @Column({ type: 'text', nullable: true, name: 'recurringRule' })
+  recurrenceRule: string;
 
   @Column({ type: 'text', default: '#E1E1E1' })
   colorLabel: string;

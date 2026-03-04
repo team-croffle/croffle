@@ -4,6 +4,7 @@ import { Schedule } from 'croffle';
 import { ScheduleMapper } from '../core/schedules/mapper/ScheduleMapper';
 import { eventService } from '../core/events/service/EventService';
 import { AppEventType } from '../shared/enums';
+import { scheduleImportExportService } from '../core/schedules/service/ScheduleImportExportService';
 
 export const registerScheduleIpcHandlers = (): void => {
   ipcMain.handle(
@@ -14,10 +15,11 @@ export const registerScheduleIpcHandlers = (): void => {
         end: new Date(period.end),
       });
 
+      const dto = schedules.map(ScheduleMapper.toInterface);
       // Add app event emit
-      eventService.emit(AppEventType.SCHEDULE_GET, schedules);
+      eventService.emit(AppEventType.SCHEDULE_GET, dto);
 
-      return schedules.map(ScheduleMapper.toInterface);
+      return dto;
     }
   );
 
@@ -25,10 +27,11 @@ export const registerScheduleIpcHandlers = (): void => {
     const entityData = ScheduleMapper.toEntity(data);
     const createdEntity = await scheduleService.createSchedule(entityData);
 
+    const dto = ScheduleMapper.toInterface(createdEntity);
     // Add app event emit
-    eventService.emit(AppEventType.SCHEDULE_CREATE, createdEntity);
+    eventService.emit(AppEventType.SCHEDULE_CREATE, dto);
 
-    return ScheduleMapper.toInterface(createdEntity);
+    return dto;
   });
 
   ipcMain.handle(
@@ -37,10 +40,11 @@ export const registerScheduleIpcHandlers = (): void => {
       const entityData = ScheduleMapper.toEntity(data);
       const updatedEntity = await scheduleService.updateSchedule(id, entityData);
 
+      const dto = ScheduleMapper.toInterface(updatedEntity);
       // Add app event emit
-      eventService.emit(AppEventType.SCHEDULE_UPDATE, updatedEntity);
+      eventService.emit(AppEventType.SCHEDULE_UPDATE, dto);
 
-      return ScheduleMapper.toInterface(updatedEntity);
+      return dto;
     }
   );
 
@@ -50,4 +54,28 @@ export const registerScheduleIpcHandlers = (): void => {
 
     return await scheduleService.deleteSchedule(id);
   });
+
+  ipcMain.handle(
+    'schedule:exportSchedulesToFile',
+    async (
+      _,
+      period?: { start: string; end: string }
+    ): Promise<{ filePath: string; count: number } | null> => {
+      const result = await scheduleImportExportService.exportSchedulesToFile(period);
+      eventService.emit(AppEventType.SCHEDULE_EXPORT_TO_FILE, result);
+      return result;
+    }
+  );
+
+  ipcMain.handle(
+    'schedule:importScheduleFromFile',
+    async (
+      _,
+      mode?: 'merge' | 'duplicate'
+    ): Promise<{ created: number; updated: number } | null> => {
+      const result = await scheduleImportExportService.importScheduleFromFile(mode ?? 'merge');
+      eventService.emit(AppEventType.SCHEDULE_IMPORT_FROM_FILE, result);
+      return result;
+    }
+  );
 };

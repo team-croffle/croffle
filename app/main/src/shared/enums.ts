@@ -46,6 +46,8 @@ export enum AppEventType {
   SCHEDULE_CREATE = 'schedule:create',
   SCHEDULE_UPDATE = 'schedule:update',
   SCHEDULE_DELETE = 'schedule:delete',
+  SCHEDULE_EXPORT_TO_FILE = 'schedule:exportToFile',
+  SCHEDULE_IMPORT_FROM_FILE = 'schedule:importFromFile',
 
   // Tag
   TAG_GET = 'tag:getAll',
