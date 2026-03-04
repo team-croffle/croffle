@@ -7,10 +7,12 @@
   import RightSidebar from './components/RightSidebar.vue';
   import Button from './components/ui/button/Button.vue';
   import { useUiStore } from './stores/uiStore';
-  import ContextMenuTrigger from './components/ui/context-menu/ContextMenuTrigger.vue';
-  import { ContextMenu } from './components/ui/context-menu';
-  import ContextMenuContent from './components/ui/context-menu/ContextMenuContent.vue';
-  import ContextMenuItem from './components/ui/context-menu/ContextMenuItem.vue';
+  import {
+    ContextMenu,
+    ContextMenuTrigger,
+    ContextMenuContent,
+    ContextMenuItem,
+  } from '@/components/ui/context-menu';
   import { useContextMenuStore } from './stores/contextMenuStore';
 
   const uiStore = useUiStore();

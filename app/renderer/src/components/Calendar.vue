@@ -40,13 +40,12 @@
     const date = getClickedDate(e);
 
     if (date) {
-      selectedDate.value = date;
       contextMenuStore.setMenu([
         {
           id: 'add-schedule',
           label: `${date} 일정 추가`,
           action: () => {
-            uiStore.openRightSidebarWithDate(date);
+            uiStore.openRightSidebarWithDate(date); // 추후 일정 추가 폼으로 연결하도록 수정 예정
           },
         },
         {
@@ -60,7 +59,7 @@
           id: 'delete-schedule',
           label: '일정 삭제 (준비중)',
           action: () => {
-            console.log(`${date} 일정 삭제 클릭됨`);
+            // 추후 일정 삭제 기능 구현 시 연결
           },
           disabled: true, // 아직 기능이 없으니 비활성화 처리 예시
         },
