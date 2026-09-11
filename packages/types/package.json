@@ -17,6 +17,9 @@
     "models",
     "api"
   ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json --composite false"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -32,5 +35,9 @@
   },
   "dependencies": {
     "@types/node": "^26.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "6.0.3"
   }
 }

@@ -273,6 +273,10 @@ importers:
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
+    devDependencies:
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -5374,7 +5378,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.2.0
       '@types/keyv': 3.1.4
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
       '@types/responselike': 1.0.3
 
   '@types/debug@4.1.13':
@@ -5392,7 +5396,7 @@ snapshots:
 
   '@types/fs-extra@9.0.13':
     dependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
 
   '@types/http-cache-semantics@4.2.0': {}
 
@@ -5406,7 +5410,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
 
   '@types/ms@2.1.0': {}
 
@@ -5443,7 +5447,7 @@ snapshots:
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 26.1.2
+      '@types/node': 26.2.0
 
   '@types/web-bluetooth@0.0.21': {}
 
