@@ -1,0 +1,179 @@
+# CI — lint / format check / typecheck / build, scoped to what changed.
+#
+# Scopes (see the `changes` job): desktop, types, cli, root.
+# `root` = shared config (package.json, lockfile, oxlint/oxfmt, tsconfig, workflows)
+# and forces every scope to run.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  changes:
+    name: Detect changed scopes
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    outputs:
+      desktop: ${{ steps.filter.outputs.desktop == 'true' || steps.filter.outputs.root == 'true' }}
+      types: ${{ steps.filter.outputs.types == 'true' || steps.filter.outputs.root == 'true' }}
+      cli: ${{ steps.filter.outputs.cli == 'true' || steps.filter.outputs.root == 'true' }}
+      any: ${{ steps.filter.outputs.desktop == 'true' || steps.filter.outputs.types == 'true' || steps.filter.outputs.cli == 'true' || steps.filter.outputs.root == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            root:
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.npmrc'
+              - '.oxlintrc.json'
+              - '.oxfmtrc.json'
+              - 'tsconfig.json'
+              - '.github/workflows/ci.yml'
+            desktop:
+              - 'apps/desktop/**'
+              - 'packages/types/**'
+            types:
+              - 'packages/types/**'
+            cli:
+              - 'packages/cli/**'
+              - 'packages/types/**'
+
+  quality:
+    name: Lint · format · typecheck
+    needs: changes
+    if: ${{ needs.changes.outputs.any == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve scope paths
+        id: scope
+        env:
+          DESKTOP: ${{ needs.changes.outputs.desktop }}
+          TYPES: ${{ needs.changes.outputs.types }}
+          CLI: ${{ needs.changes.outputs.cli }}
+        run: |
+          set -euo pipefail
+          PATHS=()
+          FILTERS=()
+          [[ "$DESKTOP" == "true" ]] && PATHS+=(apps/desktop) && FILTERS+=(--filter @croffledev/desktop)
+          [[ "$TYPES" == "true" ]] && PATHS+=(packages/types) && FILTERS+=(--filter @croffledev/croffle-types)
+          [[ "$CLI" == "true" ]] && PATHS+=(packages/cli) && FILTERS+=(--filter @croffledev/croffle-cli)
+          echo "paths=${PATHS[*]}" >> "$GITHUB_OUTPUT"
+          echo "filters=${FILTERS[*]}" >> "$GITHUB_OUTPUT"
+          echo "Scopes: ${PATHS[*]}"
+
+      - name: Lint (oxlint)
+        run: pnpm exec oxlint ${{ steps.scope.outputs.paths }}
+
+      - name: Format check (oxfmt)
+        run: pnpm exec oxfmt --check ${{ steps.scope.outputs.paths }}
+
+      - name: Typecheck
+        run: pnpm ${{ steps.scope.outputs.filters }} run typecheck
+
+  build-desktop:
+    name: Build desktop
+    needs: [changes, quality]
+    if: ${{ needs.changes.outputs.desktop == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (electron-vite)
+        run: pnpm --filter @croffledev/desktop build
+
+  build-cli:
+    name: Build cli
+    needs: [changes, quality]
+    if: ${{ needs.changes.outputs.cli == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (tsup)
+        run: pnpm --filter @croffledev/croffle-cli build
+
+  # Single required check for branch protection: passes when every scoped job
+  # either succeeded or was skipped because its scope did not change.
+  ci-ok:
+    name: CI result
+    needs: [changes, quality, build-desktop, build-cli]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS"
+          if echo "$RESULTS" | grep -Eq '"result": "(failure|cancelled)"'; then
+            echo "A required job failed."
+            exit 1
+          fi
+          echo "All scoped jobs passed or were skipped."
