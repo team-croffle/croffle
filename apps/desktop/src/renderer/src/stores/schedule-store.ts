@@ -43,7 +43,9 @@ function toCalendarEvent(schedule: Schedule): EventInput {
   };
 
   if (schedule.recurrenceRule?.trim()) {
-    const rrule = toFullCalendarRRule(schedule.recurrenceRule, schedule.startDate);
+    const rrule = toFullCalendarRRule(schedule.recurrenceRule, schedule.startDate, {
+      allDay: schedule.isAllDay,
+    });
     if (rrule) {
       return {
         ...base,
