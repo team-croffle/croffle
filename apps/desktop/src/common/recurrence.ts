@@ -13,7 +13,12 @@ import {
 } from './recurrence-internal';
 
 export type { WeekdayCode } from './recurrence-internal';
-export { toFullCalendarRRule, type FullCalendarRRuleInput } from './recurrence-fullcalendar';
+export {
+  toFullCalendarRRule,
+  toLocalDateTimeString,
+  type FullCalendarRRuleInput,
+  type FullCalendarRRuleOptions,
+} from './recurrence-fullcalendar';
 
 export type RecurrencePreset =
   | 'none'
