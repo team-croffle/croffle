@@ -99,6 +99,18 @@ branch: feat/<version>-<feature>
 
 Report at the end: item, branch, commit hash, verification results, anything left for the user.
 
+## Branch → PR → merge → release (per rc)
+
+1. **Branch**: all work for a version runs on the branch named in the plan (`fix/<version>-<feature>` or `feat/…`), created from a synced `master`. Never on `master`.
+2. **≥ 3 commits per branch/PR**. If a work item finishes with fewer than 3 commits, do **not** open a PR yet: continue with the next pending work item on the same branch and ship them together as one rc. Then renumber the remaining rc.N in the plan and work files so numbering stays contiguous.
+3. **Verify** with `/test` (gates always; run the app with `pnpm dev` only when a scenario cannot be judged from code, or the user asks).
+4. **Publish**: sync (rebase on `origin/master`), push the branch, open the PR (`gh pr create`, template from `.github/pull_request_template/`, labels come from the labeler). Draft the body in `.ai/pr/<branch>.md` first.
+5. **GitHub Actions decide**: wait for `CI` and `Secret Scan` (`gh pr checks --watch`). Red → fix on the branch, push, wait again. Never merge red.
+6. **Merge**: Rebase and Merge (`gh pr merge --rebase --delete-branch`). Then sync: `git checkout master && git pull --rebase`, delete the local branch.
+7. **Release the rc**: run the Release workflow with `release_type=rc` → GitHub Release titled `Pre-Release vX.Y.Z-rc.A`. This is part of the loop and needs no extra approval; announce it. Version file bumps are done by the workflow, never by hand.
+8. **Stable release** (`Release vX.Y.Z`, `release_type=patch|minor|major`) happens **only on an explicit user instruction** or the user's manual run. `/release` without an explicit type must not produce a stable release.
+9. **Packages** (`packages/types`, `packages/cli`): code changes ship with a Changeset in the same PR. After merge, the `Publish Packages` workflow (github-actions bot) opens a "chore: version packages" PR; merge that PR (same checks) and the bot publishes to npm. Do not publish by hand.
+
 ## Test workflow
 
 There is no automated test suite yet. A test run is:
@@ -115,14 +127,17 @@ Never mark a scenario passed that was not actually executed.
 Releasing = the desktop version in `apps/desktop/package.json` (packages are released separately by Changesets on merge).
 
 Preconditions, all must hold or stop and report:
-- The version's feature branch is merged (Rebase and Merge), local `master` synced with `origin/master`, working tree clean, on `master`.
-- The plan is `done`, no work file for the version remains, and the latest `.ai/test/*_<version>.md` has no failing gate.
+
+- The branch is merged (Rebase and Merge) with green `CI` + `Secret Scan`, local `master` synced with `origin/master`, working tree clean, on `master`.
+- For an **rc**: the rc's work items are finished (history written, work files deleted) and the latest `.ai/test/*_<version>.md` has no failing gate.
+- For a **stable** release: the plan is `done`, no work file for the version remains, the last rc was released, and the user explicitly asked for the stable release.
 - Public docs updated where the version changed behavior: `README.md` / `README.ko.md`, `docs/ROADMAP.md` ("현재 데스크톱" line), `CONTRIBUTING*.md` if the workflow changed.
 - Pending Changesets exist for any `packages/*` change in this version.
 
 Steps:
+
 1. Write `.ai/release/<version>_<Release|Pre-Release>.md` (Pre-Release for `rc`): release type, highlights (from history files), breaking changes, manual QA summary, the exact `gh workflow run` command.
 2. Update `.ai/ROADMAP.md` header ("현재 데스크톱 **<version>**") and move the version's section to a `## 완료` block, keeping later versions intact.
 3. Doc changes go on a branch (`docs/<version>-release`), are committed (`docs: prepare v<version> release`), and merged the normal way after the user approves the push.
-4. Trigger **Croffle Release** (`.github/workflows/release.yml`) with `gh workflow run release.yml -f release_type=<patch|minor|major|rc> [-f version=<x.y.z>] [-f version_suffix=rc.1] -f draft=false -f dry_run=false`. Releasing is outward-facing: **always ask before running it**, and offer `dry_run=true` first if anything is uncertain.
+4. Trigger **Croffle Release** (`.github/workflows/release.yml`) with `gh workflow run release.yml -f release_type=<patch|minor|major|rc> [-f version=<x.y.z>] [-f version_suffix=rc.1] -f draft=false -f dry_run=false`. Titles: `Pre-Release vX.Y.Z-rc.A` / `Release vX.Y.Z`. An rc release is part of the branch loop (announce, no extra approval). A stable release needs the user's explicit instruction; if anything is uncertain, offer `dry_run=true` first.
 5. Watch the run (`gh run watch`), then verify the GitHub Release has win/mac/linux assets and is not a draft (electron-updater cannot see drafts). Record the run URL in the release file.
