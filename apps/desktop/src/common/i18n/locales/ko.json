@@ -121,6 +121,7 @@
     "add": "새 일정 추가",
     "today": "오늘의 일정",
     "emptyToday": "오늘 일정이 없습니다",
+    "emptySelected": "이 날 일정이 없습니다",
     "upcoming": "다가오는 일정",
     "emptyUpcoming": "다가오는 일정이 없습니다"
   },

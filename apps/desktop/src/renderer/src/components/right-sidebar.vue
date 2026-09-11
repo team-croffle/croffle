@@ -20,9 +20,29 @@
 
   const uiStore = useUiStore();
   const scheduleStore = useScheduleStore();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const { rightSidebarOpen, selectedDate } = storeToRefs(uiStore);
+
+  const isSelectedToday = computed(
+    () => !selectedDate.value || dayjs(selectedDate.value).isSame(dayjs(), 'day'),
+  );
+
+  /** 카드 제목: 오늘이면 "Today", 아니면 선택한 날짜 (앱 언어 로케일) */
+  const selectedDateLabel = computed(() => {
+    if (isSelectedToday.value || !selectedDate.value) {
+      return t('rightSidebar.today');
+    }
+    return new Intl.DateTimeFormat(locale.value === 'ko' ? 'ko-KR' : 'en-US', {
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short',
+    }).format(dayjs(selectedDate.value).toDate());
+  });
+
+  const emptyLabel = computed(() =>
+    isSelectedToday.value ? t('rightSidebar.emptyToday') : t('rightSidebar.emptySelected'),
+  );
 
   // 선택된 날짜에 해당하는 일정만 스토어에서 가져옴
   const selectedSchedules = computed(() => {
@@ -144,7 +164,7 @@
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
             <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
               <Icon icon="lucide:calendar" class="h-4 w-4" />
-              <span>{{ $t('rightSidebar.today') }}</span>
+              <span>{{ selectedDateLabel }}</span>
               <Badge
                 class="bg-croffle-sidebar text-croffle-text-dark ml-auto h-5 rounded-md px-1.5"
               >
@@ -156,7 +176,7 @@
             class="text-croffle-text flex min-h-25 justify-center text-sm"
             :class="selectedSchedules.length === 0 ? 'items-center' : 'items-start'"
           >
-            <span v-if="selectedSchedules.length === 0">{{ $t('rightSidebar.emptyToday') }}</span>
+            <span v-if="selectedSchedules.length === 0">{{ emptyLabel }}</span>
             <div v-else class="mt-2 flex w-full flex-col gap-1">
               <div
                 v-for="schedule in selectedSchedules"
