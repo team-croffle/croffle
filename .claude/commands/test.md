@@ -1,5 +1,5 @@
 ---
-description: Run the test workflow (gates + scenarios) on the current state and write .ai/test/<date>-<version>.md.
+description: Run the test workflow (gates + scenarios) on the current state and write .ai/test/<YYYY-MM-DD-HHmm>_<version>.md.
 argument-hint: [version]
 ---
 
