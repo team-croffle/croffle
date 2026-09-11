@@ -6,6 +6,7 @@ argument-hint: <rc.N | version-rc.N | version>
 Target: $ARGUMENTS (required).
 
 Resolve the target:
+
 - `rc.N` → that rc of the current work version.
 - `<version>-rc.N` → that rc of that version.
 - `<version>` → every item of that version and of any earlier unfinished version.
