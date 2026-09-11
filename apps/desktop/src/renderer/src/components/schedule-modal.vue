@@ -13,6 +13,7 @@
     type WeekdayCode,
   } from '@croffledev/common';
   import { CalendarDate, getLocalTimeZone } from '@internationalized/date';
+  import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
   import { computed, reactive, ref, shallowRef, toRaw, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
@@ -102,6 +103,29 @@
     const jsDate = date.toDate(getLocalTimeZone());
     jsDate.setHours(hours, minutes, 0, 0);
     return jsDate;
+  };
+
+  /** 로컬 기준 오늘 (YYYY-MM-DD). toISOString()은 UTC라 자정~09:00(KST)에 어제로 잡힌다. */
+  const todayLocal = () => dayjs().format('YYYY-MM-DD');
+
+  /**
+   * 일정 추가 시 초기 시각.
+   * 대상 날짜가 오늘이면 현재 시각 / +1h, 아니면 09:00 / 10:00.
+   * +1h가 자정을 넘으면 종료 날짜를 다음 날로 넘긴다.
+   */
+  const resolveInitialTimes = (
+    dateStr: string,
+  ): { start: string; end: string; endDate: string } => {
+    if (dateStr !== todayLocal()) {
+      return { start: DEFAULT_START_TIME, end: DEFAULT_END_TIME, endDate: dateStr };
+    }
+    const now = dayjs();
+    const end = now.add(1, 'hour');
+    return {
+      start: now.format('HH:mm'),
+      end: end.format('HH:mm'),
+      endDate: end.format('YYYY-MM-DD'),
+    };
   };
 
   const form = reactive({
@@ -197,14 +221,12 @@
 
       if (mode === 'add') {
         resetForm();
-        if (uiStore.selectedDate) {
-          startDate.value = toCalendarDate(uiStore.selectedDate);
-          endDate.value = toCalendarDate(uiStore.selectedDate);
-        } else {
-          const today = new Date().toISOString().slice(0, 10);
-          startDate.value = toCalendarDate(today);
-          endDate.value = toCalendarDate(today);
-        }
+        const target = uiStore.selectedDate ?? todayLocal();
+        const initial = resolveInitialTimes(target);
+        startDate.value = toCalendarDate(target);
+        endDate.value = toCalendarDate(initial.endDate);
+        startTime.value = initial.start;
+        endTime.value = initial.end;
         return;
       }
 
