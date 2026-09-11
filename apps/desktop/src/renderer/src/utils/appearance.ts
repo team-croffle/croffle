@@ -37,13 +37,13 @@ export const hexToHue = (hex: string): number => {
   let g = 0;
   let b = 0;
   if (cleaned.length === 3) {
-    r = parseInt(cleaned[0]! + cleaned[0]!, 16);
-    g = parseInt(cleaned[1]! + cleaned[1]!, 16);
-    b = parseInt(cleaned[2]! + cleaned[2]!, 16);
+    r = Number.parseInt(cleaned[0]! + cleaned[0]!, 16);
+    g = Number.parseInt(cleaned[1]! + cleaned[1]!, 16);
+    b = Number.parseInt(cleaned[2]! + cleaned[2]!, 16);
   } else if (cleaned.length === 6) {
-    r = parseInt(cleaned.slice(0, 2), 16);
-    g = parseInt(cleaned.slice(2, 4), 16);
-    b = parseInt(cleaned.slice(4, 6), 16);
+    r = Number.parseInt(cleaned.slice(0, 2), 16);
+    g = Number.parseInt(cleaned.slice(2, 4), 16);
+    b = Number.parseInt(cleaned.slice(4, 6), 16);
   } else {
     return DEFAULT_ACCENT_HUE;
   }
