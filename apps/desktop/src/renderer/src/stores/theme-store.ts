@@ -35,10 +35,14 @@ export const useThemeStore = defineStore('darkTheme', () => {
     }
   });
 
-  /** 타이틀 바 빠른 전환 (light ↔ dark) */
+  /**
+   * 타이틀 바 빠른 전환 (light ↔ dark).
+   * 설정값(currentTheme)이 아니라 실제 표시 상태(isDark)를 기준으로 뒤집는다.
+   * SYSTEM 설정에서 OS가 이미 다크일 때도 첫 클릭에 바로 바뀌도록 하기 위함.
+   * 설정(general.theme)은 바꾸지 않는 세션 임시 오버라이드.
+   */
   const changeTheme = (): void => {
-    const next =
-      currentTheme.value === AppSettingTheme.DARK ? AppSettingTheme.LIGHT : AppSettingTheme.DARK;
+    const next = isDark.value ? AppSettingTheme.LIGHT : AppSettingTheme.DARK;
     applyFromSettings(next);
   };
 
