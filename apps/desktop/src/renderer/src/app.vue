@@ -273,7 +273,7 @@
       <div class="no-drag flex h-full items-center">
         <button
           class="flex h-6 w-6 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"
-          aria-label="Minimize window"
+          aria-label="Toggle theme"
           @click="themeStore.changeTheme"
         >
           <Icon v-if="themeStore.isDark" icon="lucide:sun" class="h-4 w-4" />
