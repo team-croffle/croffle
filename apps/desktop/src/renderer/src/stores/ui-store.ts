@@ -13,7 +13,8 @@ export type ConfirmDialogOptions = {
 export const useUiStore = defineStore('ui', () => {
   const leftSidebarOpen = ref(true);
   const rightSidebarOpen = ref(false);
-  const selectedDate = ref<string | null>(null);
+  // 시작 직후 우측 사이드바가 오늘 일정을 보여주도록 오늘(로컬)로 초기화
+  const selectedDate = ref<string | null>(dayjs().format('YYYY-MM-DD'));
   const isScheduleModalOpen = ref(false);
   const scheduleModalMode = ref<'add' | 'edit'>('add');
   const selectedScheduleId = ref<string | null>(null);

@@ -1,4 +1,5 @@
 import type { FeatureContextMenu } from '@croffledev/common';
+import dayjs from 'dayjs';
 import { toast } from 'vue-sonner';
 
 import { i18n } from '@/i18n';
@@ -30,7 +31,7 @@ export const defaultMenus: FeatureContextMenu[] = [
 
       const uiStore = useUiStore();
       const date = getClickedDateFromTarget(targetElement);
-      uiStore.selectedDate = date ?? null;
+      uiStore.selectedDate = date ?? dayjs().format('YYYY-MM-DD');
       uiStore.openScheduleModal('add');
     },
     condition: isDateElement,
