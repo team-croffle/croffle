@@ -9,10 +9,11 @@ import { reminderScheduler } from './calendar/reminder-scheduler';
 import { databaseManager } from './database';
 import { registerAllIpcHandlers } from './ipc';
 import { logger } from './logger';
+import { runVersionMigrations } from './setting/migrations';
 import {
   applyStartupPresentation,
+  resolveStartupPresentation,
   shouldCheckForUpdates,
-  STARTUP_ARG,
   LOGIN_HIDDEN_ARG,
 } from './setting/setting-applies';
 import { settingService } from './setting/setting-service';
@@ -62,12 +63,7 @@ function createWindow(): void {
     logger.info('Main', 'Main window is ready to show');
     const settings = settingService.get();
     applyStartupPresentation(settings);
-
-    const loginSettings = app.getLoginItemSettings();
-    const wasOpenedAtLogin = loginSettings.wasOpenedAtLogin || process.argv.includes(STARTUP_ARG);
-    const shouldHideOnLogin =
-      wasOpenedAtLogin &&
-      (settings.general.startMinimized || process.argv.includes(LOGIN_HIDDEN_ARG));
+    const shouldHideOnLogin = resolveStartupPresentation(settings).hidden;
 
     // WHY HERE: Splash window is closed after the main window is created.
     closeSplash();
@@ -107,7 +103,13 @@ if (!gotTheLock) {
   logger.warn('Main', 'Another instance is already running. Quitting this instance.');
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
+    // 로그인 자동 시작(숨김 인자)으로 뜬 두 번째 인스턴스는 창을 띄우지 않는다.
+    // 옛 로그인 항목이 남아 있어도 트레이만 유지되도록.
+    if (argv.includes(LOGIN_HIDDEN_ARG)) {
+      logger.info('Main', 'Second instance started hidden at login; keeping the window as is.');
+      return;
+    }
     logger.info('Main', 'Second instance requested. Focusing existing window.');
     // Someone tried to run a second instance, we should focus our window.
     windowService.showWindow();
@@ -125,8 +127,16 @@ if (!gotTheLock) {
       optimizer.watchWindowShortcuts(window);
     });
 
-    // Splash window is shown before the main window is created.
-    showSplash();
+    // 업데이트 마이그레이션(옛 로그인 항목 정리 등)은 설정이 준비된 직후, 창을 만들기 전에.
+    await runVersionMigrations(settingService.get());
+
+    // Splash window is shown before the main window is created,
+    // unless this is a hidden login start (tray only).
+    if (resolveStartupPresentation(settingService.get()).hidden) {
+      logger.info('Main', 'Hidden login start: skipping splash');
+    } else {
+      showSplash();
+    }
 
     // IPC test
     try {

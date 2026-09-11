@@ -1,6 +1,7 @@
 import type { AppSettings } from '@croffledev/croffle-types';
 import { app } from 'electron';
 
+import { logger } from '../logger';
 import { windowService } from '../window/window-service';
 
 export const LOGIN_HIDDEN_ARG = '--croffle-start-hidden';
@@ -34,22 +35,37 @@ export function applyPersisted(settings: AppSettings): void {
   applyLoginItem(settings);
 }
 
+export type StartupPresentation = {
+  wasOpenedAtLogin: boolean;
+  /** true면 스플래시도 메인 창도 띄우지 않고 트레이만 */
+  hidden: boolean;
+};
+
+/**
+ * 이번 실행이 로그인 자동 시작인지, 창을 숨겨야 하는지 한 번만 계산한다.
+ * Windows/Linux는 `wasOpenedAtLogin`이 없으므로 argv(`--startup`, `--croffle-start-hidden`)로 판단.
+ * `showSplash()` 전에 호출해 숨김 시작이면 스플래시도 생략한다.
+ */
+export function resolveStartupPresentation(settings: AppSettings): StartupPresentation {
+  const loginSettings = app.getLoginItemSettings();
+  const wasOpenedAtLogin = loginSettings.wasOpenedAtLogin || process.argv.includes(STARTUP_ARG);
+  const wasOpenedAsHidden = process.argv.includes(LOGIN_HIDDEN_ARG);
+  const { startMinimized, startOnSystemBoot } = settings.general;
+  const hidden = wasOpenedAtLogin && (startMinimized || wasOpenedAsHidden);
+
+  logger.debug(
+    'Startup',
+    `presentation: wasOpenedAtLogin=${wasOpenedAtLogin} hiddenArg=${wasOpenedAsHidden} startOnSystemBoot=${startOnSystemBoot} startMinimized=${startMinimized} → hidden=${hidden}`,
+  );
+
+  return { wasOpenedAtLogin, hidden };
+}
+
 /** 앱 최초 표시 시(로그인 시작 포함) 창 표시 결정 */
 export function applyStartupPresentation(settings: AppSettings): void {
   applyLoginItem(settings);
 
-  const loginSettings = app.getLoginItemSettings();
-  const wasOpenedAtLogin = loginSettings.wasOpenedAtLogin || process.argv.includes(STARTUP_ARG);
-  const wasOpenedAsHidden = process.argv.includes(LOGIN_HIDDEN_ARG);
-
-  if (!wasOpenedAtLogin) {
-    return;
-  }
-
-  const { startMinimized } = settings.general;
-  const shouldHide = startMinimized || wasOpenedAsHidden;
-
-  if (shouldHide) {
+  if (resolveStartupPresentation(settings).hidden) {
     windowService.hideWindow();
   }
 }
