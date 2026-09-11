@@ -121,6 +121,7 @@
     "add": "Add schedule",
     "today": "Today",
     "emptyToday": "No schedules today",
+    "emptySelected": "No schedules on this day",
     "upcoming": "Upcoming",
     "emptyUpcoming": "No upcoming schedules"
   },
