@@ -239,7 +239,13 @@ jobs:
           set -euo pipefail
           # Empty body; editors can fill notes before publishing. Always draft
           # here so electron-updater never sees a half-uploaded release.
-          ARGS=(--draft --title "$VERSION" --notes "")
+          # Title convention: "Pre-Release vX.Y.Z-rc.N" / "Release vX.Y.Z"
+          if [[ "$IS_PRE" == "true" ]]; then
+            TITLE="Pre-Release v${VERSION}"
+          else
+            TITLE="Release v${VERSION}"
+          fi
+          ARGS=(--draft --title "$TITLE" --notes "")
           if [[ "$IS_PRE" == "true" ]]; then
             ARGS+=(--prerelease)
           fi
