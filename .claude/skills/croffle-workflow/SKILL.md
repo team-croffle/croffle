@@ -111,6 +111,12 @@ Report at the end: item, branch, commit hash, verification results, anything lef
 8. **Stable release** (`Release vX.Y.Z`, `release_type=patch|minor|major`) happens **only on an explicit user instruction** or the user's manual run. `/release` without an explicit type must not produce a stable release.
 9. **Packages** (`packages/types`, `packages/cli`): code changes ship with a Changeset in the same PR. After merge, the `Publish Packages` workflow (github-actions bot) opens a "chore: version packages" PR; merge that PR (same checks) and the bot publishes to npm. Do not publish by hand.
 
+Operating rules for the loop:
+
+- All GitHub operations go through `gh` (`gh pr create/checks/merge`, `gh workflow run`, `gh run watch`, `gh release view`). Never use the web UI or raw API calls when `gh` can do it.
+- On any error (failed gate, red check, failed run, merge conflict): first search `.ai/history/*` (`grep -l 'decisions:.*<keyword>'`) for an earlier fix, apply or adapt it, and retry. Only stop and notify the user when a decision would cause a serious problem that is hard to undo (force push over shared history, deleting released tags, publishing a wrong stable version, data loss).
+- Do not wait for the workflows that run on `master` after a merge (`CI`, `Secret Scan`, `Publish Packages`); the PR checks already covered that commit. Do wait for the `Croffle Release` run when the next step depends on its result (tag, version bump, assets).
+
 ## Test workflow
 
 There is no automated test suite yet. A test run is:
