@@ -6,7 +6,7 @@ Plan the **next version** (definition in the workflow below). Optional hint from
 
 1. Determine the released version and the next roadmap version. If every roadmap version already has a plan, say so and stop.
 2. Read the roadmap section and the code it touches (use the file map in `AGENTS.md`).
-3. Write `.ai/plan/<version>_<feature>.md` with `상태: ready` and one work file per row as `.ai/work/<version>_<NN>-<task>.md`.
+3. Write `.ai/plan/<version>_<feature>.md` with `상태: ready` and one work file per row as `.ai/work/<version>-rc.<N>_<task>.md` (one rc per work item, numbered in execution order).
 4. Report: version, work items table, open questions for the user.
 
 Do not implement anything and do not commit.

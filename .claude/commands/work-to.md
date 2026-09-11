@@ -1,13 +1,13 @@
 ---
-description: Run work items in order up to a target — a work id (NN or <version>/NN) or a version — only if it exists in plan + work files.
-argument-hint: <NN | version/NN | version>
+description: Run work items in order up to a target — an rc (rc.N or <version>-rc.N) or a version — only if it exists in plan + work files.
+argument-hint: <rc.N | version-rc.N | version>
 ---
 
 Target: $ARGUMENTS (required).
 
 Resolve the target:
-- `NN` → item NN of the current work version.
-- `<version>/NN` → that item.
+- `rc.N` → that rc of the current work version.
+- `<version>-rc.N` → that rc of that version.
 - `<version>` → every item of that version and of any earlier unfinished version.
 
 If the argument is missing, the version has no `.ai/plan/<version>_*.md`, or the item does not exist under `.ai/work/`, say exactly what is missing (and that `/planning-next` or `/planning-to <version>` creates it) and **stop without doing any work**.

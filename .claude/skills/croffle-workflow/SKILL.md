@@ -24,7 +24,7 @@ Follows the global instructions (`~/.claude/CLAUDE.md`) and `AGENTS.md`; this fi
   ROADMAP.server.md / ROADMAP.docs.md / ROADMAP.pub.md
   conversation/<date>-<topic>.md     decision logs
   plan/<version>_<feature>.md        one plan per version; <feature> = short slug of the version theme
-  work/<version>_<NN>-<task>.md      one work item per file, NN = 01, 02, … ; deleted when finished
+  work/<version>-rc.<N>_<task>.md    one work item per file = one release candidate, N = 1, 2, … ; deleted when finished
   history/<YYYY-MM-DD-HHmm>_<task>.md  written when a work item finishes; first line `decisions: …`
   test/<YYYY-MM-DD-HHmm>_<version>.md  test run report
   release/<version>_<Release|Pre-Release>.md   release notes + checklist
@@ -49,7 +49,7 @@ types → desktop 순서, 네이티브 모듈, 마이그레이션, i18n 등.
 어떻게 나눌지, 왜 그 순서인지.
 
 ## 작업 목록
-| NN | 작업 | 영역 (main/preload/renderer/common/types/cli/ci/docs) | 의존 | 상태 |
+| rc | 작업 | 영역 (main/preload/renderer/common/types/cli/ci/docs) | 의존 | 상태 |
 |---|---|---|---|---|
 
 ## 검증 계획
@@ -59,17 +59,17 @@ types → desktop 순서, 네이티브 모듈, 마이그레이션, i18n 등.
 release_type (patch|minor|major|rc), 공개 문서에서 갱신할 곳, 패키지 Changeset 필요 여부.
 ```
 
-Planning rules: read the roadmap section **and the code it touches** before writing; every roadmap bullet maps to at least one work item; one work item = one focused commit (or a small series); order by dependency; `types` changes before `desktop` changes that need them; end with `docs` / `i18n` items when user-facing text changes.
+Planning rules: read the roadmap section **and the code it touches** before writing; every roadmap bullet maps to at least one work item; **one work item = one release candidate `<version>-rc.N`** (numbered in execution order, so finishing rc.N leaves the app in a `<version>-rc.N` state that can be shipped with `/release rc` when useful); one work item = one focused commit (or a small series); order by dependency; `types` changes before `desktop` changes that need them; end with `docs` / `i18n` items when user-facing text changes.
 
-## Work file — `.ai/work/<version>_<NN>-<task>.md`
+## Work file — `.ai/work/<version>-rc.<N>_<task>.md`
 
 ```
 ---
 version: <version>
-id: NN
+id: rc.N
 title: <제목>
 area: main | preload | renderer | common | types | cli | ci | docs
-depends: []            # e.g. ["01"] or ["1.1.1/03"]
+depends: []            # e.g. ["rc.1"] or ["1.1.1-rc.3"] (other version)
 status: todo | doing | blocked
 branch: feat/<version>-<feature>
 ---
@@ -87,7 +87,7 @@ branch: feat/<version>-<feature>
 
 ## Work workflow (one work item)
 
-1. Pick the item (see each command). Refuse if `status` is `blocked` or a dependency has not finished (its work file still exists); say why and stop.
+1. Pick the item (see each command; the lowest pending rc.N whose dependencies have finished). Refuse if `status` is `blocked` or a dependency has not finished (its work file still exists); say why and stop.
 2. Branch: never commit on `master`. Use the branch named in the plan (`feat/<version>-<feature>`); create it from `master` and sync (rebase) if it does not exist. Set `status: doing`.
 3. Re-read the files listed in **현재 코드**; if the plan no longer matches the code, fix the work file first. Check prior decisions: `grep -l 'decisions:.*<keyword>' .ai/history/*`.
 4. Implement following `AGENTS.md` conventions, ticking checklist items as they complete. Stay inside the item's scope; if something else is broken, add a new work item instead of fixing it silently.
