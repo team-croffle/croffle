@@ -75,6 +75,14 @@
   ];
 
   const toCalendarDate = (value: string | Date) => {
+    if (typeof value === 'string') {
+      // 'YYYY-MM-DD'는 로컬 날짜로 해석한다. new Date('YYYY-MM-DD')는 UTC 자정이라
+      // UTC보다 뒤진 시간대에서는 하루 앞으로 밀린다.
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (match) {
+        return new CalendarDate(Number(match[1]), Number(match[2]), Number(match[3]));
+      }
+    }
     const d = value instanceof Date ? value : new Date(value);
     return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
   };
@@ -247,6 +255,26 @@
     },
     { immediate: true },
   );
+
+  /**
+   * 시작을 종료보다 뒤로 옮기면 종료를 시작 + 1h로 따라오게 한다.
+   * 시작을 앞으로 당길 때는 사용자가 정한 종료를 그대로 둔다. 종일 일정은 시각을 쓰지 않으므로 제외.
+   */
+  const ensureEndAfterStart = () => {
+    if (form.isAllDay || !startDate.value || !endDate.value) {
+      return;
+    }
+    if (endDate.value.compare(startDate.value) < 0) {
+      endDate.value = startDate.value;
+    }
+    if (endDate.value.compare(startDate.value) === 0 && endTime.value < startTime.value) {
+      const next = dayjs(combineDateAndTime(startDate.value, startTime.value)).add(1, 'hour');
+      endTime.value = next.format('HH:mm');
+      endDate.value = toCalendarDate(next.format('YYYY-MM-DD'));
+    }
+  };
+
+  watch([startTime, startDate], ensureEndAfterStart);
 
   const handleSave = async () => {
     if (!form.title.trim() || !startDate.value || !endDate.value) {
