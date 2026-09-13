@@ -10,7 +10,8 @@
 #   - release_type: rc | patch | minor | major
 #   - version: optional exact semver (no leading v). If empty, bump from apps/desktop.
 #   - version_suffix: optional prerelease id (e.g. rc.1, beta.2). Appended to the core version.
-#   - draft: keep GitHub Release as draft (electron-updater cannot see drafts)
+#   - draft: keep GitHub Release as draft (default). Notes are written from .ai/release and
+#            the release is published with `gh release edit --draft=false` afterwards.
 #   - dry_run: build only — no version commit/tag/publish
 
 name: Croffle Release
@@ -39,10 +40,10 @@ on:
         type: string
         default: ''
       draft:
-        description: Leave the GitHub Release as draft after upload
+        description: Leave the GitHub Release as draft after upload (release notes are filled in before publishing)
         required: true
         type: boolean
-        default: false
+        default: true
       dry_run:
         description: Build installers only (no commit, tag, or publish)
         required: true
@@ -239,11 +240,11 @@ jobs:
           set -euo pipefail
           # Empty body; editors can fill notes before publishing. Always draft
           # here so electron-updater never sees a half-uploaded release.
-          # Title convention: "Pre-Release vX.Y.Z-rc.N" / "Release vX.Y.Z"
+          # Title convention: "Pre-Release vX.Y.Z-rc.N" / "Croffle vX.Y.Z — Release Note"
           if [[ "$IS_PRE" == "true" ]]; then
             TITLE="Pre-Release v${VERSION}"
           else
-            TITLE="Release v${VERSION}"
+            TITLE="Croffle v${VERSION} — Release Note"
           fi
           ARGS=(--draft --title "$TITLE" --notes "")
           if [[ "$IS_PRE" == "true" ]]; then
