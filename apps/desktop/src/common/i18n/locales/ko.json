@@ -4,6 +4,7 @@
     "cancel": "취소",
     "close": "닫기",
     "delete": "삭제",
+    "edit": "편집",
     "retry": "다시 시도",
     "add": "추가"
   },
@@ -140,6 +141,8 @@
     "editTitle": "일정 수정",
     "createTitle": "새 일정",
     "editDescription": "선택한 일정의 내용을 변경합니다.",
+    "viewTitle": "일정",
+    "viewDescription": "선택한 일정의 내용입니다.",
     "createDescription": "제목과 날짜만 있어도 바로 추가할 수 있어요.",
     "basics": "기본 정보",
     "title": "제목",

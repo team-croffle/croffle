@@ -19,6 +19,7 @@
   import { useI18n } from 'vue-i18n';
   import { toast } from 'vue-sonner';
 
+  import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Calendar } from '@/components/ui/calendar';
   import {
@@ -53,6 +54,7 @@
   import { cn } from '@/lib/utils';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
+  import { describeRecurrence } from '@/utils/recurrence-summary';
 
   import TimeField from './time-field.vue';
 
@@ -421,6 +423,86 @@
     custom: 'recurrence.custom',
   };
 
+  // --- Viewer (read-only) ------------------------------------------------------
+  // 뷰어는 폼 상태가 아니라 스토어의 원본 Schedule을 읽는다.
+  // 폼 ref를 건드리지 않아야 ensureEndAfterStart watch가 오발동하지 않는다.
+  const isViewMode = computed(() => scheduleModalMode.value === 'view');
+
+  const viewedSchedule = computed(() =>
+    selectedScheduleId.value ? scheduleStore.getScheduleById(selectedScheduleId.value) : undefined,
+  );
+
+  const formatViewDate = (value: Date | string) =>
+    new Intl.DateTimeFormat(locale.value === 'ko' ? 'ko-KR' : 'en-US', {
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short',
+    }).format(value instanceof Date ? value : new Date(value));
+
+  /** "9월 20일 (토) 10:00 – 11:00" / 다른 날이면 양쪽 날짜 / 종일이면 날짜만 */
+  const viewDateLabel = computed(() => {
+    const schedule = viewedSchedule.value;
+    if (!schedule) {
+      return '';
+    }
+    const start = new Date(schedule.startDate);
+    const end = new Date(schedule.endDate);
+    const sameDay = dayjs(start).isSame(end, 'day');
+    if (schedule.isAllDay) {
+      return sameDay ? formatViewDate(start) : `${formatViewDate(start)} – ${formatViewDate(end)}`;
+    }
+    if (sameDay) {
+      return `${formatViewDate(start)} ${formatTimeFromDate(start)} – ${formatTimeFromDate(end)}`;
+    }
+    return `${formatViewDate(start)} ${formatTimeFromDate(start)} – ${formatViewDate(end)} ${formatTimeFromDate(end)}`;
+  });
+
+  const viewRecurrence = computed(() => {
+    const schedule = viewedSchedule.value;
+    if (!schedule) {
+      return null;
+    }
+    return describeRecurrence(
+      schedule.recurrenceRule,
+      t,
+      locale.value,
+      new Date(schedule.startDate),
+    );
+  });
+
+  const viewPriorityLabel = computed(() => {
+    const priority = viewedSchedule.value?.priority ?? 'medium';
+    return t(`priority.${priority}`);
+  });
+
+  const headerIcon = computed(() => {
+    if (isViewMode.value) {
+      return 'lucide:calendar';
+    }
+    return scheduleModalMode.value === 'edit' ? 'lucide:calendar-check-2' : 'lucide:calendar-plus';
+  });
+
+  const headerTitle = computed(() => {
+    if (isViewMode.value) {
+      return t('schedule.viewTitle');
+    }
+    return scheduleModalMode.value === 'edit' ? t('schedule.editTitle') : t('schedule.createTitle');
+  });
+
+  const headerDescription = computed(() => {
+    if (isViewMode.value) {
+      return t('schedule.viewDescription');
+    }
+    return scheduleModalMode.value === 'edit'
+      ? t('schedule.editDescription')
+      : t('schedule.createDescription');
+  });
+
+  /** Viewer → Editor. 모달은 닫지 않고 모드만 바꾼다. 폼은 watch가 mode 변경을 보고 채운다. */
+  const startEditing = () => {
+    uiStore.setScheduleModalMode('edit');
+  };
+
   const priorityOptions = computed(() => [
     {
       value: 'low' as const,
@@ -460,32 +542,97 @@
           <div
             class="bg-croffle-primary/10 text-croffle-primary flex size-10 shrink-0 items-center justify-center rounded-xl"
           >
-            <Icon
-              :icon="
-                scheduleModalMode !== 'add' ? 'lucide:calendar-check-2' : 'lucide:calendar-plus'
-              "
-              class="size-5"
-            />
+            <Icon :icon="headerIcon" class="size-5" />
           </div>
           <div class="min-w-0 space-y-1">
             <DialogTitle class="text-foreground text-lg font-semibold tracking-tight">
-              {{
-                scheduleModalMode !== 'add' ? $t('schedule.editTitle') : $t('schedule.createTitle')
-              }}
+              {{ headerTitle }}
             </DialogTitle>
             <DialogDescription class="text-muted-foreground text-sm">
-              {{
-                scheduleModalMode !== 'add'
-                  ? $t('schedule.editDescription')
-                  : $t('schedule.createDescription')
-              }}
+              {{ headerDescription }}
             </DialogDescription>
           </div>
         </div>
       </DialogHeader>
 
       <div class="max-h-[min(62vh,560px)] overflow-y-auto px-6 py-5">
-        <form class="contents" @submit.prevent="handleSave">
+        <div v-if="isViewMode && viewedSchedule" class="space-y-5">
+          <div class="flex items-start gap-3">
+            <span
+              class="mt-1.5 size-3 shrink-0 rounded-full"
+              :style="{ backgroundColor: viewedSchedule.colorLabel }"
+              :aria-label="$t('schedule.colorAria', { color: viewedSchedule.colorLabel })"
+            />
+            <h3 class="text-foreground text-xl leading-snug font-semibold break-words">
+              {{ viewedSchedule.title }}
+            </h3>
+          </div>
+
+          <dl class="space-y-3 text-sm">
+            <div class="flex items-start gap-3">
+              <Icon icon="lucide:clock" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <div class="min-w-0">
+                <dt class="sr-only">{{ $t('schedule.dateTime') }}</dt>
+                <dd class="text-foreground">{{ viewDateLabel }}</dd>
+                <dd v-if="viewedSchedule.isAllDay" class="text-muted-foreground text-xs">
+                  {{ $t('schedule.allDay') }}
+                </dd>
+              </div>
+            </div>
+
+            <div v-if="viewRecurrence" class="flex items-start gap-3">
+              <Icon icon="lucide:repeat" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <div class="min-w-0">
+                <dt class="sr-only">{{ $t('schedule.recurrence') }}</dt>
+                <dd class="text-foreground">{{ viewRecurrence }}</dd>
+              </div>
+            </div>
+
+            <div v-if="viewedSchedule.location" class="flex items-start gap-3">
+              <Icon icon="lucide:map-pin" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <div class="min-w-0">
+                <dt class="sr-only">{{ $t('schedule.location') }}</dt>
+                <dd class="text-foreground break-words">{{ viewedSchedule.location }}</dd>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <Icon icon="lucide:flag" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <div class="min-w-0">
+                <dt class="sr-only">{{ $t('schedule.priority') }}</dt>
+                <dd>
+                  <Badge variant="secondary" class="rounded-md">{{ viewPriorityLabel }}</Badge>
+                </dd>
+              </div>
+            </div>
+
+            <div v-if="viewedSchedule.tags?.length" class="flex items-start gap-3">
+              <Icon icon="lucide:tag" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <dd class="flex flex-wrap gap-1.5">
+                <Badge
+                  v-for="tag in viewedSchedule.tags"
+                  :key="tag.id"
+                  variant="outline"
+                  class="rounded-md"
+                  :style="{ borderColor: tag.color }"
+                >
+                  {{ tag.name }}
+                </Badge>
+              </dd>
+            </div>
+          </dl>
+
+          <div v-if="viewedSchedule.description" class="border-croffle-border border-t pt-4">
+            <p class="text-muted-foreground mb-1.5 text-xs tracking-wide uppercase">
+              {{ $t('schedule.description') }}
+            </p>
+            <p class="text-foreground text-sm break-words whitespace-pre-wrap">
+              {{ viewedSchedule.description }}
+            </p>
+          </div>
+        </div>
+
+        <form v-else class="contents" @submit.prevent="handleSave">
           <FieldGroup class="gap-6">
             <FieldSet class="gap-4">
               <FieldLegend
@@ -913,7 +1060,25 @@
           </Button>
         </div>
 
-        <div class="flex shrink-0 gap-2">
+        <div v-if="isViewMode" class="flex shrink-0 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            class="border-croffle-border h-9"
+            @click="uiStore.closeScheduleModal()"
+          >
+            {{ $t('common.close') }}
+          </Button>
+          <Button
+            type="button"
+            class="bg-croffle-primary hover:bg-croffle-hover h-9 text-white"
+            @click="startEditing"
+          >
+            <Icon icon="lucide:pencil" class="mr-1.5 size-4" />
+            {{ $t('common.edit') }}
+          </Button>
+        </div>
+        <div v-else class="flex shrink-0 gap-2">
           <Button
             type="button"
             variant="outline"
@@ -929,10 +1094,10 @@
             @click="handleSave"
           >
             <Icon
-              :icon="scheduleModalMode !== 'add' ? 'lucide:check' : 'lucide:plus'"
+              :icon="scheduleModalMode === 'edit' ? 'lucide:check' : 'lucide:plus'"
               class="mr-1.5 size-4"
             />
-            {{ scheduleModalMode !== 'add' ? $t('common.save') : $t('common.add') }}
+            {{ scheduleModalMode === 'edit' ? $t('common.save') : $t('common.add') }}
           </Button>
         </div>
       </DialogFooter>

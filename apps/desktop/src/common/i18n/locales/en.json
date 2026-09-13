@@ -4,6 +4,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "delete": "Delete",
+    "edit": "Edit",
     "retry": "Retry",
     "add": "Add"
   },
@@ -140,6 +141,8 @@
     "editTitle": "Edit schedule",
     "createTitle": "New schedule",
     "editDescription": "Change the selected schedule.",
+    "viewTitle": "Schedule",
+    "viewDescription": "Details of the selected schedule.",
     "createDescription": "A title and dates are enough to add it.",
     "basics": "Basics",
     "title": "Title",
