@@ -11,6 +11,7 @@ import { registerAllIpcHandlers } from './ipc';
 import { logger } from './logger';
 import { runVersionMigrations } from './setting/migrations';
 import {
+  applyLoginItem,
   applyStartupPresentation,
   resolveStartupPresentation,
   shouldCheckForUpdates,
@@ -129,6 +130,9 @@ if (!gotTheLock) {
 
     // 업데이트 마이그레이션(옛 로그인 항목 정리 등)은 설정이 준비된 직후, 창을 만들기 전에.
     await runVersionMigrations(settingService.get());
+
+    // 로그인 항목은 AppUserModelId가 설정된 뒤 여기서 한 번만 등록한다 (설정 저장 시에는 applyPersisted).
+    applyLoginItem(settingService.get());
 
     // Splash window is shown before the main window is created,
     // unless this is a hidden login start (tray only).

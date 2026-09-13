@@ -13,7 +13,7 @@ import { is } from '@electron-toolkit/utils';
 import { app } from 'electron';
 
 import { logger } from '../logger';
-import { applyLoginItem, applyPersisted } from './setting-applies';
+import { applyPersisted } from './setting-applies';
 
 const DEFAULT_SETTINGS: AppSettings = {
   general: {
@@ -68,7 +68,8 @@ class SettingService {
         calendar: { ...DEFAULT_SETTINGS.calendar, ...parsed.calendar },
         notifications: { ...DEFAULT_SETTINGS.notifications, ...parsed.notifications },
       };
-      applyLoginItem(merged);
+      // 로그인 항목 등록은 여기서 하지 않는다. 이 생성자는 app ready 전에 돌아
+      // AppUserModelId가 아직 기본값이라 잘못된 이름으로 등록된다. index.ts whenReady에서 한 번 등록.
       return merged;
     } catch (err) {
       logger.error('Settings', 'Failed to load settings, using default settings.', err);
