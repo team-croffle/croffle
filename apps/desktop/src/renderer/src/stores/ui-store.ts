@@ -10,13 +10,16 @@ export type ConfirmDialogOptions = {
   confirmVariant?: 'default' | 'destructive';
 };
 
+/** 일정 모달 모드. 기존 일정은 기본 `view`(조회)로 열고, 버튼으로 `edit`으로 전환한다. */
+export type ScheduleModalMode = 'add' | 'edit' | 'view';
+
 export const useUiStore = defineStore('ui', () => {
   const leftSidebarOpen = ref(true);
   const rightSidebarOpen = ref(false);
   // 시작 직후 우측 사이드바가 오늘 일정을 보여주도록 오늘(로컬)로 초기화
   const selectedDate = ref<string | null>(dayjs().format('YYYY-MM-DD'));
   const isScheduleModalOpen = ref(false);
-  const scheduleModalMode = ref<'add' | 'edit'>('add');
+  const scheduleModalMode = ref<ScheduleModalMode>('add');
   const selectedScheduleId = ref<string | null>(null);
 
   const isConfirmModalOpen = ref(false);
@@ -41,13 +44,21 @@ export const useUiStore = defineStore('ui', () => {
     rightSidebarOpen.value = true;
   };
 
-  const openScheduleModal = (mode: 'add' | 'edit' = 'add', scheduleId?: string) => {
-    if (mode === 'edit' && !scheduleId) {
+  const openScheduleModal = (mode: ScheduleModalMode = 'add', scheduleId?: string) => {
+    if (mode !== 'add' && !scheduleId) {
       return;
     }
     scheduleModalMode.value = mode;
     selectedScheduleId.value = scheduleId ?? null;
     isScheduleModalOpen.value = true;
+  };
+
+  /** 열린 모달의 모드만 바꾼다 (view ↔ edit). 닫지 않으므로 선택된 일정은 유지된다. */
+  const setScheduleModalMode = (mode: Exclude<ScheduleModalMode, 'add'>) => {
+    if (!isScheduleModalOpen.value || !selectedScheduleId.value) {
+      return;
+    }
+    scheduleModalMode.value = mode;
   };
 
   const closeScheduleModal = () => {
@@ -100,6 +111,7 @@ export const useUiStore = defineStore('ui', () => {
     toggleRightSidebar,
     openRightSidebarWithDate,
     openScheduleModal,
+    setScheduleModalMode,
     closeScheduleModal,
     openConfirm,
     resolveConfirm,
