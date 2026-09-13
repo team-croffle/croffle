@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import { app } from 'electron';
 
 import { logger } from '../logger';
+import { LOGIN_ITEM_NAME } from './setting-applies';
 
 const execFileAsync = promisify(execFile);
 
@@ -48,7 +49,7 @@ export async function cleanupLoginItems(): Promise<LoginItemCleanupResult> {
 
   // 현재 이름/경로 항목도 해제한다. 호출자가 설정대로 재등록한다.
   try {
-    app.setLoginItemSettings({ openAtLogin: false, path: process.execPath });
+    app.setLoginItemSettings({ name: LOGIN_ITEM_NAME, openAtLogin: false, path: process.execPath });
   } catch (err) {
     result.errors.push(`setLoginItemSettings: ${String(err)}`);
   }
