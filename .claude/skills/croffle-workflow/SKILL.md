@@ -27,7 +27,7 @@ Follows the global instructions (`~/.claude/CLAUDE.md`) and `AGENTS.md`; this fi
   work/<version>-rc.<N>_<task>.md    one work item per file = one release candidate, N = 1, 2, … ; deleted when finished
   history/<YYYY-MM-DD-HHmm>_<task>.md  written when a work item finishes; first line `decisions: …`
   test/<YYYY-MM-DD-HHmm>_<version>.md  test run report
-  release/<version>_<Release|Pre-Release>.md   release notes + checklist
+  release/<version>_<Release|Pre-Release>.md   GitHub release note body (templates: release-notes.md)
   pr/<branch>.md                     PR message when not pushing immediately
 ```
 
@@ -107,7 +107,7 @@ Report at the end: item, branch, commit hash, verification results, anything lef
 4. **Publish**: sync (rebase on `origin/master`), push the branch, open the PR (`gh pr create`, template from `.github/pull_request_template/`, labels come from the labeler). Draft the body in `.ai/pr/<branch>.md` first.
 5. **GitHub Actions decide**: wait for `CI` and `Secret Scan` (`gh pr checks --watch`). Red → fix on the branch, push, wait again. Never merge red.
 6. **Merge**: Rebase and Merge (`gh pr merge --rebase --delete-branch`). Then sync: `git checkout master && git pull --rebase`, delete the local branch.
-7. **Release the rc**: run the Release workflow with `release_type=rc` → GitHub Release titled `Pre-Release vX.Y.Z-rc.A`. This is part of the loop and needs no extra approval; announce it. Version file bumps are done by the workflow, never by hand.
+7. **Release the rc**: run the Release workflow with `release_type=rc`, then write `.ai/release/X.Y.Z-rc.A_Pre-Release.md` from the pre-release template and publish the draft with `gh release edit … --notes-file … --draft=false --prerelease` (title `Pre-Release vX.Y.Z-rc.A`). This is part of the loop and needs no extra approval; announce it. Version file bumps are done by the workflow, never by hand.
 8. **Stable release** (`Release vX.Y.Z`, `release_type=patch|minor|major`) happens **only on an explicit user instruction** or the user's manual run. `/release` without an explicit type must not produce a stable release.
 9. **Packages** (`packages/types`, `packages/cli`): code changes ship with a Changeset in the same PR. After merge, the `Publish Packages` workflow (github-actions bot) opens a "chore: version packages" PR; merge that PR (same checks) and the bot publishes to npm. Do not publish by hand.
 
@@ -142,8 +142,8 @@ Preconditions, all must hold or stop and report:
 
 Steps:
 
-1. Write `.ai/release/<version>_<Release|Pre-Release>.md` (Pre-Release for `rc`): release type, highlights (from history files), breaking changes, manual QA summary, the exact `gh workflow run` command.
-2. Update `.ai/ROADMAP.md` header ("현재 데스크톱 **<version>**") and move the version's section to a `## 완료` block, keeping later versions intact.
+1. Write `.ai/release/<version>_<Release|Pre-Release>.md` as the **release note body** using the templates in [release-notes.md](./release-notes.md): Korean block in `<details>`, `---`, English block, and a final `## Changelogs` section pasted from `gh api … releases/generate-notes` with its `## What's Changed` heading renamed. No commands, run URLs, or QA logs in this file.
+2. Update `.ai/ROADMAP.md` header ("현재 데스크톱 **<version>**") and move the version's section to a `## 완료` block, keeping later versions intact (stable releases only).
 3. Doc changes go on a branch (`docs/<version>-release`), are committed (`docs: prepare v<version> release`), and merged the normal way after the user approves the push.
-4. Trigger **Croffle Release** (`.github/workflows/release.yml`) with `gh workflow run release.yml -f release_type=<patch|minor|major|rc> [-f version=<x.y.z>] [-f version_suffix=rc.1] -f draft=false -f dry_run=false`. Titles: `Pre-Release vX.Y.Z-rc.A` / `Release vX.Y.Z`. An rc release is part of the branch loop (announce, no extra approval). A stable release needs the user's explicit instruction; if anything is uncertain, offer `dry_run=true` first.
-5. Watch the run (`gh run watch`), then verify the GitHub Release has win/mac/linux assets and is not a draft (electron-updater cannot see drafts). Record the run URL in the release file.
+4. Trigger **Croffle Release** (`.github/workflows/release.yml`) with `gh workflow run release.yml -f release_type=<patch|minor|major|rc> [-f version=<x.y.z>] [-f version_suffix=rc.1] -f dry_run=false`. `draft` defaults to **true**: the workflow uploads assets to a draft. An rc release is part of the branch loop (announce, no extra approval). A stable release needs the user's explicit instruction; if anything is uncertain, offer `dry_run=true` first.
+5. Watch the run (`gh run watch`), confirm win/mac/linux assets are attached, then publish with the notes: `gh release edit <tag> --title "<title>" --notes-file .ai/release/<file> --draft=false [--prerelease]`. Titles: `Pre-Release vX.Y.Z-rc.A` / `Croffle vX.Y.Z — Release Note`. Verify `gh release view <tag> --json name,isDraft,isPrerelease,assets` shows `isDraft=false` (electron-updater cannot see drafts). Record the run URL in `.ai/history/`, not in the release file.
