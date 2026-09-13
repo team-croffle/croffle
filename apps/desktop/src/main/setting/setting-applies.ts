@@ -7,6 +7,28 @@ import { windowService } from '../window/window-service';
 export const LOGIN_HIDDEN_ARG = '--croffle-start-hidden';
 export const STARTUP_ARG = '--startup';
 
+/**
+ * 레지스트리/로그인 항목 값 이름. 항상 명시한다.
+ *
+ * WHY: 생략하면 Electron이 AppUserModelId를 쓰는데, `setAppUserModelId` 호출 전에
+ * 등록하면 기본값 `electron.app.croffle`로, 이후에는 `kr.croffledev.croffle`로 써서
+ * 같은 exe가 두 번 등록됐다 (1.1.0 시작 프로그램 2개 문제).
+ */
+export const LOGIN_ITEM_NAME = 'Croffle';
+
+/** 현재 설정에 맞는 로그인 항목 인자 */
+export function loginItemArgs(settings: AppSettings): string[] {
+  const { startOnSystemBoot, startMinimized } = settings.general;
+  const args: string[] = [];
+  if (startOnSystemBoot) {
+    args.push(STARTUP_ARG);
+    if (startMinimized) {
+      args.push(LOGIN_HIDDEN_ARG);
+    }
+  }
+  return args;
+}
+
 /** 로그인 항목(시작 프로그램) 등록 상태 반영 */
 export function applyLoginItem(settings: AppSettings): void {
   if (!app.isPackaged) {
@@ -14,20 +36,14 @@ export function applyLoginItem(settings: AppSettings): void {
   }
 
   const { startOnSystemBoot, startMinimized } = settings.general;
-  const args: string[] = [];
-
-  if (startOnSystemBoot) {
-    args.push(STARTUP_ARG);
-    if (startMinimized) {
-      args.push(LOGIN_HIDDEN_ARG);
-    }
-  }
+  const args = loginItemArgs(settings);
 
   app.setLoginItemSettings({
+    name: LOGIN_ITEM_NAME,
     openAtLogin: startOnSystemBoot,
     openAsHidden: startMinimized,
     path: process.execPath,
-    args: args,
+    args,
   });
 }
 
@@ -47,7 +63,10 @@ export type StartupPresentation = {
  * `showSplash()` 전에 호출해 숨김 시작이면 스플래시도 생략한다.
  */
 export function resolveStartupPresentation(settings: AppSettings): StartupPresentation {
-  const loginSettings = app.getLoginItemSettings();
+  const loginSettings = app.getLoginItemSettings({
+    path: process.execPath,
+    args: loginItemArgs(settings),
+  });
   const wasOpenedAtLogin = loginSettings.wasOpenedAtLogin || process.argv.includes(STARTUP_ARG);
   const wasOpenedAsHidden = process.argv.includes(LOGIN_HIDDEN_ARG);
   const { startMinimized, startOnSystemBoot } = settings.general;
