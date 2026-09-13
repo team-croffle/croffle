@@ -19,10 +19,11 @@ type Migration = {
  */
 const MIGRATIONS: Migration[] = [
   {
-    upTo: '1.1.0',
-    name: 'cleanup-login-items',
-    // 1.1.0 이하: 이전 버전 인스턴스가 시작 프로그램에 남아 Start minimized를 무시하고 창을 띄움.
+    // 1.1.1-rc.4까지: 이전 버전 인스턴스가 시작 프로그램에 남거나, AppUserModelId 설정 전 등록으로
+    // 같은 exe가 electron.app.croffle / kr.croffledev.croffle 두 이름으로 등록됨 (rc.1~rc.4도 해당).
     // Croffle 항목을 전부 지우고 현재 설정대로 재등록한다 (off면 등록 안 함).
+    upTo: '1.1.1-rc.4',
+    name: 'cleanup-login-items',
     run: async (settings) => {
       const result = await cleanupLoginItems();
       applyLoginItem(settings);
