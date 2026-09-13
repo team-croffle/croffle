@@ -184,6 +184,18 @@
     "deleteFailed": "일정 삭제 실패: {error}",
     "loadFailed": "일정 불러오기 실패: {error}"
   },
+  "recurrenceSummary": {
+    "daily": "매일",
+    "weekdays": "평일",
+    "weekly": "매주 {days}",
+    "monthly": "매월 {day}일",
+    "monthlyNoDay": "매월",
+    "everyNDays": "{n}일마다",
+    "everyNWeeks": "{n}주마다 {days}",
+    "untilSuffix": "{date}까지",
+    "countSuffix": "{n}회",
+    "custom": "사용자 지정 규칙"
+  },
   "recurrence": {
     "none": "반복 안 함",
     "daily": "매일",

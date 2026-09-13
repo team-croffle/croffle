@@ -184,6 +184,18 @@
     "deleteFailed": "Failed to delete schedule: {error}",
     "loadFailed": "Failed to load schedules: {error}"
   },
+  "recurrenceSummary": {
+    "daily": "Every day",
+    "weekdays": "Weekdays",
+    "weekly": "Weekly on {days}",
+    "monthly": "Monthly on day {day}",
+    "monthlyNoDay": "Monthly",
+    "everyNDays": "Every {n} days",
+    "everyNWeeks": "Every {n} weeks on {days}",
+    "untilSuffix": "until {date}",
+    "countSuffix": "{n} times",
+    "custom": "Custom rule"
+  },
   "recurrence": {
     "none": "Does not repeat",
     "daily": "Daily",
