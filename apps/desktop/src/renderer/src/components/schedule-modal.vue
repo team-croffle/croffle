@@ -348,7 +348,7 @@
   };
 
   const handleDelete = async () => {
-    if (scheduleModalMode.value !== 'edit' || !selectedScheduleId.value) {
+    if (scheduleModalMode.value === 'add' || !selectedScheduleId.value) {
       return;
     }
 
@@ -462,7 +462,7 @@
           >
             <Icon
               :icon="
-                scheduleModalMode === 'edit' ? 'lucide:calendar-check-2' : 'lucide:calendar-plus'
+                scheduleModalMode !== 'add' ? 'lucide:calendar-check-2' : 'lucide:calendar-plus'
               "
               class="size-5"
             />
@@ -470,12 +470,12 @@
           <div class="min-w-0 space-y-1">
             <DialogTitle class="text-foreground text-lg font-semibold tracking-tight">
               {{
-                scheduleModalMode === 'edit' ? $t('schedule.editTitle') : $t('schedule.createTitle')
+                scheduleModalMode !== 'add' ? $t('schedule.editTitle') : $t('schedule.createTitle')
               }}
             </DialogTitle>
             <DialogDescription class="text-muted-foreground text-sm">
               {{
-                scheduleModalMode === 'edit'
+                scheduleModalMode !== 'add'
                   ? $t('schedule.editDescription')
                   : $t('schedule.createDescription')
               }}
@@ -902,7 +902,7 @@
       >
         <div class="min-w-0">
           <Button
-            v-if="scheduleModalMode === 'edit'"
+            v-if="scheduleModalMode !== 'add'"
             type="button"
             variant="ghost"
             class="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 px-3"
@@ -929,10 +929,10 @@
             @click="handleSave"
           >
             <Icon
-              :icon="scheduleModalMode === 'edit' ? 'lucide:check' : 'lucide:plus'"
+              :icon="scheduleModalMode !== 'add' ? 'lucide:check' : 'lucide:plus'"
               class="mr-1.5 size-4"
             />
-            {{ scheduleModalMode === 'edit' ? $t('common.save') : $t('common.add') }}
+            {{ scheduleModalMode !== 'add' ? $t('common.save') : $t('common.add') }}
           </Button>
         </div>
       </DialogFooter>

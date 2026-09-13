@@ -86,7 +86,7 @@ export function useCalendarLogic() {
   // 이벤트를 더블 클릭했을 때
   const handleEventDoubleClick = (eventId: string) => {
     handleDoubleClick(`event:${eventId}`, () => {
-      uiStore.openScheduleModal('edit', eventId);
+      uiStore.openScheduleModal('view', eventId);
     });
   };
 

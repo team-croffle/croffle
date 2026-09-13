@@ -77,7 +77,7 @@
   // const hasTodayEvent = computed(() => todayCount.value > 0);
 
   const handleEditTodo = (scheduleId: string) => {
-    uiStore.openScheduleModal('edit', scheduleId);
+    uiStore.openScheduleModal('view', scheduleId);
   };
 
   function getPriorityClass(priority: string) {
