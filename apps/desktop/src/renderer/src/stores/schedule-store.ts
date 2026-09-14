@@ -69,6 +69,8 @@ function toCalendarEvent(schedule: Schedule): EventInput {
 
 export const useScheduleStore = defineStore('schedule', () => {
   const schedules = ref<Schedule[]>([]);
+  /** 마지막으로 불러온 범위. 가져오기 등 외부 변경 뒤 같은 범위로 다시 읽을 때 쓴다. */
+  let lastRange: { start: string; end: string } | null = null;
 
   const events = computed(() => schedules.value.map(toCalendarEvent));
 
@@ -113,9 +115,19 @@ export const useScheduleStore = defineStore('schedule', () => {
 
       const result = await croffle.calendar.schedules.getAll({ start, end });
       schedules.value = result;
+      lastRange = { start, end };
     } catch (error) {
       toast.error(String(i18n.global.t('schedule.loadFailed', { error: JSON.stringify(error) })));
     }
+  };
+
+  /** 마지막 범위로 다시 불러온다 (없으면 기본 범위). */
+  const reload = async () => {
+    if (lastRange) {
+      await loadSchedules(lastRange.start, lastRange.end);
+      return;
+    }
+    await loadSchedules();
   };
 
   return {
@@ -126,5 +138,6 @@ export const useScheduleStore = defineStore('schedule', () => {
     updateScheduleById,
     removeScheduleById,
     loadSchedules,
+    reload,
   };
 });

@@ -35,6 +35,7 @@
   import { Switch } from '@/components/ui/switch';
   import { extensionLoader } from '@/services/extension-loader';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
+  import { useScheduleStore } from '@/stores/schedule-store';
   import { useSettingsStore } from '@/stores/settings-store';
   import {
     DEFAULT_ACCENT_HUE,
@@ -56,6 +57,7 @@
 
   const settingsStore = useSettingsStore();
   const appSettingsStore = useAppSettingsStore();
+  const scheduleStore = useScheduleStore();
   const { t } = useI18n();
 
   const activeTab = ref<string>('general');
@@ -70,6 +72,15 @@
   const installedPlugins = ref<ExtensionInfo[]>([]);
   const installUrl = ref<string>('');
   const isInstalling = ref<boolean>(false);
+
+  // 일정 데이터 가져오기/내보내기 (설정 저장과 무관한 즉시 실행)
+  type ImportMode = 'merge' | 'duplicate';
+  const importMode = ref<ImportMode>('merge');
+  const isExporting = ref(false);
+  const isImporting = ref(false);
+
+  const errorMessage = (error: unknown) =>
+    error instanceof Error ? error.message : typeof error === 'string' ? error : String(error);
 
   const extensionDrafts = ref<Record<string, Record<string, unknown>>>({});
   const originalExtensionDrafts = ref<Record<string, Record<string, unknown>>>({});
@@ -443,6 +454,64 @@
     })),
   );
 
+  const importModeOptions = computed(() => [
+    { value: 'merge' as const, label: t('settings.calendar.importMerge') },
+    { value: 'duplicate' as const, label: t('settings.calendar.importDuplicate') },
+  ]);
+
+  const importModeHint = computed(() =>
+    importMode.value === 'merge'
+      ? t('settings.calendar.importMergeHint')
+      : t('settings.calendar.importDuplicateHint'),
+  );
+
+  const onImportModeChange = (value: unknown) => {
+    if (value === 'merge' || value === 'duplicate') {
+      importMode.value = value;
+    }
+  };
+
+  const onExportSchedules = async () => {
+    if (isExporting.value) {
+      return;
+    }
+    isExporting.value = true;
+    try {
+      const result = await croffle.calendar.schedules.exportSchedulesToFile();
+      if (result) {
+        toast.success(
+          t('settings.calendar.exportDone', { count: result.count, path: result.filePath }),
+        );
+      }
+    } catch (error) {
+      toast.error(t('settings.errors.export', { error: errorMessage(error) }));
+    } finally {
+      isExporting.value = false;
+    }
+  };
+
+  const onImportSchedules = async () => {
+    if (isImporting.value) {
+      return;
+    }
+    isImporting.value = true;
+    try {
+      const result = await croffle.calendar.schedules.importScheduleFromFile(importMode.value);
+      if (result) {
+        toast.success(
+          t('settings.calendar.importDone', { created: result.created, updated: result.updated }),
+        );
+        await scheduleStore.reload();
+      }
+    } catch (error) {
+      toast.error(t('settings.errors.import', { error: errorMessage(error) }));
+      // 일부만 들어갔을 수 있으므로 화면은 항상 다시 읽는다
+      await scheduleStore.reload();
+    } finally {
+      isImporting.value = false;
+    }
+  };
+
   const onExtensionTabClick = async (tab: ConfigurationTabContribution) => {
     const compositeId = settingsStore.getTabCompositeId(tab);
     activeTab.value = compositeId;
@@ -767,6 +836,96 @@
                     @update:model-value="onShowWeekNumbersSwitch"
                   />
                 </div>
+
+                <Separator />
+
+                <section class="space-y-4">
+                  <div class="space-y-1">
+                    <h4 class="text-base font-bold text-foreground">
+                      {{ $t('settings.calendar.data') }}
+                    </h4>
+                    <p class="text-muted-foreground text-sm">
+                      {{ $t('settings.calendar.dataIntro') }}
+                    </p>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="space-y-0.5">
+                      <Label class="text-foreground text-sm font-medium">
+                        {{ $t('settings.calendar.export') }}
+                      </Label>
+                      <p class="text-muted-foreground text-xs">
+                        {{ $t('settings.calendar.exportHint') }}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      class="h-9 shrink-0 gap-2"
+                      :disabled="isExporting"
+                      @click="onExportSchedules"
+                    >
+                      <Icon
+                        v-if="isExporting"
+                        icon="lucide:loader-2"
+                        class="h-4 w-4 animate-spin"
+                      />
+                      <Icon v-else icon="lucide:upload" class="h-4 w-4" />
+                      {{ $t('settings.calendar.export') }}
+                    </Button>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between gap-4">
+                      <div class="space-y-0.5">
+                        <Label
+                          for="settings-import-mode"
+                          class="text-foreground text-sm font-medium"
+                        >
+                          {{ $t('settings.calendar.import') }}
+                        </Label>
+                        <p class="text-muted-foreground text-xs">
+                          {{ importModeHint }}
+                        </p>
+                      </div>
+                      <div class="flex shrink-0 items-center gap-2">
+                        <Select :model-value="importMode" @update:model-value="onImportModeChange">
+                          <SelectTrigger id="settings-import-mode" class="h-9 w-40">
+                            <SelectValue :placeholder="$t('settings.calendar.importMode')" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              v-for="option in importModeOptions"
+                              :key="option.value"
+                              :value="option.value"
+                            >
+                              {{ option.label }}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          class="h-9 gap-2"
+                          :disabled="isImporting"
+                          @click="onImportSchedules"
+                        >
+                          <Icon
+                            v-if="isImporting"
+                            icon="lucide:loader-2"
+                            class="h-4 w-4 animate-spin"
+                          />
+                          <Icon v-else icon="lucide:download" class="h-4 w-4" />
+                          {{ $t('settings.calendar.import') }}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p class="text-muted-foreground text-xs">
+                    {{ $t('settings.calendar.dataHint') }}
+                  </p>
+                </section>
               </div>
 
               <!-- 알림 -->

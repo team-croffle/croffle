@@ -69,7 +69,20 @@
       "timeFormat12h": "12시간 (AM/PM)",
       "timeFormat24h": "24시간",
       "showWeekNumbers": "주차 표시",
-      "showWeekNumbersHint": "캘린더에 주차 번호를 표시합니다."
+      "showWeekNumbersHint": "캘린더에 주차 번호를 표시합니다.",
+      "data": "데이터",
+      "dataIntro": "일정을 JSON 파일로 백업하거나 파일에서 불러옵니다.",
+      "dataHint": "이 작업은 바로 실행되며 저장/취소 버튼과 무관합니다.",
+      "export": "내보내기",
+      "exportHint": "모든 일정을 JSON 파일로 저장합니다.",
+      "exportDone": "일정 {count}개를 내보냈습니다: {path}",
+      "import": "가져오기",
+      "importMode": "가져오기 방식",
+      "importMerge": "병합",
+      "importMergeHint": "같은 ID의 일정은 갱신하고 나머지는 추가합니다.",
+      "importDuplicate": "복사본으로 추가",
+      "importDuplicateHint": "파일의 모든 일정을 새 일정으로 추가합니다.",
+      "importDone": "가져오기 완료: 추가 {created}개, 갱신 {updated}개"
     },
     "notifications": {
       "intro": "일정 알림 설정입니다.",
@@ -102,6 +115,8 @@
       "installLocal": "Failed to install local extension: {error}",
       "toggle": "확장 토글 실패: {error}",
       "uninstall": "확장 삭제 실패: {error}",
+      "export": "일정 내보내기 실패: {error}",
+      "import": "일정 가져오기 실패: {error}",
       "save": "설정 저장 실패: {error}"
     }
   },
@@ -280,6 +295,10 @@
   },
   "notification": {
     "fallbackTitle": "알림"
+  },
+  "importExport": {
+    "importDialogTitle": "일정 가져오기",
+    "exportDialogTitle": "일정 내보내기"
   },
   "reminder": {
     "bodyAllDay": "{minutes}분 전 · 종일 일정",

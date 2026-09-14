@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { t } from '../i18n';
 import { scheduleMapper } from '../mapper/schedule-mapper';
 import { saveJsonFileDialog } from '../window/json-file-dialog';
 import type { ExportShapeV1 } from './export.type';
@@ -11,7 +12,7 @@ export async function exportSchedulesToFile(period?: {
   end: string;
 }): Promise<{ filePath: string; count: number } | null> {
   const filePath = await saveJsonFileDialog({
-    title: 'Export schedules',
+    title: t('importExport.exportDialogTitle'),
     defaultFileName: 'schedules.json',
   });
 
