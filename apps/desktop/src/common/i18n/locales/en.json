@@ -69,7 +69,20 @@
       "timeFormat12h": "12-hour (AM/PM)",
       "timeFormat24h": "24-hour",
       "showWeekNumbers": "Week numbers",
-      "showWeekNumbersHint": "Show week numbers on the calendar."
+      "showWeekNumbersHint": "Show week numbers on the calendar.",
+      "data": "Data",
+      "dataIntro": "Back up your schedules to a JSON file or bring them in from one.",
+      "dataHint": "These actions run immediately and are not affected by Save or Cancel.",
+      "export": "Export",
+      "exportHint": "Save all schedules to a JSON file.",
+      "exportDone": "Exported {count} schedules to {path}",
+      "import": "Import",
+      "importMode": "Import mode",
+      "importMerge": "Merge",
+      "importMergeHint": "Update schedules with the same ID, add the rest.",
+      "importDuplicate": "Add as copies",
+      "importDuplicateHint": "Add every schedule in the file as a new one.",
+      "importDone": "Imported: {created} added, {updated} updated"
     },
     "notifications": {
       "intro": "Schedule notification settings.",
@@ -102,6 +115,8 @@
       "installLocal": "Failed to install local extension: {error}",
       "toggle": "Failed to toggle extension: {error}",
       "uninstall": "Failed to uninstall extension: {error}",
+      "export": "Failed to export schedules: {error}",
+      "import": "Failed to import schedules: {error}",
       "save": "Failed to save settings: {error}"
     }
   },
@@ -280,6 +295,10 @@
   },
   "notification": {
     "fallbackTitle": "Notification"
+  },
+  "importExport": {
+    "importDialogTitle": "Import schedules",
+    "exportDialogTitle": "Export schedules"
   },
   "reminder": {
     "bodyAllDay": "{minutes} minutes before · All-day",
