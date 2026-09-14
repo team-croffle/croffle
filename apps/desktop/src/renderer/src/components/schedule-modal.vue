@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import {
     type Schedule,
+    type Tag,
     RECURRENCE_PRESET_OPTIONS,
     WEEKDAY_OPTIONS,
     buildRRule,
@@ -15,7 +16,7 @@
   import { CalendarDate, getLocalTimeZone } from '@internationalized/date';
   import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
-  import { computed, reactive, ref, shallowRef, toRaw, watch } from 'vue';
+  import { computed, nextTick, reactive, ref, shallowRef, toRaw, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { toast } from 'vue-sonner';
 
@@ -50,10 +51,18 @@
     SelectValue,
   } from '@/components/ui/select';
   import { Switch } from '@/components/ui/switch';
+  import {
+    TagsInput,
+    TagsInputInput,
+    TagsInputItem,
+    TagsInputItemDelete,
+    TagsInputItemText,
+  } from '@/components/ui/tags-input';
   import { Textarea } from '@/components/ui/textarea';
   import { cn } from '@/lib/utils';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
+  import { TAG_NAME_MAX_LENGTH, useTagStore } from '@/stores/tag-store';
   import { useUiStore } from '@/stores/ui-store';
   import { describeRecurrence } from '@/utils/recurrence-summary';
 
@@ -62,6 +71,7 @@
   const uiStore = useUiStore();
   const scheduleStore = useScheduleStore();
   const appSettingsStore = useAppSettingsStore();
+  const tagStore = useTagStore();
   const { t, locale } = useI18n();
   const { isScheduleModalOpen, scheduleModalMode, selectedScheduleId } = storeToRefs(uiStore);
 
@@ -153,6 +163,7 @@
     isAllDay: false,
     colorLabel: '#DCA780',
     reminderMinutes: null as number | null,
+    tags: [] as Tag[],
   });
 
   const recurrence = reactive<RecurrenceFormState>(createDefaultRecurrenceFormState());
@@ -204,6 +215,7 @@
     form.isAllDay = false;
     form.colorLabel = '#DCA780';
     form.reminderMinutes = null;
+    form.tags = [];
     startDate.value = undefined;
     endDate.value = undefined;
     startTime.value = DEFAULT_START_TIME;
@@ -221,6 +233,7 @@
     form.colorLabel = cloned.colorLabel ?? '#DCA780';
     form.priority = cloned.priority ?? 'medium';
     form.reminderMinutes = cloned.reminderMinutes ?? null;
+    form.tags = cloned.tags ?? [];
     startDate.value = cloned.startDate ? toCalendarDate(cloned.startDate) : undefined;
     endDate.value = cloned.endDate ? toCalendarDate(cloned.endDate) : startDate.value;
     startTime.value = cloned.startDate ? formatTimeFromDate(cloned.startDate) : DEFAULT_START_TIME;
@@ -238,6 +251,8 @@
       if (!open) {
         return;
       }
+
+      void tagStore.loadTags();
 
       if (mode === 'add') {
         resetForm();
@@ -341,7 +356,8 @@
       colorLabel: form.colorLabel || '#DCA780',
       priority: form.priority,
       reminderMinutes: form.reminderMinutes,
-      tags: [],
+      // Pinia Proxy를 IPC(structuredClone)에 넘기지 않도록 plain 객체로
+      tags: form.tags.map((tag) => ({ ...toRaw(tag) })),
     };
 
     try {
@@ -466,6 +482,87 @@
     }
     const minutes = Number(value);
     form.reminderMinutes = Number.isInteger(minutes) && minutes >= 0 ? minutes : null;
+  };
+
+  // --- Tags ---------------------------------------------------------------------
+  // TagsInput(reka-ui)은 string[]만 다루므로 modelValue는 이름 배열, 실제 상태는 form.tags(Tag[]).
+  // 추가/삭제는 addTag/removeTag 이벤트로 받아 form.tags를 갱신하고, 실패하면 key를 올려 되돌린다.
+  const tagNames = computed(() => form.tags.map((tag) => tag.name));
+  const tagQuery = ref('');
+  const tagsInputKey = ref(0);
+  const isAddingTag = ref(false);
+
+  const tagSuggestions = computed(() => {
+    const query = tagQuery.value.trim().toLowerCase();
+    if (!query) {
+      return [];
+    }
+    const selected = new Set(form.tags.map((tag) => tag.id));
+    return tagStore.tags
+      .filter((tag) => !selected.has(tag.id) && tag.name.toLowerCase().includes(query))
+      .slice(0, 8);
+  });
+
+  const hasExactTagMatch = computed(() => {
+    const query = tagQuery.value.trim().toLowerCase();
+    return (
+      !!query &&
+      (form.tags.some((tag) => tag.name.toLowerCase() === query) ||
+        tagStore.tags.some((tag) => tag.name.toLowerCase() === query))
+    );
+  });
+
+  /** TagsInput 내부 상태를 form.tags 기준으로 다시 맞춘다 (실패·거부 시). */
+  const resyncTagsInput = async () => {
+    await nextTick();
+    tagsInputKey.value += 1;
+  };
+
+  const addTagByName = async (rawName: string) => {
+    const name = rawName.trim();
+    tagQuery.value = '';
+    if (!name) {
+      await resyncTagsInput();
+      return;
+    }
+    if (name.length > TAG_NAME_MAX_LENGTH) {
+      toast.error(t('schedule.tagTooLong', { max: TAG_NAME_MAX_LENGTH }));
+      await resyncTagsInput();
+      return;
+    }
+    if (form.tags.some((tag) => tag.name.toLowerCase() === name.toLowerCase())) {
+      await resyncTagsInput();
+      return;
+    }
+    isAddingTag.value = true;
+    try {
+      const tag = await tagStore.ensureTag(name);
+      if (!form.tags.some((item) => item.id === tag.id)) {
+        form.tags = [...form.tags, tag];
+      }
+    } catch (error) {
+      toast.error(t('schedule.tagCreateFailed', { error: String(error) }));
+      await resyncTagsInput();
+    } finally {
+      isAddingTag.value = false;
+    }
+  };
+
+  const removeTagByName = (name: unknown) => {
+    if (typeof name !== 'string') {
+      return;
+    }
+    form.tags = form.tags.filter((tag) => tag.name !== name);
+  };
+
+  const onTagInput = (event: Event) => {
+    tagQuery.value = (event.target as HTMLInputElement | null)?.value ?? '';
+  };
+
+  const onTagAdded = (value: unknown) => {
+    if (typeof value === 'string') {
+      void addTagByName(value);
+    }
   };
 
   const RECURRENCE_PRESET_KEYS: Record<RecurrencePreset, string> = {
@@ -951,6 +1048,55 @@
                     />
                   </label>
                 </div>
+              </Field>
+
+              <Field>
+                <FieldLabel for="schedule-tags">{{ $t('schedule.tags') }}</FieldLabel>
+                <TagsInput
+                  :key="tagsInputKey"
+                  :model-value="tagNames"
+                  :disabled="isAddingTag"
+                  class="border-croffle-border focus-within:ring-croffle-primary/30 min-h-10 focus-within:ring-2"
+                  @add-tag="onTagAdded"
+                  @remove-tag="removeTagByName"
+                >
+                  <TagsInputItem
+                    v-for="tag in form.tags"
+                    :key="tag.id"
+                    :value="tag.name"
+                    class="border bg-transparent"
+                    :style="{ borderColor: tag.color }"
+                  >
+                    <TagsInputItemText />
+                    <TagsInputItemDelete
+                      :aria-label="$t('schedule.tagRemoveAria', { name: tag.name })"
+                    />
+                  </TagsInputItem>
+                  <TagsInputInput
+                    id="schedule-tags"
+                    :placeholder="$t('schedule.tagsPlaceholder')"
+                    :max-length="TAG_NAME_MAX_LENGTH"
+                    @input="onTagInput"
+                  />
+                </TagsInput>
+                <div v-if="tagQuery.trim()" class="flex flex-wrap items-center gap-1.5">
+                  <button
+                    v-for="tag in tagSuggestions"
+                    :key="tag.id"
+                    type="button"
+                    class="border-croffle-border hover:bg-muted/50 rounded-md border px-2 py-0.5 text-xs"
+                    :style="{ borderColor: tag.color }"
+                    @click="addTagByName(tag.name)"
+                  >
+                    {{ tag.name }}
+                  </button>
+                  <span v-if="!hasExactTagMatch" class="text-muted-foreground text-xs">
+                    {{ $t('schedule.tagCreateHint', { name: tagQuery.trim() }) }}
+                  </span>
+                </div>
+                <FieldDescription>
+                  {{ $t('schedule.tagsHint') }}
+                </FieldDescription>
               </Field>
 
               <Field>
