@@ -26,6 +26,9 @@ import type { ScheduleEntityInput } from '../mapper/schedule-mapper';
 import { colorValidation } from '../utils/color-validator';
 import { stringValidation } from '../utils/string-validator';
 
+/** 0 = no reminder, null = app default. Upper bound: 7 days. */
+const MAX_REMINDER_MINUTES = 7 * 24 * 60;
+
 function mapScheduleWithTags(
   row: ScheduleRow & {
     scheduleTags: { tag: ScheduleWithTags['tags'][number] }[];
@@ -64,6 +67,13 @@ export function validateScheduleData(schedule: ScheduleEntityInput) {
   if (schedule.recurrenceRule !== undefined && schedule.recurrenceRule !== null) {
     if (!isValidRecurrenceRule(schedule.recurrenceRule)) {
       throw new Error('Invalid recurrence rule');
+    }
+  }
+
+  if (schedule.reminderMinutes !== undefined && schedule.reminderMinutes !== null) {
+    const minutes = schedule.reminderMinutes;
+    if (!Number.isInteger(minutes) || minutes < 0 || minutes > MAX_REMINDER_MINUTES) {
+      throw new Error(`Reminder minutes must be an integer between 0 and ${MAX_REMINDER_MINUTES}`);
     }
   }
 }

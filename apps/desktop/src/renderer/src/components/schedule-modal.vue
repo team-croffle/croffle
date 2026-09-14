@@ -52,6 +52,7 @@
   import { Switch } from '@/components/ui/switch';
   import { Textarea } from '@/components/ui/textarea';
   import { cn } from '@/lib/utils';
+  import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
   import { describeRecurrence } from '@/utils/recurrence-summary';
@@ -60,11 +61,17 @@
 
   const uiStore = useUiStore();
   const scheduleStore = useScheduleStore();
+  const appSettingsStore = useAppSettingsStore();
   const { t, locale } = useI18n();
   const { isScheduleModalOpen, scheduleModalMode, selectedScheduleId } = storeToRefs(uiStore);
 
   const DEFAULT_START_TIME = '09:00';
   const DEFAULT_END_TIME = '10:00';
+
+  /** 일정별 알림 선택지(분). 0 = 알림 없음. null(앱 기본값)은 Select 값 'default'로 표현한다. */
+  const REMINDER_OPTIONS = [0, 5, 10, 15, 30, 60, 120, 1440];
+  const REMINDER_DEFAULT_VALUE = 'default';
+  const FALLBACK_DEFAULT_REMINDER_MINUTES = 10;
 
   const COLOR_PRESETS = [
     '#DCA780',
@@ -145,6 +152,7 @@
     priority: 'medium' as 'low' | 'medium' | 'high',
     isAllDay: false,
     colorLabel: '#DCA780',
+    reminderMinutes: null as number | null,
   });
 
   const recurrence = reactive<RecurrenceFormState>(createDefaultRecurrenceFormState());
@@ -195,6 +203,7 @@
     form.priority = 'medium';
     form.isAllDay = false;
     form.colorLabel = '#DCA780';
+    form.reminderMinutes = null;
     startDate.value = undefined;
     endDate.value = undefined;
     startTime.value = DEFAULT_START_TIME;
@@ -211,6 +220,7 @@
     form.isAllDay = cloned.isAllDay ?? false;
     form.colorLabel = cloned.colorLabel ?? '#DCA780';
     form.priority = cloned.priority ?? 'medium';
+    form.reminderMinutes = cloned.reminderMinutes ?? null;
     startDate.value = cloned.startDate ? toCalendarDate(cloned.startDate) : undefined;
     endDate.value = cloned.endDate ? toCalendarDate(cloned.endDate) : startDate.value;
     startTime.value = cloned.startDate ? formatTimeFromDate(cloned.startDate) : DEFAULT_START_TIME;
@@ -330,6 +340,7 @@
       recurrenceRule,
       colorLabel: form.colorLabel || '#DCA780',
       priority: form.priority,
+      reminderMinutes: form.reminderMinutes,
       tags: [],
     };
 
@@ -412,6 +423,51 @@
     recurrence.byWeekday = [...recurrence.byWeekday, day];
   };
 
+  // --- Reminder -----------------------------------------------------------------
+  const appDefaultReminderMinutes = computed(
+    () =>
+      appSettingsStore.settings?.notifications.defaultReminderMinutes ??
+      FALLBACK_DEFAULT_REMINDER_MINUTES,
+  );
+
+  /** null → 'default', 0 → '0', N → 'N' (Select는 문자열만 받는다) */
+  const reminderSelectValue = computed(() =>
+    form.reminderMinutes === null ? REMINDER_DEFAULT_VALUE : String(form.reminderMinutes),
+  );
+
+  const describeReminderMinutes = (minutes: number) => {
+    if (minutes === 0) {
+      return t('schedule.reminderNone');
+    }
+    if (minutes === 1440) {
+      return t('schedule.reminderDayBefore');
+    }
+    return t('schedule.reminderMinutesBefore', { minutes });
+  };
+
+  const reminderOptions = computed(() => [
+    {
+      value: REMINDER_DEFAULT_VALUE,
+      label: t('schedule.reminderDefault', { minutes: appDefaultReminderMinutes.value }),
+    },
+    ...REMINDER_OPTIONS.map((minutes) => ({
+      value: String(minutes),
+      label: describeReminderMinutes(minutes),
+    })),
+  ]);
+
+  const onReminderChange = (value: unknown) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    if (value === REMINDER_DEFAULT_VALUE) {
+      form.reminderMinutes = null;
+      return;
+    }
+    const minutes = Number(value);
+    form.reminderMinutes = Number.isInteger(minutes) && minutes >= 0 ? minutes : null;
+  };
+
   const RECURRENCE_PRESET_KEYS: Record<RecurrencePreset, string> = {
     none: 'recurrence.none',
     daily: 'recurrence.daily',
@@ -468,6 +524,14 @@
       locale.value,
       new Date(schedule.startDate),
     );
+  });
+
+  const viewReminderLabel = computed(() => {
+    const minutes = viewedSchedule.value?.reminderMinutes ?? null;
+    if (minutes === null) {
+      return t('schedule.reminderDefault', { minutes: appDefaultReminderMinutes.value });
+    }
+    return describeReminderMinutes(minutes);
   });
 
   const viewPriorityLabel = computed(() => {
@@ -603,6 +667,14 @@
                 <dd>
                   <Badge variant="secondary" class="rounded-md">{{ viewPriorityLabel }}</Badge>
                 </dd>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <Icon icon="lucide:bell" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
+              <div class="min-w-0">
+                <dt class="sr-only">{{ $t('schedule.reminder') }}</dt>
+                <dd class="text-foreground">{{ viewReminderLabel }}</dd>
               </div>
             </div>
 
@@ -879,6 +951,27 @@
                     />
                   </label>
                 </div>
+              </Field>
+
+              <Field>
+                <FieldLabel for="schedule-reminder">{{ $t('schedule.reminder') }}</FieldLabel>
+                <Select :model-value="reminderSelectValue" @update:model-value="onReminderChange">
+                  <SelectTrigger id="schedule-reminder" class="border-croffle-border h-10 w-full">
+                    <SelectValue :placeholder="$t('schedule.reminderPlaceholder')" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="option in reminderOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  {{ $t('schedule.reminderHint') }}
+                </FieldDescription>
               </Field>
 
               <Field>
