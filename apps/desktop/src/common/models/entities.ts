@@ -20,10 +20,17 @@ export type ScheduleEntity = {
   recurrenceRule: string | null;
   colorLabel: string;
   priority: 'low' | 'medium' | 'high';
-  /** null = use app-wide notifications.defaultReminderMinutes */
-  reminderMinutes: number | null;
+  /** true = follow notifications.defaultReminderMinutes; false = use schedule_reminder rows */
+  useDefaultReminder: boolean;
   createdAt: Date;
   updatedAt: Date;
+};
+
+/** One reminder offset of a schedule, in minutes before the occurrence starts. */
+export type ScheduleReminderEntity = {
+  id: string;
+  scheduleId: string;
+  minutes: number;
 };
 
 /** Persisted extension registry row (manifest body stays on disk). */

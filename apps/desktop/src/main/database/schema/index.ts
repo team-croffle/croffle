@@ -15,4 +15,10 @@ export {
   type NewSchedule,
   type ScheduleWithTags,
 } from './schedule';
+export {
+  scheduleReminders,
+  scheduleRemindersRelations,
+  type ScheduleReminderRow,
+  type NewScheduleReminder,
+} from './schedule-reminder';
 export { tags, type TagRow, type NewTag } from './tag';

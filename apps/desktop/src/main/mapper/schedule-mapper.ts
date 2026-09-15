@@ -2,6 +2,11 @@ import type { Schedule, Tag } from '@croffledev/common';
 
 import type { ScheduleWithTags, TagRow } from '../database/schema';
 
+/** Ascending, de-duplicated. Range checks live in validateScheduleData. */
+function normalizeReminders(minutes: number[]): number[] {
+  return [...new Set(minutes)].toSorted((a, b) => a - b);
+}
+
 /** Drizzle write input (dates already as Date). */
 export type ScheduleEntityInput = {
   id?: string;
@@ -14,7 +19,8 @@ export type ScheduleEntityInput = {
   recurrenceRule?: string | null;
   colorLabel?: string;
   priority?: 'low' | 'medium' | 'high';
-  reminderMinutes?: number | null;
+  useDefaultReminder?: boolean;
+  reminders?: number[];
   createdAt?: Date;
   updatedAt?: Date;
   tags?: TagRow[];
@@ -42,6 +48,8 @@ function toDate(value: Date): Date {
 
 export const scheduleMapper = {
   toInterface(entity: ScheduleWithTags): Schedule {
+    const reminders = entity.useDefaultReminder ? null : normalizeReminders(entity.reminders);
+
     return {
       id: entity.id,
       title: entity.title,
@@ -53,7 +61,9 @@ export const scheduleMapper = {
       recurrenceRule: entity.recurrenceRule ?? undefined,
       colorLabel: entity.colorLabel,
       priority: entity.priority,
-      reminderMinutes: entity.reminderMinutes ?? null,
+      reminders,
+      // Deprecated mirror for extensions written against 1.2.0 (removed in 1.3).
+      reminderMinutes: reminders === null ? null : (reminders[0] ?? 0),
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       tags: entity.tags.map(toTagDto),
@@ -93,8 +103,23 @@ export const scheduleMapper = {
     if (data.priority !== undefined) {
       entity.priority = data.priority;
     }
-    if (data.reminderMinutes !== undefined) {
-      entity.reminderMinutes = data.reminderMinutes;
+    // `reminders` wins; `reminderMinutes` is the deprecated single-value path.
+    if (data.reminders !== undefined) {
+      if (data.reminders === null) {
+        entity.useDefaultReminder = true;
+        entity.reminders = [];
+      } else {
+        entity.useDefaultReminder = false;
+        entity.reminders = normalizeReminders(data.reminders);
+      }
+    } else if (data.reminderMinutes !== undefined) {
+      if (data.reminderMinutes === null) {
+        entity.useDefaultReminder = true;
+        entity.reminders = [];
+      } else {
+        entity.useDefaultReminder = false;
+        entity.reminders = data.reminderMinutes > 0 ? [data.reminderMinutes] : [];
+      }
     }
     if (data.createdAt !== undefined) {
       entity.createdAt = toDate(data.createdAt);
