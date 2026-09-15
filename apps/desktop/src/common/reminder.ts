@@ -10,7 +10,10 @@ export type ReminderScheduleInput = {
   endDate: Date;
   isAllDay: boolean;
   recurrenceRule?: string | null;
-  reminderMinutes?: number | null;
+  /** true (or missing) = follow the app default; false = use `reminders`. */
+  useDefaultReminder?: boolean;
+  /** Offsets in minutes before the occurrence starts. */
+  reminders?: number[];
 };
 
 export type ReminderCandidate = {
@@ -22,15 +25,15 @@ export type ReminderCandidate = {
   isAllDay: boolean;
 };
 
-/** Prefer per-schedule minutes when set; otherwise app default. */
+/** Prefer per-schedule offsets when set; otherwise app default. 0 means "no reminder". */
 export function resolveReminderMinutes(
-  schedule: Pick<ReminderScheduleInput, 'reminderMinutes'>,
+  schedule: Pick<ReminderScheduleInput, 'useDefaultReminder' | 'reminders'>,
   defaultMinutes: number,
 ): number {
-  if (schedule.reminderMinutes === null || schedule.reminderMinutes === undefined) {
+  if (schedule.useDefaultReminder !== false) {
     return defaultMinutes;
   }
-  return schedule.reminderMinutes;
+  return schedule.reminders?.[0] ?? 0;
 }
 
 /** Local midnight of the occurrence's calendar day. */

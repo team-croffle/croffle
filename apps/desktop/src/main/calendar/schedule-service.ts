@@ -16,6 +16,7 @@ import {
 
 import { databaseManager } from '../database';
 import {
+  scheduleReminders,
   schedules,
   scheduleTags,
   type NewSchedule,
@@ -26,18 +27,22 @@ import type { ScheduleEntityInput } from '../mapper/schedule-mapper';
 import { colorValidation } from '../utils/color-validator';
 import { stringValidation } from '../utils/string-validator';
 
-/** 0 = no reminder, null = app default. Upper bound: 7 days. */
+/** Upper bound for a single reminder offset: 7 days. */
 const MAX_REMINDER_MINUTES = 7 * 24 * 60;
+/** Reminders per schedule. Each one multiplies the notification queue. */
+const MAX_REMINDERS_PER_SCHEDULE = 5;
 
 function mapScheduleWithTags(
   row: ScheduleRow & {
     scheduleTags: { tag: ScheduleWithTags['tags'][number] }[];
+    scheduleReminders: { minutes: number }[];
   },
 ): ScheduleWithTags {
-  const { scheduleTags: links, ...schedule } = row;
+  const { scheduleTags: links, scheduleReminders: reminderRows, ...schedule } = row;
   return {
     ...schedule,
     tags: links.map((link) => link.tag),
+    reminders: reminderRows.map((reminder) => reminder.minutes).toSorted((a, b) => a - b),
   };
 }
 
@@ -70,10 +75,20 @@ export function validateScheduleData(schedule: ScheduleEntityInput) {
     }
   }
 
-  if (schedule.reminderMinutes !== undefined && schedule.reminderMinutes !== null) {
-    const minutes = schedule.reminderMinutes;
-    if (!Number.isInteger(minutes) || minutes < 0 || minutes > MAX_REMINDER_MINUTES) {
-      throw new Error(`Reminder minutes must be an integer between 0 and ${MAX_REMINDER_MINUTES}`);
+  if (schedule.reminders !== undefined) {
+    const reminders = schedule.reminders;
+    if (reminders.length > MAX_REMINDERS_PER_SCHEDULE) {
+      throw new Error(`A schedule can have at most ${MAX_REMINDERS_PER_SCHEDULE} reminders`);
+    }
+    if (new Set(reminders).size !== reminders.length) {
+      throw new Error('Reminder offsets must be unique');
+    }
+    for (const minutes of reminders) {
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > MAX_REMINDER_MINUTES) {
+        throw new Error(
+          `Reminder minutes must be an integer between 1 and ${MAX_REMINDER_MINUTES}`,
+        );
+      }
     }
   }
 }
@@ -98,6 +113,27 @@ async function syncScheduleTags(scheduleId: string, tags: { id: string }[] | und
   );
 }
 
+async function syncScheduleReminders(scheduleId: string, reminders: number[] | undefined) {
+  if (reminders === undefined) {
+    return;
+  }
+
+  const db = databaseManager.getDb();
+  await db.delete(scheduleReminders).where(eq(scheduleReminders.scheduleId, scheduleId));
+
+  if (reminders.length === 0) {
+    return;
+  }
+
+  await db.insert(scheduleReminders).values(
+    reminders.map((minutes) => ({
+      id: `${scheduleId}-${minutes}`,
+      scheduleId,
+      minutes,
+    })),
+  );
+}
+
 async function findScheduleWithTags(id: string): Promise<ScheduleWithTags | null> {
   const db = databaseManager.getDb();
   const row = await db.query.schedules.findFirst({
@@ -106,6 +142,7 @@ async function findScheduleWithTags(id: string): Promise<ScheduleWithTags | null
       scheduleTags: {
         with: { tag: true },
       },
+      scheduleReminders: true,
     },
   });
 
@@ -146,6 +183,7 @@ export async function getSchedules(period: {
       scheduleTags: {
         with: { tag: true },
       },
+      scheduleReminders: true,
     },
   });
 
@@ -175,7 +213,7 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
 
   const now = new Date();
   const id = data.id ?? randomUUID();
-  const { tags: inputTags, ...scheduleFields } = data;
+  const { tags: inputTags, reminders: inputReminders, ...scheduleFields } = data;
   const startDate = data.startDate;
   const endDate = data.endDate;
 
@@ -190,7 +228,7 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
     recurrenceRule: scheduleFields.recurrenceRule ?? null,
     colorLabel: scheduleFields.colorLabel ?? '#E1E1E1',
     priority: scheduleFields.priority ?? 'medium',
-    reminderMinutes: scheduleFields.reminderMinutes ?? null,
+    useDefaultReminder: scheduleFields.useDefaultReminder ?? true,
     createdAt: scheduleFields.createdAt ?? now,
     updatedAt: scheduleFields.updatedAt ?? now,
   };
@@ -198,6 +236,7 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
   const db = databaseManager.getDb();
   await db.insert(schedules).values(values);
   await syncScheduleTags(id, inputTags);
+  await syncScheduleReminders(id, inputReminders);
 
   const created = await findScheduleWithTags(id);
   if (!created) {
@@ -215,7 +254,7 @@ export async function updateSchedule(
     throw new Error('Schedule not found');
   }
 
-  const { tags: inputTags, ...scheduleFields } = data;
+  const { tags: inputTags, reminders: inputReminders, ...scheduleFields } = data;
   const merged: ScheduleEntityInput = {
     id: existing.id,
     title: scheduleFields.title ?? existing.title,
@@ -231,13 +270,11 @@ export async function updateSchedule(
         : existing.recurrenceRule,
     colorLabel: scheduleFields.colorLabel ?? existing.colorLabel,
     priority: scheduleFields.priority ?? existing.priority,
-    reminderMinutes:
-      scheduleFields.reminderMinutes !== undefined
-        ? scheduleFields.reminderMinutes
-        : existing.reminderMinutes,
+    useDefaultReminder: scheduleFields.useDefaultReminder ?? existing.useDefaultReminder,
     createdAt: scheduleFields.createdAt ?? existing.createdAt,
     updatedAt: scheduleFields.updatedAt ?? existing.updatedAt,
     tags: inputTags ?? existing.tags,
+    reminders: inputReminders ?? existing.reminders,
   };
 
   validateScheduleData(merged);
@@ -255,12 +292,13 @@ export async function updateSchedule(
       recurrenceRule: merged.recurrenceRule ?? null,
       colorLabel: merged.colorLabel,
       priority: merged.priority ?? 'medium',
-      reminderMinutes: merged.reminderMinutes ?? null,
+      useDefaultReminder: merged.useDefaultReminder ?? true,
       updatedAt: new Date(),
     })
     .where(eq(schedules.id, id));
 
   await syncScheduleTags(id, inputTags);
+  await syncScheduleReminders(id, inputReminders);
 
   const updated = await findScheduleWithTags(id);
   if (!updated) {

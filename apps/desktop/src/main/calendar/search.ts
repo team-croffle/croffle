@@ -7,10 +7,11 @@ import { schedules, scheduleTags, type ScheduleWithTags } from '../database/sche
 function mapScheduleWithTags(
   row: Awaited<ReturnType<typeof querySchedules>>[number],
 ): ScheduleWithTags {
-  const { scheduleTags: links, ...schedule } = row;
+  const { scheduleTags: links, scheduleReminders: reminderRows, ...schedule } = row;
   return {
     ...schedule,
     tags: links.map((link) => link.tag),
+    reminders: reminderRows.map((reminder) => reminder.minutes).toSorted((a, b) => a - b),
   };
 }
 
@@ -23,6 +24,7 @@ async function querySchedules(where?: SQL) {
       scheduleTags: {
         with: { tag: true },
       },
+      scheduleReminders: true,
     },
   });
 }

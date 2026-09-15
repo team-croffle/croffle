@@ -12,7 +12,16 @@ export type Schedule = {
   colorLabel: string;
   tags: Tag[];
   priority: 'low' | 'medium' | 'high';
-  /** null/undefined = use app-wide notifications.defaultReminderMinutes */
+  /**
+   * Reminder offsets in minutes before the schedule starts, ascending.
+   * `null` = follow the app-wide notifications.defaultReminderMinutes.
+   * `[]` = no reminder at all.
+   */
+  reminders: number[] | null;
+  /**
+   * @deprecated Mirror of the first entry in `reminders`, kept for extensions
+   * written against 1.2.0. Removed in 1.3 — read `reminders` instead.
+   */
   reminderMinutes?: number | null;
   createdAt: Date;
   updatedAt: Date;

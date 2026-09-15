@@ -19,6 +19,7 @@ export type {
 export type {
   TagEntity,
   ScheduleEntity,
+  ScheduleReminderEntity,
   ExtensionInfoEntity,
   ExtensionStorageEntity,
 } from './entities';

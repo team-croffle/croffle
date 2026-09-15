@@ -2,6 +2,7 @@ import { assertSchemaMatch, type AssertSchema, type ScheduleEntity } from '@crof
 import { relations } from 'drizzle-orm';
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+import { scheduleReminders, type ScheduleReminderRow } from './schedule-reminder';
 import { tags, type TagRow } from './tag';
 
 export const schedules = sqliteTable('schedule', {
@@ -17,8 +18,8 @@ export const schedules = sqliteTable('schedule', {
   priority: text('priority', { enum: ['low', 'medium', 'high'] })
     .notNull()
     .default('medium'),
-  /** null = use app-wide notifications.defaultReminderMinutes */
-  reminderMinutes: integer('reminderMinutes'),
+  /** true = follow notifications.defaultReminderMinutes; false = use schedule_reminder rows */
+  useDefaultReminder: integer('useDefaultReminder', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
 });
@@ -38,6 +39,7 @@ export const scheduleTags = sqliteTable(
 
 export const schedulesRelations = relations(schedules, ({ many }) => ({
   scheduleTags: many(scheduleTags),
+  scheduleReminders: many(scheduleReminders),
 }));
 
 export const scheduleTagsRelations = relations(scheduleTags, ({ one }) => ({
@@ -57,6 +59,9 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 
 export type ScheduleRow = typeof schedules.$inferSelect;
 export type NewSchedule = typeof schedules.$inferInsert;
-export type ScheduleWithTags = ScheduleRow & { tags: TagRow[] };
+/** A schedule row joined with its tags and its reminder offsets (minutes, ascending). */
+export type ScheduleWithTags = ScheduleRow & { tags: TagRow[]; reminders: number[] };
+
+export type { ScheduleReminderRow };
 
 assertSchemaMatch<AssertSchema<ScheduleRow, ScheduleEntity>>();
