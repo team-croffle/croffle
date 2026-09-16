@@ -2,6 +2,7 @@
   import {
     type Schedule,
     type Tag,
+    MAX_REMINDER_MINUTES,
     RECURRENCE_PRESET_OPTIONS,
     WEEKDAY_OPTIONS,
     buildRRule,
@@ -78,9 +79,9 @@
   const DEFAULT_START_TIME = '09:00';
   const DEFAULT_END_TIME = '10:00';
 
-  /** 일정별 알림 선택지(분). 0 = 알림 없음. null(앱 기본값)은 Select 값 'default'로 표현한다. */
-  const REMINDER_OPTIONS = [0, 5, 10, 15, 30, 60, 120, 1440];
-  const REMINDER_DEFAULT_VALUE = 'default';
+  /** 알림 프리셋(분). 0(알림 없음)은 목록에서 뺀다 — 칩을 전부 지우면 "알림 없음"이다. */
+  const REMINDER_PRESETS = [5, 10, 15, 30, 60, 120, 1440];
+  const MAX_REMINDERS = 5;
   const FALLBACK_DEFAULT_REMINDER_MINUTES = 10;
 
   const COLOR_PRESETS = [
@@ -162,7 +163,8 @@
     priority: 'medium' as 'low' | 'medium' | 'high',
     isAllDay: false,
     colorLabel: '#DCA780',
-    reminderMinutes: null as number | null,
+    /** null = 앱 기본값, [] = 알림 없음, [N…] = N분 전 (오름차순) */
+    reminders: null as number[] | null,
     tags: [] as Tag[],
   });
 
@@ -214,7 +216,7 @@
     form.priority = 'medium';
     form.isAllDay = false;
     form.colorLabel = '#DCA780';
-    form.reminderMinutes = null;
+    form.reminders = null;
     form.tags = [];
     startDate.value = undefined;
     endDate.value = undefined;
@@ -232,7 +234,7 @@
     form.isAllDay = cloned.isAllDay ?? false;
     form.colorLabel = cloned.colorLabel ?? '#DCA780';
     form.priority = cloned.priority ?? 'medium';
-    form.reminderMinutes = cloned.reminderMinutes ?? null;
+    form.reminders = cloned.reminders ? [...cloned.reminders] : null;
     form.tags = cloned.tags ?? [];
     startDate.value = cloned.startDate ? toCalendarDate(cloned.startDate) : undefined;
     endDate.value = cloned.endDate ? toCalendarDate(cloned.endDate) : startDate.value;
@@ -355,7 +357,8 @@
       recurrenceRule,
       colorLabel: form.colorLabel || '#DCA780',
       priority: form.priority,
-      reminderMinutes: form.reminderMinutes,
+      // reminderMinutes(deprecated)는 보내지 않는다 — mapper가 reminders를 우선한다
+      reminders: form.reminders ? [...form.reminders] : null,
       // Pinia Proxy를 IPC(structuredClone)에 넘기지 않도록 plain 객체로
       tags: form.tags.map((tag) => ({ ...toRaw(tag) })),
     };
@@ -446,11 +449,6 @@
       FALLBACK_DEFAULT_REMINDER_MINUTES,
   );
 
-  /** null → 'default', 0 → '0', N → 'N' (Select는 문자열만 받는다) */
-  const reminderSelectValue = computed(() =>
-    form.reminderMinutes === null ? REMINDER_DEFAULT_VALUE : String(form.reminderMinutes),
-  );
-
   const describeReminderMinutes = (minutes: number) => {
     if (minutes === 0) {
       return t('schedule.reminderNone');
@@ -461,27 +459,80 @@
     return t('schedule.reminderMinutesBefore', { minutes });
   };
 
-  const reminderOptions = computed(() => [
-    {
-      value: REMINDER_DEFAULT_VALUE,
-      label: t('schedule.reminderDefault', { minutes: appDefaultReminderMinutes.value }),
+  /**
+   * "앱 기본값 사용" 토글. 끌 때는 빈 목록이 아니라 앱 기본값 분을 채워서 시작한다 —
+   * 빈 목록은 "알림 없음"이라 사용자의 의도를 알 수 없기 때문.
+   */
+  const useAppDefaultReminder = computed({
+    get: () => form.reminders === null,
+    set: (value: boolean) => {
+      form.reminders = value ? null : [appDefaultReminderMinutes.value];
     },
-    ...REMINDER_OPTIONS.map((minutes) => ({
+  });
+
+  const onUseDefaultReminderChange = (value: unknown) => {
+    useAppDefaultReminder.value = Boolean(value);
+  };
+
+  const reminderList = computed(() => form.reminders ?? []);
+  const reminderListFull = computed(() => reminderList.value.length >= MAX_REMINDERS);
+  const reminderEditingDisabled = computed(
+    () => useAppDefaultReminder.value || reminderListFull.value,
+  );
+
+  const reminderPresetOptions = computed(() =>
+    REMINDER_PRESETS.filter((minutes) => !reminderList.value.includes(minutes)).map((minutes) => ({
       value: String(minutes),
       label: describeReminderMinutes(minutes),
     })),
-  ]);
+  );
 
-  const onReminderChange = (value: unknown) => {
-    if (typeof value !== 'string') {
+  const isValidReminderMinutes = (minutes: number) =>
+    Number.isInteger(minutes) && minutes >= 1 && minutes <= MAX_REMINDER_MINUTES;
+
+  const addReminder = (minutes: number) => {
+    if (!isValidReminderMinutes(minutes)) {
+      toast.error(t('schedule.reminderInvalid', { max: MAX_REMINDER_MINUTES }));
+      return false;
+    }
+    const current = reminderList.value;
+    if (current.includes(minutes)) {
+      return true;
+    }
+    if (current.length >= MAX_REMINDERS) {
+      toast.error(t('schedule.reminderLimit', { max: MAX_REMINDERS }));
+      return false;
+    }
+    form.reminders = [...current, minutes].toSorted((a, b) => a - b);
+    return true;
+  };
+
+  const removeReminder = (minutes: number) => {
+    form.reminders = reminderList.value.filter((m) => m !== minutes);
+  };
+
+  /** 프리셋 Select. 선택 즉시 추가하고 key를 올려 비운다 — 같은 항목을 다시 고를 수 있게. */
+  const reminderPresetKey = ref(0);
+  const onReminderPresetChange = (value: unknown) => {
+    if (typeof value !== 'string' || !value) {
       return;
     }
-    if (value === REMINDER_DEFAULT_VALUE) {
-      form.reminderMinutes = null;
+    addReminder(Number(value));
+    reminderPresetKey.value += 1;
+  };
+
+  /** 분 직접 입력. type="number" Input은 빈 값에서 ''를 주므로 추가 시점에 정수 검사한다. */
+  const customReminderInput = ref<number | string>('');
+  const addCustomReminder = () => {
+    const raw = String(customReminderInput.value).trim();
+    const minutes = Number(raw);
+    if (raw === '' || !isValidReminderMinutes(minutes)) {
+      toast.error(t('schedule.reminderInvalid', { max: MAX_REMINDER_MINUTES }));
       return;
     }
-    const minutes = Number(value);
-    form.reminderMinutes = Number.isInteger(minutes) && minutes >= 0 ? minutes : null;
+    if (addReminder(minutes)) {
+      customReminderInput.value = '';
+    }
   };
 
   // --- Tags ---------------------------------------------------------------------
@@ -623,12 +674,15 @@
     );
   });
 
-  const viewReminderLabel = computed(() => {
-    const minutes = viewedSchedule.value?.reminderMinutes ?? null;
-    if (minutes === null) {
-      return t('schedule.reminderDefault', { minutes: appDefaultReminderMinutes.value });
+  const viewReminderLabels = computed(() => {
+    const reminders = viewedSchedule.value?.reminders ?? null;
+    if (reminders === null) {
+      return [t('schedule.reminderDefault', { minutes: appDefaultReminderMinutes.value })];
     }
-    return describeReminderMinutes(minutes);
+    if (reminders.length === 0) {
+      return [t('schedule.reminderNone')];
+    }
+    return reminders.map((minutes) => describeReminderMinutes(minutes));
   });
 
   const viewPriorityLabel = computed(() => {
@@ -771,7 +825,16 @@
               <Icon icon="lucide:bell" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
               <div class="min-w-0">
                 <dt class="sr-only">{{ $t('schedule.reminder') }}</dt>
-                <dd class="text-foreground">{{ viewReminderLabel }}</dd>
+                <dd class="flex flex-wrap gap-1.5">
+                  <Badge
+                    v-for="label in viewReminderLabels"
+                    :key="label"
+                    variant="secondary"
+                    class="rounded-md"
+                  >
+                    {{ label }}
+                  </Badge>
+                </dd>
               </div>
             </div>
 
@@ -1100,24 +1163,117 @@
               </Field>
 
               <Field>
-                <FieldLabel for="schedule-reminder">{{ $t('schedule.reminder') }}</FieldLabel>
-                <Select :model-value="reminderSelectValue" @update:model-value="onReminderChange">
-                  <SelectTrigger id="schedule-reminder" class="border-croffle-border h-10 w-full">
-                    <SelectValue :placeholder="$t('schedule.reminderPlaceholder')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="option in reminderOptions"
-                      :key="option.value"
-                      :value="option.value"
+                <FieldLabel>{{ $t('schedule.reminder') }}</FieldLabel>
+                <div
+                  class="border-croffle-border bg-muted/30 flex items-center justify-between rounded-xl border px-3.5 py-3"
+                >
+                  <div class="space-y-0.5">
+                    <FieldLabel for="schedule-reminder-default" class="text-sm font-medium">
+                      {{ $t('schedule.reminderUseDefault') }}
+                    </FieldLabel>
+                    <FieldDescription class="text-xs">
+                      {{
+                        $t('schedule.reminderUseDefaultHint', {
+                          minutes: appDefaultReminderMinutes,
+                        })
+                      }}
+                    </FieldDescription>
+                  </div>
+                  <Switch
+                    id="schedule-reminder-default"
+                    :checked="useAppDefaultReminder"
+                    :model-value="useAppDefaultReminder"
+                    @update:checked="onUseDefaultReminderChange"
+                    @update:model-value="onUseDefaultReminderChange"
+                  />
+                </div>
+
+                <div
+                  class="space-y-2"
+                  :class="{ 'pointer-events-none opacity-50': useAppDefaultReminder }"
+                >
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <Badge
+                      v-for="minutes in reminderList"
+                      :key="minutes"
+                      variant="secondary"
+                      class="gap-1 rounded-md pr-1"
                     >
-                      {{ option.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <FieldDescription>
-                  {{ $t('schedule.reminderHint') }}
-                </FieldDescription>
+                      {{ describeReminderMinutes(minutes) }}
+                      <button
+                        type="button"
+                        class="hover:bg-foreground/10 rounded-sm p-0.5"
+                        :aria-label="
+                          $t('schedule.reminderRemoveAria', {
+                            label: describeReminderMinutes(minutes),
+                          })
+                        "
+                        :disabled="useAppDefaultReminder"
+                        @click="removeReminder(minutes)"
+                      >
+                        <Icon icon="lucide:x" class="size-3" />
+                      </button>
+                    </Badge>
+                    <span v-if="reminderList.length === 0" class="text-muted-foreground text-xs">
+                      {{ $t('schedule.reminderEmpty') }}
+                    </span>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <Select
+                      :key="reminderPresetKey"
+                      model-value=""
+                      :disabled="reminderEditingDisabled"
+                      @update:model-value="onReminderPresetChange"
+                    >
+                      <SelectTrigger
+                        id="schedule-reminder-preset"
+                        class="border-croffle-border h-10 flex-1"
+                        :aria-label="$t('schedule.reminderAdd')"
+                      >
+                        <SelectValue :placeholder="$t('schedule.reminderAdd')" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          v-for="option in reminderPresetOptions"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="schedule-reminder-custom"
+                      v-model="customReminderInput"
+                      type="number"
+                      min="1"
+                      :max="MAX_REMINDER_MINUTES"
+                      step="1"
+                      inputmode="numeric"
+                      :placeholder="$t('schedule.reminderCustomPlaceholder')"
+                      :disabled="reminderEditingDisabled"
+                      class="border-croffle-border focus-visible:ring-croffle-primary/30 h-10 w-28"
+                      @keydown.enter.prevent="addCustomReminder"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      class="border-croffle-border h-10 px-3"
+                      :disabled="reminderEditingDisabled"
+                      :aria-label="$t('schedule.reminderAdd')"
+                      @click="addCustomReminder"
+                    >
+                      <Icon icon="lucide:plus" class="size-4" />
+                    </Button>
+                  </div>
+
+                  <FieldDescription class="text-xs">
+                    {{
+                      $t('schedule.reminderCount', { n: reminderList.length, max: MAX_REMINDERS })
+                    }}
+                  </FieldDescription>
+                </div>
               </Field>
 
               <Field>
