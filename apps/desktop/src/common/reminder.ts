@@ -25,15 +25,25 @@ export type ReminderCandidate = {
   isAllDay: boolean;
 };
 
-/** Prefer per-schedule offsets when set; otherwise app default. 0 means "no reminder". */
-export function resolveReminderMinutes(
+export const MAX_REMINDER_MINUTES = 10_080;
+
+/**
+ * Offsets (minutes before start) that should fire for a schedule.
+ * App default when `useDefaultReminder` is not false; otherwise the schedule's own list,
+ * filtered to integers in 1..MAX_REMINDER_MINUTES, de-duplicated and sorted ascending.
+ * An empty result means "no reminder".
+ */
+export function resolveReminderMinutesList(
   schedule: Pick<ReminderScheduleInput, 'useDefaultReminder' | 'reminders'>,
   defaultMinutes: number,
-): number {
+): number[] {
   if (schedule.useDefaultReminder !== false) {
-    return defaultMinutes;
+    return defaultMinutes > 0 ? [defaultMinutes] : [];
   }
-  return schedule.reminders?.[0] ?? 0;
+  const valid = (schedule.reminders ?? []).filter(
+    (m) => Number.isInteger(m) && m > 0 && m <= MAX_REMINDER_MINUTES,
+  );
+  return [...new Set(valid)].toSorted((a, b) => a - b);
 }
 
 /** Local midnight of the occurrence's calendar day. */
@@ -97,27 +107,31 @@ export function buildReminderCandidates(
   const candidates: ReminderCandidate[] = [];
 
   for (const schedule of schedules) {
-    const minutes = resolveReminderMinutes(schedule, defaultReminderMinutes);
-    if (minutes <= 0) {
+    const minutesList = resolveReminderMinutesList(schedule, defaultReminderMinutes);
+    if (minutesList.length === 0) {
       continue;
     }
 
-    const occurrenceFrom = new Date(now.getTime() - minutes * 60_000 - 60_000);
+    // Expand occurrences once, rewound by the largest offset so early remindAt still maps to an occurrence.
+    const maxMinutes = Math.max(...minutesList);
+    const occurrenceFrom = new Date(now.getTime() - maxMinutes * 60_000 - 60_000);
     const starts = listOccurrenceStarts(schedule, occurrenceFrom, horizonEnd);
 
     for (const occurrenceStart of starts) {
-      const remindAt = toRemindAt(occurrenceStart, minutes, schedule.isAllDay);
-      if (remindAt > horizonEnd) {
-        continue;
+      for (const minutes of minutesList) {
+        const remindAt = toRemindAt(occurrenceStart, minutes, schedule.isAllDay);
+        if (remindAt > horizonEnd) {
+          continue;
+        }
+        candidates.push({
+          scheduleId: schedule.id,
+          title: schedule.title,
+          occurrenceStart,
+          remindAt,
+          reminderMinutes: minutes,
+          isAllDay: schedule.isAllDay,
+        });
       }
-      candidates.push({
-        scheduleId: schedule.id,
-        title: schedule.title,
-        occurrenceStart,
-        remindAt,
-        reminderMinutes: minutes,
-        isAllDay: schedule.isAllDay,
-      });
     }
   }
 
@@ -125,7 +139,20 @@ export function buildReminderCandidates(
   return candidates;
 }
 
-export function reminderDedupKey(scheduleId: string, occurrenceStart: Date): string {
+/**
+ * Dedup key for one (schedule, occurrence, offset). The occurrence timestamp stays in the
+ * second segment because `pruneFired` parses it from there.
+ */
+export function reminderDedupKey(
+  scheduleId: string,
+  occurrenceStart: Date,
+  minutes: number,
+): string {
+  return `${scheduleId}|${occurrenceStart.getTime()}|${minutes}`;
+}
+
+/** Pre-1.2.1 key (no offset segment); still honoured so already-sent reminders don't repeat after update. */
+export function legacyReminderDedupKey(scheduleId: string, occurrenceStart: Date): string {
   return `${scheduleId}|${occurrenceStart.getTime()}`;
 }
 

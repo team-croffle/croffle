@@ -5,6 +5,7 @@ import {
   AppEventType,
   buildReminderCandidates,
   formatReminderBody,
+  legacyReminderDedupKey,
   reminderDedupKey,
   type ReminderCandidate,
 } from '@croffledev/common';
@@ -139,8 +140,8 @@ class ReminderScheduler {
     let dirty = false;
 
     for (const candidate of this.candidates) {
-      const key = reminderDedupKey(candidate.scheduleId, candidate.occurrenceStart);
-      if (this.fired.has(key)) {
+      const key = this.keyOf(candidate);
+      if (this.hasFired(candidate)) {
         continue;
       }
 
@@ -176,7 +177,7 @@ class ReminderScheduler {
       });
       logger.info(
         'ReminderScheduler',
-        `Fired reminder for ${candidate.scheduleId} @ ${candidate.occurrenceStart.toISOString()}`,
+        `Fired reminder for ${candidate.scheduleId} @ ${candidate.occurrenceStart.toISOString()} (${candidate.reminderMinutes}m before)`,
       );
     } catch (error) {
       logger.error('ReminderScheduler', 'Failed to show notification', error);
@@ -192,10 +193,7 @@ class ReminderScheduler {
     }
 
     const now = Date.now();
-    const next = this.candidates.find((c) => {
-      const key = reminderDedupKey(c.scheduleId, c.occurrenceStart);
-      return !this.fired.has(key) && c.remindAt.getTime() > now;
-    });
+    const next = this.candidates.find((c) => !this.hasFired(c) && c.remindAt.getTime() > now);
 
     if (!next) {
       return;
@@ -205,6 +203,22 @@ class ReminderScheduler {
     this.nextTimer = setTimeout(() => {
       void this.tick().then(() => this.armNextTimer());
     }, delay);
+  }
+
+  private keyOf(candidate: ReminderCandidate): string {
+    return reminderDedupKey(
+      candidate.scheduleId,
+      candidate.occurrenceStart,
+      candidate.reminderMinutes,
+    );
+  }
+
+  /** New key, or the pre-1.2.1 key persisted before offsets were part of the key. */
+  private hasFired(candidate: ReminderCandidate): boolean {
+    return (
+      this.fired.has(this.keyOf(candidate)) ||
+      this.fired.has(legacyReminderDedupKey(candidate.scheduleId, candidate.occurrenceStart))
+    );
   }
 
   private clearNextTimer(): void {
