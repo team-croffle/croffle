@@ -28,9 +28,10 @@ We provide a **powerful extension system** that lets you build your own producti
 
 ### Personalization
 
-- **Theme**: Light, dark, or follow the system.
+- **Theme**: Light, dark, or follow the system. Right-click the title bar theme button to pick one.
 - **Accent color**: Tint brand UI (and matching chrome) from Settings.
 - **Startup**: Optionally launch at login, including start minimized to the tray.
+- **Window**: Choose whether the close button quits or hides to the tray (asked once), and toggle the sidebars with `Alt+B` / `Alt+Shift+B`.
 
 ### Extension System
 
