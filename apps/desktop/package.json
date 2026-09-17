@@ -2,7 +2,7 @@
   "name": "@croffledev/desktop",
   "productName": "Croffle",
   "desktopName": "croffle",
-  "version": "1.2.1-rc.1",
+  "version": "1.2.1",
   "private": true,
   "description": "Croffle desktop (Electron)",
   "main": "./out/main/index.js",
