@@ -139,6 +139,7 @@
     }
   },
   "rightSidebar": {
+    "toggle": "오른쪽 사이드바 열기/닫기",
     "title": "일정 관리",
     "subtitle": "오늘의 일정과 계획",
     "add": "새 일정 추가",
@@ -150,6 +151,7 @@
   },
   "titleBar": {
     "toggleTheme": "테마 전환",
+    "toggleLeftSidebar": "왼쪽 사이드바 열기/닫기",
     "themeMenuHint": "클릭: 전환 · 우클릭: 라이트 / 다크 / 시스템 선택"
   },
   "closeModal": {

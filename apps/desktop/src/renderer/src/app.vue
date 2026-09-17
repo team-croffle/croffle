@@ -27,6 +27,7 @@
   import Button from './components/ui/button/Button.vue';
   import { Separator } from './components/ui/separator/index.ts';
   import UpdateModal from './components/update-modal.vue';
+  import { SHORTCUT_LEFT_SIDEBAR, useGlobalShortcuts } from './composables/use-global-shortcuts.ts';
   import { defaultMenus } from './data/default-context-menus.ts';
   import { extensionLoader } from './services/extension-loader.ts';
   import { useAppSettingsStore } from './stores/app-settings-store.ts';
@@ -46,6 +47,7 @@
   const appSettingsStore = useAppSettingsStore();
   const updateStore = useUpdateStore();
   const { t } = useI18n();
+  useGlobalShortcuts();
 
   // 타이틀 바 테마 버튼 우클릭 메뉴. 좌클릭은 세션 임시 토글(theme-store.changeTheme)이고,
   // 여기서 고른 값은 설정(general.theme)에 저장되어 설정 모달과 같은 값을 보여준다.
@@ -295,6 +297,8 @@
             variant="ghost"
             size="icon"
             class="no-drag h-7 w-7 text-neutral-500"
+            :aria-label="$t('titleBar.toggleLeftSidebar')"
+            :title="`${$t('titleBar.toggleLeftSidebar')} (${SHORTCUT_LEFT_SIDEBAR})`"
             @click="uiStore.toggleLeftSidebar()"
           >
             <Icon icon="lucide:panel-left" class="h-4 w-4" />
