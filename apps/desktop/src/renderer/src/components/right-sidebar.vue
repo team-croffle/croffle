@@ -10,6 +10,7 @@
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
   import { Icon } from '@/components/ui/icon';
   import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
+  import { SHORTCUT_RIGHT_SIDEBAR } from '@/composables/use-global-shortcuts';
   import { cn } from '@/lib/utils';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
@@ -132,6 +133,8 @@
           variant="ghost"
           size="icon"
           class="text-muted-foreground h-7 w-7"
+          :aria-label="$t('rightSidebar.toggle')"
+          :title="`${$t('rightSidebar.toggle')} (${SHORTCUT_RIGHT_SIDEBAR})`"
           @click="uiStore.toggleRightSidebar"
         >
           <Icon icon="lucide:panel-right" class="h-4 w-4" />

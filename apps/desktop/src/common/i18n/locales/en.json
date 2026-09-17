@@ -139,6 +139,7 @@
     }
   },
   "rightSidebar": {
+    "toggle": "Toggle right sidebar",
     "title": "Schedules",
     "subtitle": "Today's plans",
     "add": "Add schedule",
@@ -150,6 +151,7 @@
   },
   "titleBar": {
     "toggleTheme": "Toggle theme",
+    "toggleLeftSidebar": "Toggle left sidebar",
     "themeMenuHint": "Click to toggle · right-click to pick Light / Dark / System"
   },
   "closeModal": {
