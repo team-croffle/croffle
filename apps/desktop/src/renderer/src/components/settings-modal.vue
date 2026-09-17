@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import {
+    AppCloseBehavior,
     AppSettingLanguage,
     AppSettingTheme,
     CalendarTimeFormat,
@@ -424,6 +425,19 @@
     { value: AppSettingLanguage.EN, label: t('language.en') },
   ]);
 
+  const closeBehaviorOptions = computed(() => [
+    { value: AppCloseBehavior.ASK, label: t('settings.general.closeBehaviorAsk') },
+    { value: AppCloseBehavior.TRAY, label: t('settings.general.closeBehaviorTray') },
+    { value: AppCloseBehavior.QUIT, label: t('settings.general.closeBehaviorQuit') },
+  ]);
+
+  const onCloseBehaviorChange = (value: unknown) => {
+    if (!settings.value || typeof value !== 'string') {
+      return;
+    }
+    settings.value.general.closeBehavior = value as AppCloseBehavior;
+  };
+
   const themeOptions = computed(() => [
     { value: AppSettingTheme.LIGHT, label: t('settings.general.themeLight') },
     { value: AppSettingTheme.DARK, label: t('settings.general.themeDark') },
@@ -751,6 +765,45 @@
                         @update:model-value="(v: unknown) => setGeneralBool('startMinimized', v)"
                       />
                     </div>
+                  </div>
+                </section>
+
+                <Separator />
+
+                <section class="space-y-4">
+                  <h4 class="text-base font-bold text-foreground">
+                    {{ $t('settings.general.window') }}
+                  </h4>
+
+                  <div class="space-y-2">
+                    <Label
+                      for="settings-close-behavior"
+                      class="text-foreground text-sm font-medium"
+                    >
+                      {{ $t('settings.general.closeBehavior') }}
+                    </Label>
+                    <Select
+                      :model-value="settings.general.closeBehavior"
+                      @update:model-value="onCloseBehaviorChange"
+                    >
+                      <SelectTrigger id="settings-close-behavior" class="w-full">
+                        <SelectValue
+                          :placeholder="$t('settings.general.closeBehaviorPlaceholder')"
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem
+                          v-for="option in closeBehaviorOptions"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p class="text-muted-foreground text-xs">
+                      {{ $t('settings.general.closeBehaviorHint') }}
+                    </p>
                   </div>
                 </section>
               </div>

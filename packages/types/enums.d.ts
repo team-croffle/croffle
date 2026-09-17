@@ -23,6 +23,8 @@ export declare enum AppEventType {
   WINDOW_SHOW = 'window:show',
   WINDOW_HIDE = 'window:hide',
   WINDOW_EXIT = 'window:exit',
+  /** Close was requested while `closeBehavior` is `ask`; the host UI asks the user. */
+  WINDOW_CLOSE_REQUESTED = 'window:closeRequested',
 
   // Electron updater (host UI)
   UPDATE_AVAILABLE = 'update:available',

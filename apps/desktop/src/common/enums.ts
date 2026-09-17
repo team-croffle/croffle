@@ -26,6 +26,13 @@ export enum CalendarTimeFormat {
   H24 = '24h',
 }
 
+/** What the window close button does. `ASK` shows a one-time prompt and stores the answer. */
+export enum AppCloseBehavior {
+  ASK = 'ask',
+  TRAY = 'tray',
+  QUIT = 'quit',
+}
+
 export enum ClipboardDataType {
   TEXT = 'text',
   IMAGE = 'image',
@@ -60,6 +67,8 @@ export enum AppEventType {
   WINDOW_SHOW = 'window:show',
   WINDOW_HIDE = 'window:hide',
   WINDOW_EXIT = 'window:exit',
+  /** Close was requested while `closeBehavior` is `ask`; the host UI asks the user. */
+  WINDOW_CLOSE_REQUESTED = 'window:closeRequested',
 
   // Electron updater (host UI)
   UPDATE_AVAILABLE = 'update:available',

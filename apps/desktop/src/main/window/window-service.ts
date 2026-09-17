@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { AppEventType } from '@croffledev/common';
+import { AppCloseBehavior, AppEventType } from '@croffledev/common';
 import type { AppSettings } from '@croffledev/croffle-types';
 import type { BrowserWindow } from 'electron';
 import { app, Menu, Tray, shell } from 'electron';
@@ -18,7 +18,6 @@ class WindowService {
   private mainWindow: BrowserWindow | null = null;
   private tray: Tray | null = null;
   public isQuitting: boolean = false; // Service가 상태 관리
-  private shouldCloseToTray: boolean = true; // 닫기 시 트레이로 최소화 여부
 
   // ======== Update 관련 변수 ========
   private readonly updateStatePath: string = path.join(
@@ -60,9 +59,25 @@ class WindowService {
     });
   }
 
+  /**
+   * @deprecated Kept for the public `window.setCloseToTrayMode` API. Writes the
+   * `general.closeBehavior` setting so the choice survives restarts.
+   */
   public setCloseToTrayMode(enabled: boolean): void {
-    this.shouldCloseToTray = enabled;
-    logger.info('WindowService', `Close-to-Tray mode set to: ${enabled}`);
+    const closeBehavior = enabled ? AppCloseBehavior.TRAY : AppCloseBehavior.QUIT;
+    const updated = settingService.update({
+      general: { ...settingService.get().general, closeBehavior },
+    });
+    eventService.emit(AppEventType.SETTINGS_UPDATE, updated);
+    logger.info('WindowService', `Close behavior set to: ${closeBehavior}`);
+  }
+
+  /**
+   * Close button behavior from settings. Old settings files (≤ 1.2.1) have no value;
+   * the merge in SettingService fills in `ASK` so the first close prompts once.
+   */
+  private get closeBehavior(): AppCloseBehavior {
+    return settingService.get().general.closeBehavior ?? AppCloseBehavior.ASK;
   }
 
   private registerWindowEvents(): void {
@@ -75,13 +90,21 @@ class WindowService {
         return true;
       }
 
-      if (this.shouldCloseToTray) {
-        event.preventDefault();
-        this.hideWindow();
-        return false;
-      } else {
-        this.isQuitting = true;
-        return true;
+      switch (this.closeBehavior) {
+        case AppCloseBehavior.TRAY:
+          event.preventDefault();
+          this.hideWindow();
+          return false;
+        case AppCloseBehavior.QUIT:
+          this.isQuitting = true;
+          return true;
+        default:
+          // ASK: keep the window, let the renderer prompt. Its answer is saved as the
+          // setting and the next close follows it.
+          event.preventDefault();
+          logger.info('WindowService', 'Close requested with closeBehavior=ask; prompting.');
+          eventService.emit(AppEventType.WINDOW_CLOSE_REQUESTED);
+          return false;
       }
     });
 

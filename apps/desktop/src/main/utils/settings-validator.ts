@@ -1,4 +1,5 @@
 import {
+  AppCloseBehavior,
   AppSettingLanguage,
   AppSettingTheme,
   CalendarTimeFormat,
@@ -15,7 +16,7 @@ function isValidEnum<T extends object>(value: unknown, enumObj: T): value is T[k
 
 export const validateSettings = (settings: Partial<AppSettings>): void => {
   if (settings.general) {
-    const { language, theme } = settings.general;
+    const { language, theme, closeBehavior } = settings.general;
 
     if (language && !isValidEnum(language, AppSettingLanguage)) {
       throw new Error(
@@ -26,6 +27,12 @@ export const validateSettings = (settings: Partial<AppSettings>): void => {
     if (theme && !isValidEnum(theme, AppSettingTheme)) {
       throw new Error(
         `Invalid theme setting: ${theme}. Allowed values are: ${Object.values(AppSettingTheme).join(', ')}`,
+      );
+    }
+
+    if (closeBehavior && !isValidEnum(closeBehavior, AppCloseBehavior)) {
+      throw new Error(
+        `Invalid closeBehavior setting: ${closeBehavior}. Allowed values are: ${Object.values(AppCloseBehavior).join(', ')}`,
       );
     }
   }
