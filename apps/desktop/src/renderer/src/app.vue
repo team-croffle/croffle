@@ -1,12 +1,17 @@
 <script setup lang="ts">
   import type { ConfigurationSectionContribution, ExtensionInfo } from '@croffledev/common';
-  import { ref, onMounted, onUnmounted } from 'vue';
+  import { AppSettingTheme } from '@croffledev/common';
+  import { computed, ref, onMounted, onUnmounted } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { toast } from 'vue-sonner';
 
   import {
     ContextMenu,
     ContextMenuTrigger,
     ContextMenuContent,
     ContextMenuItem,
+    ContextMenuRadioGroup,
+    ContextMenuRadioItem,
   } from '@/components/ui/context-menu';
   import { Icon } from '@/components/ui/icon';
   import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -40,6 +45,36 @@
   const themeStore = useThemeStore();
   const appSettingsStore = useAppSettingsStore();
   const updateStore = useUpdateStore();
+  const { t } = useI18n();
+
+  // 타이틀 바 테마 버튼 우클릭 메뉴. 좌클릭은 세션 임시 토글(theme-store.changeTheme)이고,
+  // 여기서 고른 값은 설정(general.theme)에 저장되어 설정 모달과 같은 값을 보여준다.
+  const themeMenuOptions = computed(() => [
+    { value: AppSettingTheme.LIGHT, label: t('settings.general.themeLight'), icon: 'lucide:sun' },
+    { value: AppSettingTheme.DARK, label: t('settings.general.themeDark'), icon: 'lucide:moon' },
+    {
+      value: AppSettingTheme.SYSTEM,
+      label: t('settings.general.themeSystem'),
+      icon: 'lucide:monitor',
+    },
+  ]);
+
+  const selectTheme = async (value: unknown) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    const theme = value as AppSettingTheme;
+    const general = appSettingsStore.settings?.general ?? (await croffle.settings.getAll()).general;
+    if (general.theme === theme && themeStore.currentTheme === theme) {
+      return;
+    }
+    try {
+      // SETTINGS_UPDATE 이벤트가 app-settings-store를 거쳐 테마를 적용한다.
+      await croffle.settings.update({ general: { ...general, theme } });
+    } catch (error) {
+      toast.error(t('settings.errors.save', { error: JSON.stringify(error) }));
+    }
+  };
 
   // 설정 모달 상태
   const isSettingsOpen = ref(false);
@@ -272,14 +307,34 @@
       </div>
 
       <div class="no-drag flex h-full items-center">
-        <button
-          class="flex h-6 w-6 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"
-          aria-label="Toggle theme"
-          @click="themeStore.changeTheme"
-        >
-          <Icon v-if="themeStore.isDark" icon="lucide:sun" class="h-4 w-4" />
-          <Icon v-else icon="lucide:moon" class="h-4 w-4" />
-        </button>
+        <ContextMenu>
+          <ContextMenuTrigger as-child>
+            <button
+              class="flex h-6 w-6 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"
+              :aria-label="$t('titleBar.toggleTheme')"
+              :title="$t('titleBar.themeMenuHint')"
+              @click="themeStore.changeTheme"
+            >
+              <Icon v-if="themeStore.isDark" icon="lucide:sun" class="h-4 w-4" />
+              <Icon v-else icon="lucide:moon" class="h-4 w-4" />
+            </button>
+          </ContextMenuTrigger>
+          <ContextMenuContent class="w-44">
+            <ContextMenuRadioGroup
+              :model-value="themeStore.currentTheme"
+              @update:model-value="selectTheme"
+            >
+              <ContextMenuRadioItem
+                v-for="option in themeMenuOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                <Icon :icon="option.icon" class="mr-2 h-4 w-4" />
+                {{ option.label }}
+              </ContextMenuRadioItem>
+            </ContextMenuRadioGroup>
+          </ContextMenuContent>
+        </ContextMenu>
         <Separator orientation="vertical" class="mr-6 ml-4 bg-neutral-300 dark:bg-neutral-700" />
         <button
           class="flex h-full w-12 items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"

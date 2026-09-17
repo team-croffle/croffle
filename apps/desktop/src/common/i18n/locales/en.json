@@ -148,6 +148,10 @@
     "upcoming": "Upcoming",
     "emptyUpcoming": "No upcoming schedules"
   },
+  "titleBar": {
+    "toggleTheme": "Toggle theme",
+    "themeMenuHint": "Click to toggle · right-click to pick Light / Dark / System"
+  },
   "closeModal": {
     "title": "Close Croffle?",
     "description": "Quit completely, or keep Croffle running in the tray so reminders still fire.",
