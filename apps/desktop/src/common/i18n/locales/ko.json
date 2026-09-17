@@ -148,6 +148,10 @@
     "upcoming": "다가오는 일정",
     "emptyUpcoming": "다가오는 일정이 없습니다"
   },
+  "titleBar": {
+    "toggleTheme": "테마 전환",
+    "themeMenuHint": "클릭: 전환 · 우클릭: 라이트 / 다크 / 시스템 선택"
+  },
   "closeModal": {
     "title": "Croffle을 닫을까요?",
     "description": "완전히 종료하거나, 알림이 계속 울리도록 트레이에서 실행 상태로 둘 수 있습니다.",
