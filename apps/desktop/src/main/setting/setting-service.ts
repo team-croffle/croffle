@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
+  AppCloseBehavior,
   AppSettingLanguage,
   AppSettingTheme,
   CalendarTimeFormat,
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     autoUpdate: true,
     startOnSystemBoot: false,
     startMinimized: false,
+    closeBehavior: AppCloseBehavior.ASK,
   },
   appearance: {
     accentHue: 69.8,

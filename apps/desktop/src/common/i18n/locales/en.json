@@ -50,7 +50,14 @@
       "startOnBoot": "Launch at login",
       "startOnBootHint": "Start Croffle automatically when you log in.",
       "startMinimized": "Start minimized",
-      "startMinimizedHint": "Run in the tray without showing a window."
+      "startMinimizedHint": "Run in the tray without showing a window.",
+      "window": "Window",
+      "closeBehavior": "Close button",
+      "closeBehaviorPlaceholder": "Select close behavior",
+      "closeBehaviorAsk": "Ask on next close",
+      "closeBehaviorTray": "Hide to the tray",
+      "closeBehaviorQuit": "Quit Croffle",
+      "closeBehaviorHint": "Reminders fire only while Croffle is running. Hiding to the tray keeps it running."
     },
     "calendar": {
       "intro": "How the calendar is displayed.",
@@ -140,6 +147,13 @@
     "emptySelected": "No schedules on this day",
     "upcoming": "Upcoming",
     "emptyUpcoming": "No upcoming schedules"
+  },
+  "closeModal": {
+    "title": "Close Croffle?",
+    "description": "Quit completely, or keep Croffle running in the tray so reminders still fire.",
+    "hint": "Your choice is saved. Change it later in Settings → General → Window.",
+    "tray": "Hide to the tray",
+    "quit": "Quit"
   },
   "contextMenu": {
     "addSchedule": "Add schedule",

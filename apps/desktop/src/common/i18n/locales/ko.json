@@ -50,7 +50,14 @@
       "startOnBoot": "OS 시작 시 실행",
       "startOnBootHint": "켜면 로그인 시 Croffle이 자동으로 실행됩니다.",
       "startMinimized": "최소화로 시작",
-      "startMinimizedHint": "시작 시 창을 표시하지 않고 트레이에서 실행합니다."
+      "startMinimizedHint": "시작 시 창을 표시하지 않고 트레이에서 실행합니다.",
+      "window": "창",
+      "closeBehavior": "닫기 버튼",
+      "closeBehaviorPlaceholder": "닫기 동작 선택",
+      "closeBehaviorAsk": "다음 닫기에서 묻기",
+      "closeBehaviorTray": "트레이로 숨기기",
+      "closeBehaviorQuit": "Croffle 종료",
+      "closeBehaviorHint": "알림은 Croffle이 실행 중일 때만 울립니다. 트레이로 숨기면 계속 실행됩니다."
     },
     "calendar": {
       "intro": "캘린더 표시 방식을 설정합니다.",
@@ -140,6 +147,13 @@
     "emptySelected": "이 날 일정이 없습니다",
     "upcoming": "다가오는 일정",
     "emptyUpcoming": "다가오는 일정이 없습니다"
+  },
+  "closeModal": {
+    "title": "Croffle을 닫을까요?",
+    "description": "완전히 종료하거나, 알림이 계속 울리도록 트레이에서 실행 상태로 둘 수 있습니다.",
+    "hint": "선택은 저장됩니다. 설정 → 일반 → 창에서 언제든 바꿀 수 있습니다.",
+    "tray": "트레이로 숨기기",
+    "quit": "종료"
   },
   "contextMenu": {
     "addSchedule": "일정 추가",
