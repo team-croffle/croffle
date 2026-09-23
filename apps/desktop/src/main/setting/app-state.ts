@@ -13,9 +13,11 @@ import { logger } from '../logger';
 export type AppState = {
   /** 직전 실행의 `app.getVersion()`. 파일이 없으면 1.1.0 이하로 간주한다. */
   lastRunVersion: string | null;
+  /** 이 설치의 고정 식별자. 동기화 행의 `lastWriterId = device:<clientId>`에 쓴다 (1.2.3+). */
+  clientId: string | null;
 };
 
-const EMPTY_STATE: AppState = { lastRunVersion: null };
+const EMPTY_STATE: AppState = { lastRunVersion: null, clientId: null };
 
 function resolvePath(): string {
   return is.dev
@@ -32,6 +34,7 @@ export function readAppState(): AppState {
     const parsed = JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<AppState>;
     return {
       lastRunVersion: typeof parsed.lastRunVersion === 'string' ? parsed.lastRunVersion : null,
+      clientId: typeof parsed.clientId === 'string' && parsed.clientId ? parsed.clientId : null,
     };
   } catch (err) {
     logger.warn('AppState', `Failed to read ${filePath}; treating as first run.`, err);

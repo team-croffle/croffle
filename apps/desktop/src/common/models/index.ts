@@ -19,7 +19,10 @@ export type {
 export type {
   TagEntity,
   ScheduleEntity,
+  ScheduleTagEntity,
   ScheduleReminderEntity,
   ExtensionInfoEntity,
   ExtensionStorageEntity,
 } from './entities';
+export type { SyncColumns } from './sync';
+export { LAST_WRITER_DEVICE_PREFIX } from './sync';

@@ -72,7 +72,8 @@ export function compareVersions(a: string, b: string): number {
  */
 export async function runVersionMigrations(settings: AppSettings): Promise<void> {
   const current = app.getVersion();
-  const { lastRunVersion } = readAppState();
+  const state = readAppState();
+  const { lastRunVersion } = state;
 
   if (lastRunVersion === current) {
     return;
@@ -80,7 +81,7 @@ export async function runVersionMigrations(settings: AppSettings): Promise<void>
 
   if (!app.isPackaged) {
     logger.debug('Migrations', `Dev build: skip migrations (${lastRunVersion} → ${current})`);
-    writeAppState({ lastRunVersion: current });
+    writeAppState({ ...state, lastRunVersion: current });
     return;
   }
 
@@ -103,5 +104,5 @@ export async function runVersionMigrations(settings: AppSettings): Promise<void>
     }
   }
 
-  writeAppState({ lastRunVersion: current });
+  writeAppState({ ...state, lastRunVersion: current });
 }

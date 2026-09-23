@@ -23,10 +23,11 @@ export type ScheduleEntityInput = {
   reminders?: number[];
   createdAt?: Date;
   updatedAt?: Date;
-  tags?: TagRow[];
+  /** Only `id` is persisted (link rows); name/color ride along for callers that echo the input. */
+  tags?: Tag[];
 };
 
-function toTag(tag: Tag): TagRow {
+function toTag(tag: Tag): Tag {
   return {
     id: tag.id,
     name: tag.name,
