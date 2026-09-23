@@ -21,6 +21,7 @@ export type {
   ScheduleEntity,
   ScheduleTagEntity,
   ScheduleReminderEntity,
+  ScheduleExternalLinkEntity,
   ExtensionInfoEntity,
   ExtensionStorageEntity,
 } from './entities';

@@ -23,5 +23,11 @@ export {
   type ScheduleReminderRow,
   type NewScheduleReminder,
 } from './schedule-reminder';
+export {
+  scheduleExternalLinks,
+  scheduleExternalLinksRelations,
+  type ScheduleExternalLinkRow,
+  type NewScheduleExternalLink,
+} from './schedule-external-link';
 export { tags, type TagRow, type NewTag } from './tag';
 export { syncColumns } from './sync-columns';

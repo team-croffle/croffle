@@ -7,6 +7,7 @@ import {
 import { relations } from 'drizzle-orm';
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
+import { scheduleExternalLinks } from './schedule-external-link';
 import { scheduleReminders, type ScheduleReminderRow } from './schedule-reminder';
 import { syncColumns } from './sync-columns';
 import { tags, type TagRow } from './tag';
@@ -53,6 +54,7 @@ export const scheduleTags = sqliteTable(
 export const schedulesRelations = relations(schedules, ({ many }) => ({
   scheduleTags: many(scheduleTags),
   scheduleReminders: many(scheduleReminders),
+  scheduleExternalLinks: many(scheduleExternalLinks),
 }));
 
 export const scheduleTagsRelations = relations(scheduleTags, ({ one }) => ({
