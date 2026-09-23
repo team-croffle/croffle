@@ -4,6 +4,7 @@ import { and, eq, ne } from 'drizzle-orm';
 
 import { databaseManager } from '../database';
 import { tags, type TagRow } from '../database/schema';
+import { deviceWriterId } from '../sync/client-id';
 import { colorValidation } from '../utils/color-validator';
 import { stringValidation } from '../utils/string-validator';
 
@@ -37,7 +38,19 @@ export async function createTag(name: string, color: string): Promise<TagRow> {
     throw new Error('Invalid color format');
   }
 
-  const newTag: TagRow = { id: randomUUID(), name, color };
+  const now = new Date();
+  const newTag: TagRow = {
+    id: randomUUID(),
+    name,
+    color,
+    createdAt: now,
+    updatedAt: now,
+    updatedAtMs: now.getTime(),
+    version: 1,
+    deletedAt: null,
+    lastWriterId: deviceWriterId(),
+    ownerId: null,
+  };
   await db.insert(tags).values(newTag);
   return newTag;
 }
@@ -66,8 +79,9 @@ export async function modifyTag(id: string, name: string, color: string): Promis
     throw new Error('Invalid color format');
   }
 
-  await db.update(tags).set({ name, color }).where(eq(tags.id, id));
-  return { ...tag, name, color };
+  const now = new Date();
+  await db.update(tags).set({ name, color, updatedAt: now }).where(eq(tags.id, id));
+  return { ...tag, name, color, updatedAt: now };
 }
 
 export async function removeTag(id: string): Promise<boolean> {

@@ -7,6 +7,7 @@ import { relations } from 'drizzle-orm';
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 import { schedules } from './schedule';
+import { syncColumns } from './sync-columns';
 
 /**
  * Reminder offsets for one schedule. A schedule with `useDefaultReminder = true`
@@ -21,6 +22,7 @@ export const scheduleReminders = sqliteTable(
       .notNull()
       .references(() => schedules.id, { onDelete: 'cascade' }),
     minutes: integer('minutes').notNull(),
+    ...syncColumns(),
   },
   (t) => [uniqueIndex('schedule_reminder_scheduleId_minutes_unique').on(t.scheduleId, t.minutes)],
 );

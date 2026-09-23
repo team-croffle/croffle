@@ -17,7 +17,7 @@ export const extensionInfoMapper = {
     };
   },
 
-  toEntity(api: ExtensionInfo): NewExtensionInfo {
+  toEntity(api: ExtensionInfo): Omit<NewExtensionInfo, 'installedAt' | 'updatedAt'> {
     return {
       id: api.id,
       name: api.name,

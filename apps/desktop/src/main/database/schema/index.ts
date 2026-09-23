@@ -13,6 +13,8 @@ export {
   tagsRelations,
   type ScheduleRow,
   type NewSchedule,
+  type ScheduleTagRow,
+  type NewScheduleTag,
   type ScheduleWithTags,
 } from './schedule';
 export {
@@ -22,3 +24,4 @@ export {
   type NewScheduleReminder,
 } from './schedule-reminder';
 export { tags, type TagRow, type NewTag } from './tag';
+export { syncColumns } from './sync-columns';

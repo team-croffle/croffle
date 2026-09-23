@@ -107,6 +107,7 @@ async function syncScheduleTags(scheduleId: string, tags: { id: string }[] | und
 
   await db.insert(scheduleTags).values(
     tags.map((tag) => ({
+      id: randomUUID(),
       scheduleId,
       tagId: tag.id,
     })),

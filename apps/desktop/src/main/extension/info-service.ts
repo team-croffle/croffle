@@ -44,6 +44,8 @@ export const extensionInfoService = {
         description: data.description !== undefined ? data.description : existingById.description,
         enabled: data.enabled ?? existingById.enabled,
         main: data.main !== undefined ? data.main : existingById.main,
+        installedAt: existingById.installedAt,
+        updatedAt: new Date(),
       };
       await db
         .update(extensionInfo)
@@ -54,6 +56,7 @@ export const extensionInfoService = {
           description: updated.description,
           enabled: updated.enabled,
           main: updated.main,
+          updatedAt: updated.updatedAt,
         })
         .where(eq(extensionInfo.id, existingById.id));
       return updated;
@@ -72,6 +75,7 @@ export const extensionInfoService = {
       throw new Error('Extension id, name, version, and author are required.');
     }
 
+    const now = new Date();
     const row: NewExtensionInfo = {
       id: data.id,
       name: data.name,
@@ -80,6 +84,8 @@ export const extensionInfoService = {
       description: data.description ?? null,
       enabled: data.enabled ?? true,
       main: data.main ?? null,
+      installedAt: now,
+      updatedAt: now,
     };
 
     await db.insert(extensionInfo).values(row);
@@ -91,6 +97,8 @@ export const extensionInfoService = {
       description: row.description ?? null,
       enabled: row.enabled ?? true,
       main: row.main ?? null,
+      installedAt: now,
+      updatedAt: now,
     };
   },
 
@@ -103,7 +111,10 @@ export const extensionInfoService = {
       throw new Error(`Extension "${id}" not found.`);
     }
 
-    await db.update(extensionInfo).set({ enabled: enable }).where(eq(extensionInfo.id, id));
+    await db
+      .update(extensionInfo)
+      .set({ enabled: enable, updatedAt: new Date() })
+      .where(eq(extensionInfo.id, id));
     return { ...row, enabled: enable };
   },
 

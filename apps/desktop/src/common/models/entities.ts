@@ -3,13 +3,20 @@
  * Public/API DTOs live alongside and are assembled via mappers.
  */
 
-export type TagEntity = {
+import type { SyncColumns } from './sync';
+
+/** Flattens `T & SyncColumns` so `AssertEqual` can compare it with drizzle `$inferSelect`. */
+type WithSync<T> = { [K in keyof (T & SyncColumns)]: (T & SyncColumns)[K] };
+
+export type TagEntity = WithSync<{
   id: string;
   name: string;
   color: string;
-};
+  createdAt: Date;
+  updatedAt: Date;
+}>;
 
-export type ScheduleEntity = {
+export type ScheduleEntity = WithSync<{
   id: string;
   title: string;
   description: string | null;
@@ -24,14 +31,21 @@ export type ScheduleEntity = {
   useDefaultReminder: boolean;
   createdAt: Date;
   updatedAt: Date;
-};
+}>;
+
+/** Schedule ↔ tag link. Has its own id so it can be tombstoned and synced as a row. */
+export type ScheduleTagEntity = WithSync<{
+  id: string;
+  scheduleId: string;
+  tagId: string;
+}>;
 
 /** One reminder offset of a schedule, in minutes before the occurrence starts. */
-export type ScheduleReminderEntity = {
+export type ScheduleReminderEntity = WithSync<{
   id: string;
   scheduleId: string;
   minutes: number;
-};
+}>;
 
 /** Persisted extension registry row (manifest body stays on disk). */
 export type ExtensionInfoEntity = {
@@ -42,6 +56,8 @@ export type ExtensionInfoEntity = {
   description: string | null;
   enabled: boolean;
   main: string | null;
+  installedAt: Date;
+  updatedAt: Date;
 };
 
 export type ExtensionStorageEntity = {
