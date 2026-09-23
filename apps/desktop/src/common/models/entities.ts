@@ -40,6 +40,17 @@ export type ScheduleTagEntity = WithSync<{
   tagId: string;
 }>;
 
+/** Link between a local schedule and one external provider event (provider-neutral). */
+export type ScheduleExternalLinkEntity = WithSync<{
+  id: string;
+  scheduleId: string;
+  provider: string;
+  accountId: string;
+  externalId: string;
+  externalEtag: string | null;
+  externalUpdatedAtMs: number | null;
+}>;
+
 /** One reminder offset of a schedule, in minutes before the occurrence starts. */
 export type ScheduleReminderEntity = WithSync<{
   id: string;
