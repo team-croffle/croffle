@@ -107,11 +107,16 @@ export async function importScheduleFromFile(
       if (s.id) {
         const exists = await db.query.schedules.findFirst({
           where: eq(schedules.id, s.id),
+          columns: { id: true, deletedAt: true },
         });
-        if (exists) {
+        if (exists && exists.deletedAt === null) {
           await updateSchedule(s.id, entityData);
           updated += 1;
           continue;
+        }
+        if (exists) {
+          // The id belongs to a tombstone: keep the deletion history and import as a new schedule.
+          delete entityData.id;
         }
       }
 

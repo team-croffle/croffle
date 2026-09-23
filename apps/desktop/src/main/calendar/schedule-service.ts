@@ -24,8 +24,10 @@ import {
   type ScheduleWithTags,
 } from '../database/schema';
 import type { ScheduleEntityInput } from '../mapper/schedule-mapper';
+import { alive, bumpVersion, tombstone, touch } from '../sync/lww';
 import { colorValidation } from '../utils/color-validator';
 import { stringValidation } from '../utils/string-validator';
+import { syncScheduleReminders, syncScheduleTags } from './schedule-children';
 
 /** Upper bound for a single reminder offset: 7 days. */
 const MAX_REMINDER_MINUTES = 7 * 24 * 60;
@@ -41,10 +43,22 @@ function mapScheduleWithTags(
   const { scheduleTags: links, scheduleReminders: reminderRows, ...schedule } = row;
   return {
     ...schedule,
-    tags: links.map((link) => link.tag),
+    // Link rows are filtered by `alive()` in the query; the tag itself may be tombstoned.
+    tags: links.map((link) => link.tag).filter((tag) => tag.deletedAt === null),
     reminders: reminderRows.map((reminder) => reminder.minutes).toSorted((a, b) => a - b),
   };
 }
+
+/** Relational `with` shared by every schedule read: live links + live reminders. */
+const withLiveChildren = {
+  scheduleTags: {
+    where: alive(scheduleTags),
+    with: { tag: true },
+  },
+  scheduleReminders: {
+    where: alive(scheduleReminders),
+  },
+} as const;
 
 export function validateScheduleData(schedule: ScheduleEntityInput) {
   if (schedule.title !== undefined && !stringValidation(schedule.title, false, 100, 1)) {
@@ -93,58 +107,11 @@ export function validateScheduleData(schedule: ScheduleEntityInput) {
   }
 }
 
-async function syncScheduleTags(scheduleId: string, tags: { id: string }[] | undefined) {
-  if (tags === undefined) {
-    return;
-  }
-
-  const db = databaseManager.getDb();
-  await db.delete(scheduleTags).where(eq(scheduleTags.scheduleId, scheduleId));
-
-  if (tags.length === 0) {
-    return;
-  }
-
-  await db.insert(scheduleTags).values(
-    tags.map((tag) => ({
-      id: randomUUID(),
-      scheduleId,
-      tagId: tag.id,
-    })),
-  );
-}
-
-async function syncScheduleReminders(scheduleId: string, reminders: number[] | undefined) {
-  if (reminders === undefined) {
-    return;
-  }
-
-  const db = databaseManager.getDb();
-  await db.delete(scheduleReminders).where(eq(scheduleReminders.scheduleId, scheduleId));
-
-  if (reminders.length === 0) {
-    return;
-  }
-
-  await db.insert(scheduleReminders).values(
-    reminders.map((minutes) => ({
-      id: `${scheduleId}-${minutes}`,
-      scheduleId,
-      minutes,
-    })),
-  );
-}
-
 async function findScheduleWithTags(id: string): Promise<ScheduleWithTags | null> {
   const db = databaseManager.getDb();
   const row = await db.query.schedules.findFirst({
-    where: eq(schedules.id, id),
-    with: {
-      scheduleTags: {
-        with: { tag: true },
-      },
-      scheduleReminders: true,
-    },
+    where: and(eq(schedules.id, id), alive(schedules)),
+    with: withLiveChildren,
   });
 
   return row ? mapScheduleWithTags(row) : null;
@@ -178,14 +145,9 @@ export async function getSchedules(period: {
   }
 
   const rows = await db.query.schedules.findMany({
-    where,
+    where: and(alive(schedules), where),
     orderBy: [asc(schedules.startDate)],
-    with: {
-      scheduleTags: {
-        with: { tag: true },
-      },
-      scheduleReminders: true,
-    },
+    with: withLiveChildren,
   });
 
   const mapped = rows.map(mapScheduleWithTags);
@@ -232,6 +194,8 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
     useDefaultReminder: scheduleFields.useDefaultReminder ?? true,
     createdAt: scheduleFields.createdAt ?? now,
     updatedAt: scheduleFields.updatedAt ?? now,
+    version: 1,
+    ...touch(now),
   };
 
   const db = databaseManager.getDb();
@@ -280,6 +244,7 @@ export async function updateSchedule(
 
   validateScheduleData(merged);
 
+  const now = new Date();
   const db = databaseManager.getDb();
   await db
     .update(schedules)
@@ -294,7 +259,9 @@ export async function updateSchedule(
       colorLabel: merged.colorLabel,
       priority: merged.priority ?? 'medium',
       useDefaultReminder: merged.useDefaultReminder ?? true,
-      updatedAt: new Date(),
+      updatedAt: now,
+      version: bumpVersion(schedules),
+      ...touch(now),
     })
     .where(eq(schedules.id, id));
 
@@ -308,16 +275,26 @@ export async function updateSchedule(
   return updated;
 }
 
+/** Soft delete: the schedule and its live links / reminders become tombstones. */
 export async function deleteSchedule(id: string): Promise<boolean> {
   const db = databaseManager.getDb();
   const existing = await db.query.schedules.findFirst({
-    where: eq(schedules.id, id),
+    where: and(eq(schedules.id, id), alive(schedules)),
   });
 
   if (!existing) {
     throw new Error('Schedule not found');
   }
 
-  await db.delete(schedules).where(eq(schedules.id, id));
+  const now = new Date();
+  await db.update(schedules).set(tombstone(schedules, now)).where(eq(schedules.id, id));
+  await db
+    .update(scheduleTags)
+    .set(tombstone(scheduleTags, now))
+    .where(and(eq(scheduleTags.scheduleId, id), alive(scheduleTags)));
+  await db
+    .update(scheduleReminders)
+    .set(tombstone(scheduleReminders, now))
+    .where(and(eq(scheduleReminders.scheduleId, id), alive(scheduleReminders)));
   return true;
 }
