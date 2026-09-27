@@ -103,4 +103,36 @@ export function sameWeekdays(a: WeekdayCode[], b: WeekdayCode[]): boolean {
   return normalizeWeekdays(a).join(',') === normalizeWeekdays(b).join(',');
 }
 
+/**
+ * rrule.js evaluates BYDAY / BYMONTHDAY on UTC fields. Passing a local Date shifts the
+ * weekday for times whose UTC date differs (KST before 09:00). "Floating" dates carry the
+ * local wall-clock in their UTC fields so the rule is evaluated in local time.
+ */
+export function toFloatingUtc(date: Date): Date {
+  return new Date(
+    Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds(),
+    ),
+  );
+}
+
+/** Inverse of {@link toFloatingUtc}: UTC fields back to a local Date. */
+export function fromFloatingUtc(date: Date): Date {
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  );
+}
+
 export type { Options };
