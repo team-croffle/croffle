@@ -2,39 +2,16 @@ import type { SearchQuery } from '@croffledev/common';
 import { and, asc, gte, inArray, like, lte, or, type SQL } from 'drizzle-orm';
 
 import { databaseManager } from '../database';
-import {
-  scheduleReminders,
-  schedules,
-  scheduleTags,
-  type ScheduleWithTags,
-} from '../database/schema';
+import { schedules, scheduleTags, type ScheduleWithTags } from '../database/schema';
 import { alive } from '../sync/lww';
-
-function mapScheduleWithTags(
-  row: Awaited<ReturnType<typeof querySchedules>>[number],
-): ScheduleWithTags {
-  const { scheduleTags: links, scheduleReminders: reminderRows, ...schedule } = row;
-  return {
-    ...schedule,
-    tags: links.map((link) => link.tag).filter((tag) => tag.deletedAt === null),
-    reminders: reminderRows.map((reminder) => reminder.minutes).toSorted((a, b) => a - b),
-  };
-}
+import { mapScheduleWithTags, withLiveChildren } from './schedule-query';
 
 async function querySchedules(where?: SQL) {
   const db = databaseManager.getDb();
   return db.query.schedules.findMany({
     where: and(alive(schedules), where),
     orderBy: [asc(schedules.startDate)],
-    with: {
-      scheduleTags: {
-        where: alive(scheduleTags),
-        with: { tag: true },
-      },
-      scheduleReminders: {
-        where: alive(scheduleReminders),
-      },
-    },
+    with: withLiveChildren,
   });
 }
 

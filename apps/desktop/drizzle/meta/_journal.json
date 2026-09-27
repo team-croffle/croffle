@@ -43,6 +43,13 @@
       "when": 1790121700000,
       "tag": "0005_schedule_external_link",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790640000000,
+      "tag": "0006_schedule_exception",
+      "breakpoints": true
     }
   ]
 }
