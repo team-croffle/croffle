@@ -1,78 +1,18 @@
 import type { Schedule } from '@croffledev/common';
-import { toFullCalendarRRule } from '@croffledev/common';
-import type { EventInput } from '@fullcalendar/core';
 import dayjs from 'dayjs';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { toast } from 'vue-sonner';
 
 import { i18n } from '@/i18n';
-
-function toEventDuration(schedule: Schedule): EventInput['duration'] {
-  const start = dayjs(schedule.startDate);
-  const end = dayjs(schedule.endDate);
-
-  if (schedule.isAllDay) {
-    const startDay = start.startOf('day');
-    const endExclusive = end.startOf('day').add(1, 'day');
-    const days = Math.max(endExclusive.diff(startDay, 'day'), 1);
-    return { days };
-  }
-
-  const ms = Math.max(end.diff(start), 5 * 60 * 1000);
-  return { milliseconds: ms };
-}
-
-function toCalendarEvent(schedule: Schedule): EventInput {
-  const base: EventInput = {
-    id: schedule.id,
-    title: schedule.title,
-    allDay: schedule.isAllDay,
-    backgroundColor: schedule.colorLabel,
-    borderColor: schedule.colorLabel,
-    textColor: '#FFFFFF',
-    display: schedule.isAllDay ? 'auto' : 'block',
-    extendedProps: {
-      scheduleId: schedule.id,
-      description: schedule.description,
-      location: schedule.location,
-      tags: schedule.tags,
-      recurrenceRule: schedule.recurrenceRule,
-      priority: schedule.priority,
-    },
-  };
-
-  if (schedule.recurrenceRule?.trim()) {
-    const rrule = toFullCalendarRRule(schedule.recurrenceRule, schedule.startDate, {
-      allDay: schedule.isAllDay,
-    });
-    if (rrule) {
-      return {
-        ...base,
-        rrule,
-        duration: toEventDuration(schedule),
-      };
-    }
-  }
-
-  let displayEndDate: Date | string = schedule.endDate;
-  if (schedule.isAllDay && schedule.endDate) {
-    displayEndDate = dayjs(schedule.endDate).add(1, 'day').toDate();
-  }
-
-  return {
-    ...base,
-    start: schedule.startDate,
-    end: displayEndDate,
-  };
-}
+import { toCalendarEvents } from '@/utils/schedule-events';
 
 export const useScheduleStore = defineStore('schedule', () => {
   const schedules = ref<Schedule[]>([]);
   /** 마지막으로 불러온 범위. 가져오기 등 외부 변경 뒤 같은 범위로 다시 읽을 때 쓴다. */
   let lastRange: { start: string; end: string } | null = null;
 
-  const events = computed(() => schedules.value.map(toCalendarEvent));
+  const events = computed(() => schedules.value.flatMap(toCalendarEvents));
 
   const getScheduleById = (id: string) => {
     return schedules.value.find((s) => s.id === id);
