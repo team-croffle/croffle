@@ -39,6 +39,13 @@ export const useScheduleStore = defineStore('schedule', () => {
     return updated;
   };
 
+  /** Move one occurrence of a recurring schedule (series unchanged). */
+  const moveOccurrence = async (id: string, occurrenceStart: Date, newStart: Date) => {
+    const updated = await croffle.calendar.schedules.moveOccurrence(id, occurrenceStart, newStart);
+    upsertSchedule(updated);
+    return updated;
+  };
+
   const removeScheduleById = async (id: string) => {
     const ok = await croffle.calendar.schedules.remove(id);
     if (ok) {
@@ -76,6 +83,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     getScheduleById,
     createSchedule,
     updateScheduleById,
+    moveOccurrence,
     removeScheduleById,
     loadSchedules,
     reload,

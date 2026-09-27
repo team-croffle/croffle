@@ -13,6 +13,7 @@
   import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 
   import { useCalendarLogic } from '@/composables/use-calendar-logic';
+  import { useScheduleDrag } from '@/composables/use-schedule-drag';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
   import {
@@ -36,6 +37,8 @@
 
   const { startResizeObserver, stopResizeObserver, handleDateDoubleClick, handleEventDoubleClick } =
     useCalendarLogic();
+
+  const { handleEventDrop } = useScheduleDrag();
 
   let unsubscribeSettings: (() => void) | null = null;
 
@@ -110,7 +113,15 @@
 
       events: [],
 
-      editable: false, // 이벤트 드래그 가능
+      // 월·연 보기에서만 드래그로 날짜를 옮긴다 (시간·기간 유지). 주·일 보기는 시각이 바뀌므로 막는다.
+      editable: true,
+      eventDurationEditable: false,
+      views: {
+        timeGrid: { editable: false },
+      },
+      eventDrop: (info) => {
+        void handleEventDrop(info);
+      },
       selectable: true, // 날짜 선택 가능
       dateClick: (info) => {
         // WHY: Left-click selection is rendered by FullCalendar (.fc-highlight), while
@@ -401,6 +412,14 @@
     align-items: center;
     cursor: default;
     user-select: none;
+  }
+
+  :deep(.fc-event.fc-event-draggable) {
+    cursor: grab;
+  }
+
+  :deep(.fc-event.fc-event-dragging) {
+    cursor: grabbing;
   }
 
   :deep(.fc-event::after) {

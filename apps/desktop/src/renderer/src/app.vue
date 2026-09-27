@@ -18,6 +18,7 @@
   import { Toaster } from '@/components/ui/sonner';
   import { translateOrRaw } from '@/i18n';
 
+  import ChoiceModal from './components/choice-modal.vue';
   import CloseBehaviorModal from './components/close-behavior-modal.vue';
   import ConfirmModal from './components/confirm-modal.vue';
   import LeftSidebar from './components/left-sidebar.vue';
@@ -397,6 +398,7 @@
         <RightSidebar />
         <ScheduleModal />
         <ConfirmModal />
+        <ChoiceModal />
         <CloseBehaviorModal />
       </SidebarProvider>
     </div>
