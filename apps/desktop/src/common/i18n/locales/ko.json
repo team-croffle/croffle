@@ -241,7 +241,15 @@
     "invalidRule": "반복 규칙을 만들 수 없습니다.",
     "saveFailed": "일정 저장 실패: {error}",
     "deleteFailed": "일정 삭제 실패: {error}",
-    "loadFailed": "일정 불러오기 실패: {error}"
+    "loadFailed": "일정 불러오기 실패: {error}",
+    "drag": {
+      "recurringTitle": "반복 일정 이동",
+      "recurringDescription": "이 일정만 옮길까요, 아니면 반복되는 모든 일정을 같은 날짜만큼 옮길까요?",
+      "thisOccurrence": "이 일정만",
+      "allOccurrences": "모든 일정",
+      "ruleNotShiftable": "이 반복 규칙은 날짜 단위로 옮길 수 없어 이 일정만 옮길 수 있습니다.",
+      "moveFailed": "일정을 옮기지 못했습니다: {error}"
+    }
   },
   "recurrenceSummary": {
     "daily": "매일",

@@ -241,7 +241,15 @@
     "invalidRule": "Could not build the recurrence rule.",
     "saveFailed": "Failed to save schedule: {error}",
     "deleteFailed": "Failed to delete schedule: {error}",
-    "loadFailed": "Failed to load schedules: {error}"
+    "loadFailed": "Failed to load schedules: {error}",
+    "drag": {
+      "recurringTitle": "Move a repeating schedule",
+      "recurringDescription": "Move only this occurrence, or every occurrence of the series by the same number of days?",
+      "thisOccurrence": "Only this one",
+      "allOccurrences": "All occurrences",
+      "ruleNotShiftable": "This repeat rule can't be shifted by days, so only this occurrence can be moved.",
+      "moveFailed": "Could not move the schedule: {error}"
+    }
   },
   "recurrenceSummary": {
     "daily": "Every day",
