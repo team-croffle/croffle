@@ -20,7 +20,6 @@ import {
   schedules,
   scheduleTags,
   type NewSchedule,
-  type ScheduleRow,
   type ScheduleWithTags,
 } from '../database/schema';
 import type { ScheduleEntityInput } from '../mapper/schedule-mapper';
@@ -28,37 +27,17 @@ import { alive, bumpVersion, tombstone, touch } from '../sync/lww';
 import { colorValidation } from '../utils/color-validator';
 import { stringValidation } from '../utils/string-validator';
 import { syncScheduleReminders, syncScheduleTags } from './schedule-children';
+import {
+  replaceExceptions,
+  shiftExceptionKeys,
+  tombstoneExceptionsOf,
+} from './schedule-exceptions';
+import { findScheduleWithTags, mapScheduleWithTags, withLiveChildren } from './schedule-query';
 
 /** Upper bound for a single reminder offset: 7 days. */
 const MAX_REMINDER_MINUTES = 7 * 24 * 60;
 /** Reminders per schedule. Each one multiplies the notification queue. */
 const MAX_REMINDERS_PER_SCHEDULE = 5;
-
-function mapScheduleWithTags(
-  row: ScheduleRow & {
-    scheduleTags: { tag: ScheduleWithTags['tags'][number] }[];
-    scheduleReminders: { minutes: number }[];
-  },
-): ScheduleWithTags {
-  const { scheduleTags: links, scheduleReminders: reminderRows, ...schedule } = row;
-  return {
-    ...schedule,
-    // Link rows are filtered by `alive()` in the query; the tag itself may be tombstoned.
-    tags: links.map((link) => link.tag).filter((tag) => tag.deletedAt === null),
-    reminders: reminderRows.map((reminder) => reminder.minutes).toSorted((a, b) => a - b),
-  };
-}
-
-/** Relational `with` shared by every schedule read: live links + live reminders. */
-const withLiveChildren = {
-  scheduleTags: {
-    where: alive(scheduleTags),
-    with: { tag: true },
-  },
-  scheduleReminders: {
-    where: alive(scheduleReminders),
-  },
-} as const;
 
 export function validateScheduleData(schedule: ScheduleEntityInput) {
   if (schedule.title !== undefined && !stringValidation(schedule.title, false, 100, 1)) {
@@ -105,16 +84,6 @@ export function validateScheduleData(schedule: ScheduleEntityInput) {
       }
     }
   }
-}
-
-async function findScheduleWithTags(id: string): Promise<ScheduleWithTags | null> {
-  const db = databaseManager.getDb();
-  const row = await db.query.schedules.findFirst({
-    where: and(eq(schedules.id, id), alive(schedules)),
-    with: withLiveChildren,
-  });
-
-  return row ? mapScheduleWithTags(row) : null;
 }
 
 export async function getSchedules(period: {
@@ -176,7 +145,12 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
 
   const now = new Date();
   const id = data.id ?? randomUUID();
-  const { tags: inputTags, reminders: inputReminders, ...scheduleFields } = data;
+  const {
+    tags: inputTags,
+    reminders: inputReminders,
+    exceptions: inputExceptions,
+    ...scheduleFields
+  } = data;
   const startDate = data.startDate;
   const endDate = data.endDate;
 
@@ -202,6 +176,9 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
   await db.insert(schedules).values(values);
   await syncScheduleTags(id, inputTags);
   await syncScheduleReminders(id, inputReminders);
+  if (inputExceptions?.length && values.recurrenceRule) {
+    await replaceExceptions(id, inputExceptions);
+  }
 
   const created = await findScheduleWithTags(id);
   if (!created) {
@@ -219,7 +196,12 @@ export async function updateSchedule(
     throw new Error('Schedule not found');
   }
 
-  const { tags: inputTags, reminders: inputReminders, ...scheduleFields } = data;
+  const {
+    tags: inputTags,
+    reminders: inputReminders,
+    exceptions: inputExceptions,
+    ...scheduleFields
+  } = data;
   const merged: ScheduleEntityInput = {
     id: existing.id,
     title: scheduleFields.title ?? existing.title,
@@ -267,6 +249,13 @@ export async function updateSchedule(
 
   await syncScheduleTags(id, inputTags);
   await syncScheduleReminders(id, inputReminders);
+  if (inputExceptions !== undefined) {
+    // A full exception list (import, or an extension echoing the object) is authoritative.
+    await replaceExceptions(id, merged.recurrenceRule ? inputExceptions : []);
+  } else if (existing.recurrenceRule && merged.startDate) {
+    // The series start moved: keep overrides on the same occurrences.
+    await shiftExceptionKeys(id, existing.startDate, merged.startDate);
+  }
 
   const updated = await findScheduleWithTags(id);
   if (!updated) {
@@ -296,5 +285,6 @@ export async function deleteSchedule(id: string): Promise<boolean> {
     .update(scheduleReminders)
     .set(tombstone(scheduleReminders, now))
     .where(and(eq(scheduleReminders.scheduleId, id), alive(scheduleReminders)));
+  await tombstoneExceptionsOf(id, now);
   return true;
 }

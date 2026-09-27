@@ -24,6 +24,12 @@ export {
   type NewScheduleReminder,
 } from './schedule-reminder';
 export {
+  scheduleExceptions,
+  scheduleExceptionsRelations,
+  type ScheduleExceptionRow,
+  type NewScheduleException,
+} from './schedule-exception';
+export {
   scheduleExternalLinks,
   scheduleExternalLinksRelations,
   type ScheduleExternalLinkRow,

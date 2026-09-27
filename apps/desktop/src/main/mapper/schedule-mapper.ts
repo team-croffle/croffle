@@ -1,4 +1,4 @@
-import type { Schedule, Tag } from '@croffledev/common';
+import type { Schedule, ScheduleException, Tag } from '@croffledev/common';
 
 import type { ScheduleWithTags, TagRow } from '../database/schema';
 
@@ -6,6 +6,14 @@ import type { ScheduleWithTags, TagRow } from '../database/schema';
 function normalizeReminders(minutes: number[]): number[] {
   return [...new Set(minutes)].toSorted((a, b) => a - b);
 }
+
+/** Exception write input (dates already as Date). */
+export type ScheduleExceptionInput = {
+  occurrenceStart: Date;
+  startDate: Date | null;
+  endDate: Date | null;
+  cancelled: boolean;
+};
 
 /** Drizzle write input (dates already as Date). */
 export type ScheduleEntityInput = {
@@ -25,6 +33,8 @@ export type ScheduleEntityInput = {
   updatedAt?: Date;
   /** Only `id` is persisted (link rows); name/color ride along for callers that echo the input. */
   tags?: Tag[];
+  /** Full replacement of the live exception set (import / full-object update). */
+  exceptions?: ScheduleExceptionInput[];
 };
 
 function toTag(tag: Tag): Tag {
@@ -45,6 +55,29 @@ function toTagDto(tag: TagRow): Tag {
 
 function toDate(value: Date): Date {
   return value instanceof Date ? value : new Date(value);
+}
+
+function toExceptionDto(row: ScheduleWithTags['exceptions'][number]): ScheduleException {
+  return {
+    occurrenceStart: row.occurrenceStart,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    cancelled: row.cancelled,
+  };
+}
+
+function toExceptionInput(exception: ScheduleException): ScheduleExceptionInput | null {
+  const occurrenceStart = toDate(exception.occurrenceStart);
+  if (Number.isNaN(occurrenceStart.getTime())) {
+    return null;
+  }
+  const cancelled = exception.cancelled === true;
+  const startDate = !cancelled && exception.startDate ? toDate(exception.startDate) : null;
+  const endDate = !cancelled && exception.endDate ? toDate(exception.endDate) : null;
+  if (!cancelled && (!startDate || !endDate)) {
+    return null;
+  }
+  return { occurrenceStart, startDate, endDate, cancelled };
 }
 
 export const scheduleMapper = {
@@ -68,6 +101,7 @@ export const scheduleMapper = {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       tags: entity.tags.map(toTagDto),
+      exceptions: entity.recurrenceRule?.trim() ? entity.exceptions.map(toExceptionDto) : [],
     };
   },
 
@@ -130,6 +164,11 @@ export const scheduleMapper = {
     }
     if (data.tags !== undefined) {
       entity.tags = data.tags.map(toTag);
+    }
+    if (Array.isArray(data.exceptions)) {
+      entity.exceptions = data.exceptions
+        .map(toExceptionInput)
+        .filter((item): item is ScheduleExceptionInput => item !== null);
     }
 
     return entity;

@@ -7,6 +7,7 @@ import {
 import { relations } from 'drizzle-orm';
 import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
+import { scheduleExceptions, type ScheduleExceptionRow } from './schedule-exception';
 import { scheduleExternalLinks } from './schedule-external-link';
 import { scheduleReminders, type ScheduleReminderRow } from './schedule-reminder';
 import { syncColumns } from './sync-columns';
@@ -55,6 +56,7 @@ export const schedulesRelations = relations(schedules, ({ many }) => ({
   scheduleTags: many(scheduleTags),
   scheduleReminders: many(scheduleReminders),
   scheduleExternalLinks: many(scheduleExternalLinks),
+  scheduleExceptions: many(scheduleExceptions),
 }));
 
 export const scheduleTagsRelations = relations(scheduleTags, ({ one }) => ({
@@ -77,7 +79,12 @@ export type NewSchedule = typeof schedules.$inferInsert;
 export type ScheduleTagRow = typeof scheduleTags.$inferSelect;
 export type NewScheduleTag = typeof scheduleTags.$inferInsert;
 /** A schedule row joined with its tags and its reminder offsets (minutes, ascending). */
-export type ScheduleWithTags = ScheduleRow & { tags: TagRow[]; reminders: number[] };
+export type ScheduleWithTags = ScheduleRow & {
+  tags: TagRow[];
+  reminders: number[];
+  /** Live exceptions, ascending by occurrenceStart. */
+  exceptions: ScheduleExceptionRow[];
+};
 
 export type { ScheduleReminderRow };
 

@@ -51,6 +51,16 @@ export type ScheduleExternalLinkEntity = WithSync<{
   externalUpdatedAtMs: number | null;
 }>;
 
+/** Override of one occurrence of a recurring schedule (key = original occurrence start). */
+export type ScheduleExceptionEntity = WithSync<{
+  id: string;
+  scheduleId: string;
+  occurrenceStart: Date;
+  startDate: Date | null;
+  endDate: Date | null;
+  cancelled: boolean;
+}>;
+
 /** One reminder offset of a schedule, in minutes before the occurrence starts. */
 export type ScheduleReminderEntity = WithSync<{
   id: string;

@@ -4,6 +4,7 @@ import { ipcMain } from 'electron';
 
 import { exportSchedulesToFile } from '../calendar/export-schedule';
 import { importScheduleFromFile } from '../calendar/import-schedule';
+import { moveOccurrence } from '../calendar/schedule-exceptions';
 import {
   getSchedules,
   createSchedule,
@@ -41,6 +42,23 @@ export const registerScheduleIpcHandlers = (): void => {
     async (_, id: string, data: Partial<Schedule>): Promise<Schedule> => {
       const entityData = scheduleMapper.toEntity(data);
       const updatedEntity = await updateSchedule(id, entityData);
+
+      const dto = scheduleMapper.toInterface(updatedEntity);
+      eventService.emit(AppEventType.SCHEDULE_UPDATE, dto);
+
+      return dto;
+    },
+  );
+
+  ipcMain.handle(
+    'schedule:moveOccurrence',
+    async (
+      _,
+      id: string,
+      occurrenceStart: Date | string,
+      newStart: Date | string,
+    ): Promise<Schedule> => {
+      const updatedEntity = await moveOccurrence(id, occurrenceStart, newStart);
 
       const dto = scheduleMapper.toInterface(updatedEntity);
       eventService.emit(AppEventType.SCHEDULE_UPDATE, dto);
