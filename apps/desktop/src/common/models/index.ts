@@ -1,5 +1,5 @@
 export type { Tag } from './tag';
-export type { Schedule } from './schedule';
+export type { Schedule, ScheduleException } from './schedule';
 export type { SearchQuery } from './search';
 export type {
   ConfigItemType,

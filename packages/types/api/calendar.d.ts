@@ -7,6 +7,16 @@ export interface SchedulesApi {
   create(data: Partial<Schedule>): Promise<Schedule>;
   update(id: string, data: Partial<Schedule>): Promise<Schedule>;
   remove(id: string): Promise<boolean>;
+  /**
+   * Move one occurrence of a recurring schedule, keeping its duration.
+   * `occurrenceStart` is the occurrence's original start; the series is unchanged.
+   * Rejects for non-recurring schedules. Returns the schedule with its updated `exceptions`.
+   */
+  moveOccurrence(
+    id: string,
+    occurrenceStart: Date | string,
+    newStart: Date | string,
+  ): Promise<Schedule>;
   exportSchedulesToFile(period?: {
     start: string;
     end: string;
