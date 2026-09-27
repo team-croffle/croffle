@@ -1,9 +1,14 @@
-import { rrulestr } from 'rrule';
+import { RRule, rrulestr } from 'rrule';
 
 import { t } from './i18n';
 import type { ScheduleException } from './models/schedule';
 import { applyExceptions } from './recurrence-exceptions';
-import { asSingleRRule, extractRuleBody } from './recurrence-internal';
+import {
+  asSingleRRule,
+  extractRuleBody,
+  fromFloatingUtc,
+  toFloatingUtc,
+} from './recurrence-internal';
 
 export type ReminderScheduleInput = {
   id: string;
@@ -81,15 +86,22 @@ export function listOccurrenceStarts(
   }
 
   try {
-    const parsed = rrulestr(`RRULE:${extractRuleBody(rule)}`, {
-      dtstart:
-        schedule.startDate instanceof Date ? schedule.startDate : new Date(schedule.startDate),
-    });
-    const single = asSingleRRule(parsed);
+    const start =
+      schedule.startDate instanceof Date ? schedule.startDate : new Date(schedule.startDate);
+    const single = asSingleRRule(rrulestr(`RRULE:${extractRuleBody(rule)}`));
     if (!single) {
       return [];
     }
-    return applyExceptions(single.between(from, to, true), schedule.exceptions ?? [], from, to);
+    // Expand in local wall-clock time (see toFloatingUtc). UNTIL is an instant; its local
+    // wall-clock is what the editor meant (last day 23:59:59), same as the calendar view.
+    const options = { ...single.origOptions, dtstart: toFloatingUtc(start) };
+    if (options.until) {
+      options.until = toFloatingUtc(options.until);
+    }
+    const starts = new RRule(options)
+      .between(toFloatingUtc(from), toFloatingUtc(to), true)
+      .map(fromFloatingUtc);
+    return applyExceptions(starts, schedule.exceptions ?? [], from, to);
   } catch {
     return [];
   }
