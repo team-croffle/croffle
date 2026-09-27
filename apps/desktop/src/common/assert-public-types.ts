@@ -11,6 +11,7 @@ import type {
   ExtensionContributes as PublicExtensionContributes,
   ExtensionInfo as PublicExtensionInfo,
   Schedule as PublicSchedule,
+  ScheduleException as PublicScheduleException,
   SearchQuery as PublicSearchQuery,
   Tag as PublicTag,
   ViewManifest as PublicViewManifest,
@@ -25,6 +26,7 @@ import type {
   ExtensionContributes,
   ExtensionInfo,
   Schedule,
+  ScheduleException,
   SearchQuery,
   Tag,
   ViewManifest,
@@ -35,6 +37,7 @@ import type { AssertEqual, AssertTrue } from './type-utils';
 export type PublicTypeIntegrity = {
   tag: AssertTrue<AssertEqual<Tag, PublicTag>>;
   schedule: AssertTrue<AssertEqual<Schedule, PublicSchedule>>;
+  scheduleException: AssertTrue<AssertEqual<ScheduleException, PublicScheduleException>>;
   searchQuery: AssertTrue<AssertEqual<SearchQuery, PublicSearchQuery>>;
   configItemSchema: AssertTrue<AssertEqual<ConfigItemSchema, PublicConfigItemSchema>>;
   configurationSectionContribution: AssertTrue<

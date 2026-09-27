@@ -2,6 +2,7 @@ export * from './enums';
 export * from './i18n';
 export * from './models';
 export * from './recurrence';
+export * from './recurrence-exceptions';
 export * from './reminder';
 export type { AssertEqual, AssertTrue, AssertSchema } from './type-utils';
 export { assertSchemaMatch } from './type-utils';

@@ -1,6 +1,8 @@
 import { rrulestr } from 'rrule';
 
 import { t } from './i18n';
+import type { ScheduleException } from './models/schedule';
+import { applyExceptions } from './recurrence-exceptions';
 import { asSingleRRule, extractRuleBody } from './recurrence-internal';
 
 export type ReminderScheduleInput = {
@@ -14,6 +16,8 @@ export type ReminderScheduleInput = {
   useDefaultReminder?: boolean;
   /** Offsets in minutes before the occurrence starts. */
   reminders?: number[];
+  /** Per-occurrence overrides (recurring schedules only). */
+  exceptions?: Pick<ScheduleException, 'occurrenceStart' | 'startDate' | 'cancelled'>[];
 };
 
 export type ReminderCandidate = {
@@ -62,7 +66,7 @@ export function toRemindAt(occurrenceStart: Date, minutes: number, isAllDay: boo
  * Recurring: expand RRULE with between().
  */
 export function listOccurrenceStarts(
-  schedule: Pick<ReminderScheduleInput, 'startDate' | 'endDate' | 'recurrenceRule'>,
+  schedule: Pick<ReminderScheduleInput, 'startDate' | 'endDate' | 'recurrenceRule' | 'exceptions'>,
   from: Date,
   to: Date,
 ): Date[] {
@@ -85,7 +89,7 @@ export function listOccurrenceStarts(
     if (!single) {
       return [];
     }
-    return single.between(from, to, true);
+    return applyExceptions(single.between(from, to, true), schedule.exceptions ?? [], from, to);
   } catch {
     return [];
   }

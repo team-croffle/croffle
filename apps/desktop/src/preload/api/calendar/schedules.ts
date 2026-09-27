@@ -19,6 +19,14 @@ export const scheduleApi = {
     return ipcRenderer.invoke('schedule:delete', id);
   },
 
+  moveOccurrence: async (
+    id: string,
+    occurrenceStart: Date | string,
+    newStart: Date | string,
+  ): Promise<Schedule> => {
+    return ipcRenderer.invoke('schedule:moveOccurrence', id, occurrenceStart, newStart);
+  },
+
   exportSchedulesToFile: async (period?: {
     start: string;
     end: string;
