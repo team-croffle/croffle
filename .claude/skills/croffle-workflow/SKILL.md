@@ -15,6 +15,13 @@ Follows the global instructions (`~/.claude/CLAUDE.md`) and `AGENTS.md`; this fi
 - **Current work version**: the lowest version that still has a file under `.ai/work/` (work files are deleted when finished, so any remaining file is pending).
 - Versions are written without `v` in file names (`1.2`, `1.1.1`, `1.3.0-rc.1`).
 
+## Work numbers vs. rc labels
+
+- **Work number**: every work item of a version gets a number `1, 2, 3, …` in execution order. Numbers continue across planning rounds of the same version (items added after a test run get the next free numbers) and are never reused or renumbered.
+- **rc label**: `<version>-rc.A` is attached only when a pre-release is actually shipped. It has nothing to do with work numbers: one rc usually ships several work items, and items may be merged or moved to another rc depending on how much was implemented.
+- Every work item states its **target release** (`release: <version>-rc.A`) in its front matter. Items shipped together share the same value (e.g. items 1–6 all say `1.2.4-rc.1`). The target may change before shipping; update the field (and the plan's 배포 column) when it does.
+- Never write `rc.N` to mean a work item. In prose use `#N` (or `<version>#N` across versions).
+
 ## `.ai/` file names (global layout, Croffle naming)
 
 ```
@@ -24,7 +31,7 @@ Follows the global instructions (`~/.claude/CLAUDE.md`) and `AGENTS.md`; this fi
   ROADMAP.server.md / ROADMAP.docs.md / ROADMAP.pub.md
   conversation/<date>-<topic>.md     decision logs
   plan/<version>_<feature>.md        one plan per version; <feature> = short slug of the version theme
-  work/<version>-rc.<N>_<task>.md    one work item per file = one release candidate, N = 1, 2, … ; deleted when finished
+  work/<version>_<N>.md              one work item per file, N = work number (1, 2, …); deleted when finished
   history/<YYYY-MM-DD-HHmm>_<task>.md  written when a work item finishes; first line `decisions: …`
   test/<YYYY-MM-DD-HHmm>_<version>.md  test run report
   release/<version>_<Release|Pre-Release>.md   GitHub release note body (templates: release-notes.md)
@@ -49,8 +56,8 @@ types → desktop 순서, 네이티브 모듈, 마이그레이션, i18n 등.
 어떻게 나눌지, 왜 그 순서인지.
 
 ## 작업 목록
-| rc | 작업 | 영역 (main/preload/renderer/common/types/cli/ci/docs) | 의존 | 상태 |
-|---|---|---|---|---|
+| # | 작업 | 영역 (main/preload/renderer/common/types/cli/ci/docs) | 의존 | 배포 | 상태 |
+|---|---|---|---|---|---|
 
 ## 검증 계획
 버전 전체를 확인하는 수동 시나리오 + 자동 게이트(typecheck/lint/build).
@@ -59,17 +66,18 @@ types → desktop 순서, 네이티브 모듈, 마이그레이션, i18n 등.
 release_type (patch|minor|major|rc), 공개 문서에서 갱신할 곳, 패키지 Changeset 필요 여부.
 ```
 
-Planning rules: read the roadmap section **and the code it touches** before writing; every roadmap bullet maps to at least one work item; **one work item = one release candidate `<version>-rc.N`** (numbered in execution order, so finishing rc.N leaves the app in a `<version>-rc.N` state that can be shipped with `/release rc` when useful); one work item = one focused commit (or a small series); order by dependency; `types` changes before `desktop` changes that need them; end with `docs` / `i18n` items when user-facing text changes.
+Planning rules: read the roadmap section **and the code it touches** before writing; every roadmap bullet maps to at least one work item; work items are **numbered** `1, 2, …` in execution order (see "Work numbers vs. rc labels"), and the 배포 column gives each item's target `<version>-rc.A` (usually several items per rc; items that are too small get merged, large ones split — the numbers stay); one work item = one focused commit (or a small series); order by dependency; `types` changes before `desktop` changes that need them; end with `docs` / `i18n` items when user-facing text changes.
 
-## Work file — `.ai/work/<version>-rc.<N>_<task>.md`
+## Work file — `.ai/work/<version>_<N>.md`
 
 ```
 ---
 version: <version>
-id: rc.N
+id: <N>                # work number, not an rc
+release: <version>-rc.A   # target pre-release this item ships in (shared by items shipped together)
 title: <제목>
 area: main | preload | renderer | common | types | cli | ci | docs
-depends: []            # e.g. ["rc.1"] or ["1.1.1-rc.3"] (other version)
+depends: []            # e.g. [1, 2] (same version) or ["1.1.1_3"] (other version)
 status: todo | doing | blocked
 branch: feat/<version>-<feature>
 ---
@@ -87,7 +95,7 @@ branch: feat/<version>-<feature>
 
 ## Work workflow (one work item)
 
-1. Pick the item (see each command; the lowest pending rc.N whose dependencies have finished). Refuse if `status` is `blocked` or a dependency has not finished (its work file still exists); say why and stop.
+1. Pick the item (see each command; the lowest pending work number whose dependencies have finished). Refuse if `status` is `blocked` or a dependency has not finished (its work file still exists); say why and stop.
 2. Branch: never commit on `master`. Use the branch named in the plan (`feat/<version>-<feature>`); create it from `master` and sync (rebase) if it does not exist. Set `status: doing`.
 3. Re-read the files listed in **현재 코드**; if the plan no longer matches the code, fix the work file first. Check prior decisions: `grep -l 'decisions:.*<keyword>' .ai/history/*`.
 4. Implement following `AGENTS.md` conventions, ticking checklist items as they complete. Stay inside the item's scope; if something else is broken, add a new work item instead of fixing it silently.
@@ -102,12 +110,12 @@ Report at the end: item, branch, commit hash, verification results, anything lef
 ## Branch → PR → merge → release (per rc)
 
 1. **Branch**: all work for a version runs on the branch named in the plan (`fix/<version>-<feature>` or `feat/…`), created from a synced `master`. Never on `master`.
-2. **≥ 3 commits per branch/PR**. If a work item finishes with fewer than 3 commits, do **not** open a PR yet: continue with the next pending work item on the same branch and ship them together as one rc. Then renumber the remaining rc.N in the plan and work files so numbering stays contiguous.
+2. **≥ 3 commits per branch/PR**. If the items targeting an rc finish with fewer than 3 commits, do **not** open a PR yet: continue with the next pending item on the same branch and ship them together. Update the `release` field (and the plan's 배포 column) of every item that moves to a different rc. Work numbers never change.
 3. **Verify** with `/test` (gates always; run the app with `pnpm dev` only when a scenario cannot be judged from code, or the user asks).
 4. **Publish**: sync (rebase on `origin/master`), push the branch, open the PR (`gh pr create`, template from `.github/pull_request_template/`, labels come from the labeler). Draft the body in `.ai/pr/<branch>.md` first.
 5. **GitHub Actions decide**: wait for `CI` and `Secret Scan` (`gh pr checks --watch`). Red → fix on the branch, push, wait again. Never merge red.
 6. **Merge**: Rebase and Merge (`gh pr merge --rebase --delete-branch`). Then sync: `git checkout master && git pull --rebase`, delete the local branch.
-7. **Release the rc**: run the Release workflow with `release_type=rc`, then write `.ai/release/X.Y.Z-rc.A_Pre-Release.md` from the pre-release template and publish the draft with `gh release edit … --notes-file … --draft=false --prerelease` (title `Pre-Release vX.Y.Z-rc.A`). This is part of the loop and needs no extra approval; announce it. Version file bumps are done by the workflow, never by hand.
+7. **Release the rc**: the rc label is the `release` value of the merged items. Run the Release workflow with `release_type=rc`; for the **first rc of a new version** pass it explicitly (`-f version=<X.Y.Z> -f version_suffix=rc.1`), because `rc` alone bumps the current pre-release (e.g. `1.2.3-rc.1` → `1.2.3-rc.2`). Then write `.ai/release/X.Y.Z-rc.A_Pre-Release.md` from the pre-release template and publish the draft with `gh release edit … --notes-file … --draft=false --prerelease` (title `Pre-Release vX.Y.Z-rc.A`). This is part of the loop and needs no extra approval; announce it. Version file bumps are done by the workflow, never by hand.
 8. **Stable release** (`Release vX.Y.Z`, `release_type=patch|minor|major`) happens **only on an explicit user instruction** or the user's manual run. `/release` without an explicit type must not produce a stable release.
 9. **Packages** (`packages/types`, `packages/cli`): code changes ship with a Changeset in the same PR. After merge, the `Publish Packages` workflow (github-actions bot) opens a "chore: version packages" PR; merge that PR (same checks) and the bot publishes to npm. Do not publish by hand.
 
@@ -124,7 +132,7 @@ There is no automated test suite yet. A test run is:
 1. Gates: `pnpm install --frozen-lockfile` (if node_modules is stale), `pnpm typecheck`, `pnpm lint`, `oxfmt --check .`, `pnpm build`, `pnpm --filter @croffledev/croffle-cli build`. If a `test` script exists in any package, run `pnpm -r test` too.
 2. Scenarios: for the version under test, collect the **검증** sections from the version's history files plus the plan's **검증 계획**. Run what can be run (`pnpm dev`, dev DB at `apps/desktop/dev/croffle.db`, logs at `apps/desktop/dev/logs/main.log`), and mark the rest as manual for the user.
 3. Always include the smoke set: app starts, calendar renders, create/edit/delete a schedule, settings open and language switch, an extension installs from a local zip (if one is available under `apps/desktop/dev/extensions`).
-4. Write `.ai/test/<YYYY-MM-DD-HHmm>_<version>.md`: gates table (pass/fail + output on failure), scenario table (pass/fail/manual), failures with file paths. Failures become new work files for the version.
+4. Write `.ai/test/<YYYY-MM-DD-HHmm>_<version>.md`: gates table (pass/fail + output on failure), scenario table (pass/fail/manual), failures with file paths. Failures become new work files for the version with the next free work numbers and a target `release` (normally the next rc); add them to the plan table.
 
 Never mark a scenario passed that was not actually executed.
 
@@ -135,7 +143,7 @@ Releasing = the desktop version in `apps/desktop/package.json` (packages are rel
 Preconditions, all must hold or stop and report:
 
 - The branch is merged (Rebase and Merge) with green `CI` + `Secret Scan`, local `master` synced with `origin/master`, working tree clean, on `master`.
-- For an **rc**: the rc's work items are finished (history written, work files deleted) and the latest `.ai/test/*_<version>.md` has no failing gate.
+- For an **rc**: every work item whose `release` is this rc is finished (history written, work files deleted) and the latest `.ai/test/*_<version>.md` has no failing gate.
 - For a **stable** release: the plan is `done`, no work file for the version remains, the last rc was released, and the user explicitly asked for the stable release.
 - Public docs updated where the version changed behavior: `README.md` / `README.ko.md`, `docs/ROADMAP.md` ("현재 데스크톱" line), `CONTRIBUTING*.md` if the workflow changed.
 - Pending Changesets exist for any `packages/*` change in this version.
@@ -145,5 +153,5 @@ Steps:
 1. Write `.ai/release/<version>_<Release|Pre-Release>.md` as the **release note body** using the templates in [release-notes.md](./release-notes.md): Korean block in `<details>`, `---`, English block, and a final `## Changelogs` section pasted from `gh api … releases/generate-notes` with its `## What's Changed` heading renamed. No commands, run URLs, or QA logs in this file.
 2. Update `.ai/ROADMAP.md` header ("현재 데스크톱 **<version>**") and move the version's section to a `## 완료` block, keeping later versions intact (stable releases only).
 3. Doc changes go on a branch (`docs/<version>-release`), are committed (`docs: prepare v<version> release`), and merged the normal way after the user approves the push.
-4. Trigger **Croffle Release** (`.github/workflows/release.yml`) with `gh workflow run release.yml -f release_type=<patch|minor|major|rc> [-f version=<x.y.z>] [-f version_suffix=rc.1] -f dry_run=false`. `draft` defaults to **true**: the workflow uploads assets to a draft. An rc release is part of the branch loop (announce, no extra approval). A stable release needs the user's explicit instruction; if anything is uncertain, offer `dry_run=true` first.
+4. Trigger **Croffle Release** (`.github/workflows/release.yml`) with `gh workflow run release.yml -f release_type=<patch|minor|major|rc> [-f version=<x.y.z>] [-f version_suffix=rc.1] -f dry_run=false`. The first rc of a new version always passes `version` + `version_suffix` (see the Branch → PR step 7). `draft` defaults to **true**: the workflow uploads assets to a draft. An rc release is part of the branch loop (announce, no extra approval). A stable release needs the user's explicit instruction; if anything is uncertain, offer `dry_run=true` first.
 5. Watch the run (`gh run watch`), confirm win/mac/linux assets are attached, then publish with the notes: `gh release edit <tag> --title "<title>" --notes-file .ai/release/<file> --draft=false [--prerelease]`. Titles: `Pre-Release vX.Y.Z-rc.A` / `Croffle vX.Y.Z — Release Note`. Verify `gh release view <tag> --json name,isDraft,isPrerelease,assets` shows `isDraft=false` (electron-updater cannot see drafts). Record the run URL in `.ai/history/`, not in the release file.
