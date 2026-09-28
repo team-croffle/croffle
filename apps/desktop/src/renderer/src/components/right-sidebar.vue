@@ -60,7 +60,11 @@
   // const hasTodayEvent = computed(() => todayCount.value > 0);
 
   const handleEditTodo = (occurrence: ScheduleOccurrence) => {
-    uiStore.openScheduleModal('view', occurrence.schedule.id);
+    const detail =
+      occurrence.occurrenceStart === null
+        ? undefined
+        : { start: occurrence.start, end: occurrence.end, isOverride: occurrence.isOverride };
+    uiStore.openScheduleModal('view', occurrence.schedule.id, detail);
   };
 
   function getPriorityClass(priority: string) {

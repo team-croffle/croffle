@@ -1,7 +1,7 @@
 import type FullCalendarComponent from '@fullcalendar/vue3';
 import type { Ref } from 'vue';
 
-import { useUiStore } from '@/stores/ui-store';
+import { useUiStore, type SelectedOccurrence } from '@/stores/ui-store';
 
 export function useCalendarLogic() {
   const uiStore = useUiStore();
@@ -83,10 +83,11 @@ export function useCalendarLogic() {
     });
   };
 
-  // 이벤트를 더블 클릭했을 때
-  const handleEventDoubleClick = (eventId: string) => {
-    handleDoubleClick(`event:${eventId}`, () => {
-      uiStore.openScheduleModal('view', eventId);
+  // 이벤트를 더블 클릭했을 때 (반복 일정이면 그 발생의 날짜로 연다)
+  const handleEventDoubleClick = (eventId: string, occurrence?: SelectedOccurrence) => {
+    const key = `event:${eventId}:${occurrence?.start.getTime() ?? ''}`;
+    handleDoubleClick(key, () => {
+      uiStore.openScheduleModal('view', eventId, occurrence);
     });
   };
 

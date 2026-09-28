@@ -10,6 +10,15 @@ export type ConfirmDialogOptions = {
   confirmVariant?: 'default' | 'destructive';
 };
 
+/** 반복 일정의 한 발생을 열 때 넘기는 정보. 조회 화면은 시리즈 대신 이 날짜를 보여준다. */
+export type SelectedOccurrence = {
+  start: Date;
+  /** 스토어 규칙(종료 포함)의 끝. */
+  end: Date;
+  /** 이 발생만 따로 옮겨진 경우 (일정 예외). */
+  isOverride: boolean;
+};
+
 /** 일정 모달 모드. 기존 일정은 기본 `view`(조회)로 열고, 버튼으로 `edit`으로 전환한다. */
 export type ScheduleModalMode = 'add' | 'edit' | 'view';
 
@@ -21,6 +30,7 @@ export const useUiStore = defineStore('ui', () => {
   const isScheduleModalOpen = ref(false);
   const scheduleModalMode = ref<ScheduleModalMode>('add');
   const selectedScheduleId = ref<string | null>(null);
+  const selectedOccurrence = ref<SelectedOccurrence | null>(null);
 
   const isConfirmModalOpen = ref(false);
   const confirmTitle = ref('');
@@ -44,12 +54,17 @@ export const useUiStore = defineStore('ui', () => {
     rightSidebarOpen.value = true;
   };
 
-  const openScheduleModal = (mode: ScheduleModalMode = 'add', scheduleId?: string) => {
+  const openScheduleModal = (
+    mode: ScheduleModalMode = 'add',
+    scheduleId?: string,
+    occurrence?: SelectedOccurrence,
+  ) => {
     if (mode !== 'add' && !scheduleId) {
       return;
     }
     scheduleModalMode.value = mode;
     selectedScheduleId.value = scheduleId ?? null;
+    selectedOccurrence.value = occurrence ?? null;
     isScheduleModalOpen.value = true;
   };
 
@@ -65,6 +80,7 @@ export const useUiStore = defineStore('ui', () => {
     isScheduleModalOpen.value = false;
     scheduleModalMode.value = 'add';
     selectedScheduleId.value = null;
+    selectedOccurrence.value = null;
   };
 
   const resolveConfirm = (value: boolean) => {
@@ -117,5 +133,6 @@ export const useUiStore = defineStore('ui', () => {
     resolveConfirm,
     scheduleModalMode,
     selectedScheduleId,
+    selectedOccurrence,
   };
 });
