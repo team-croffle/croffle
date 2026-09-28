@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { AppEventType } from '@croffledev/common';
-  import type { CalendarOptions } from '@fullcalendar/core';
+  import type { CalendarOptions, EventApi } from '@fullcalendar/core';
   import koLocale from '@fullcalendar/core/locales/ko';
   import dayGridPlugin from '@fullcalendar/daygrid';
   import interactionPlugin from '@fullcalendar/interaction';
@@ -16,6 +16,7 @@
   import { useScheduleDrag } from '@/composables/use-schedule-drag';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
+  import type { SelectedOccurrence } from '@/stores/ui-store';
   import {
     calendarViewToFullCalendar,
     languageToLocale,
@@ -39,6 +40,24 @@
     useCalendarLogic();
 
   const { handleEventDrop } = useScheduleDrag();
+
+  /** Occurrence info for recurring / moved events; one-off schedules open as before. */
+  function toSelectedOccurrence(
+    event: EventApi,
+    scheduleId: string,
+  ): SelectedOccurrence | undefined {
+    const schedule = scheduleStore.getScheduleById(scheduleId);
+    const isOverride = event.extendedProps.isOverride === true;
+    if (!schedule || !event.start || (!schedule.recurrenceRule?.trim() && !isOverride)) {
+      return undefined;
+    }
+    const duration = new Date(schedule.endDate).getTime() - new Date(schedule.startDate).getTime();
+    // FullCalendar's end is exclusive for all-day events; the store keeps the inclusive end.
+    const end = event.end
+      ? new Date(event.end.getTime() - (event.allDay ? 1000 : 0))
+      : new Date(event.start.getTime() + duration);
+    return { start: event.start, end, isOverride };
+  }
 
   let unsubscribeSettings: (() => void) | null = null;
 
@@ -138,7 +157,7 @@
         if (!scheduleId) {
           return;
         }
-        handleEventDoubleClick(scheduleId);
+        handleEventDoubleClick(scheduleId, toSelectedOccurrence(info.event, scheduleId));
       },
       eventDidMount: (info) => {
         const scheduleId =

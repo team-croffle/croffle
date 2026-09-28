@@ -249,6 +249,10 @@
       "allOccurrences": "All occurrences",
       "ruleNotShiftable": "This repeat rule can't be shifted by days, so only this occurrence can be moved.",
       "moveFailed": "Could not move the schedule: {error}"
+    },
+    "occurrence": {
+      "rescheduled": "Rescheduled",
+      "editSeriesHint": "Changes here apply to every occurrence. To move only this one, drag it on the calendar."
     }
   },
   "recurrenceSummary": {

@@ -74,7 +74,8 @@
   const appSettingsStore = useAppSettingsStore();
   const tagStore = useTagStore();
   const { t, locale } = useI18n();
-  const { isScheduleModalOpen, scheduleModalMode, selectedScheduleId } = storeToRefs(uiStore);
+  const { isScheduleModalOpen, scheduleModalMode, selectedScheduleId, selectedOccurrence } =
+    storeToRefs(uiStore);
 
   const DEFAULT_START_TIME = '09:00';
   const DEFAULT_END_TIME = '10:00';
@@ -649,8 +650,9 @@
     if (!schedule) {
       return '';
     }
-    const start = new Date(schedule.startDate);
-    const end = new Date(schedule.endDate);
+    // A clicked occurrence of a recurring schedule shows its own dates, not the series'.
+    const start = new Date(selectedOccurrence.value?.start ?? schedule.startDate);
+    const end = new Date(selectedOccurrence.value?.end ?? schedule.endDate);
     const sameDay = dayjs(start).isSame(end, 'day');
     if (schedule.isAllDay) {
       return sameDay ? formatViewDate(start) : `${formatViewDate(start)} – ${formatViewDate(end)}`;
@@ -788,7 +790,17 @@
               <Icon icon="lucide:clock" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
               <div class="min-w-0">
                 <dt class="sr-only">{{ $t('schedule.dateTime') }}</dt>
-                <dd class="text-foreground">{{ viewDateLabel }}</dd>
+                <dd class="text-foreground flex flex-wrap items-center gap-2">
+                  <span>{{ viewDateLabel }}</span>
+                  <Badge
+                    v-if="selectedOccurrence?.isOverride"
+                    variant="outline"
+                    class="rounded-md text-xs"
+                  >
+                    <Icon icon="lucide:calendar-clock" class="size-3" />
+                    {{ $t('schedule.occurrence.rescheduled') }}
+                  </Badge>
+                </dd>
                 <dd v-if="viewedSchedule.isAllDay" class="text-muted-foreground text-xs">
                   {{ $t('schedule.allDay') }}
                 </dd>
@@ -865,6 +877,13 @@
         </div>
 
         <form v-else class="contents" @submit.prevent="handleSave">
+          <p
+            v-if="scheduleModalMode === 'edit' && selectedOccurrence"
+            class="text-muted-foreground bg-croffle-bg rounded-md px-3 py-2 text-xs"
+          >
+            <Icon icon="lucide:info" class="mr-1 inline size-3.5 align-[-2px]" />
+            {{ $t('schedule.occurrence.editSeriesHint') }}
+          </p>
           <FieldGroup class="gap-6">
             <FieldSet class="gap-4">
               <FieldLegend

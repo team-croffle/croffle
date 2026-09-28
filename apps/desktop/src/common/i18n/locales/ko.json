@@ -249,6 +249,10 @@
       "allOccurrences": "모든 일정",
       "ruleNotShiftable": "이 반복 규칙은 날짜 단위로 옮길 수 없어 이 일정만 옮길 수 있습니다.",
       "moveFailed": "일정을 옮기지 못했습니다: {error}"
+    },
+    "occurrence": {
+      "rescheduled": "일정 조정됨",
+      "editSeriesHint": "여기서 바꾸면 반복되는 모든 일정에 적용됩니다. 이 일정만 옮기려면 캘린더에서 끌어 옮기세요."
     }
   },
   "recurrenceSummary": {
