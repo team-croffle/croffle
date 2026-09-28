@@ -1,5 +1,11 @@
 # @croffledev/croffle-types
 
+## 1.7.0
+
+### Minor Changes
+
+- 8c5a08b: Add recurring-schedule exceptions: `ScheduleException`, optional `Schedule.exceptions` and `SchedulesApi.moveOccurrence(id, occurrenceStart, newStart)`. Extensions that expand `recurrenceRule` themselves should skip each exception's `occurrenceStart` and use its `startDate`/`endDate` unless `cancelled`.
+
 ## 1.6.0
 
 ### Minor Changes
