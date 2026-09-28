@@ -342,5 +342,12 @@
   "reminder": {
     "bodyAllDay": "{minutes} minutes before · All-day",
     "bodyTimed": "Starts in {minutes} min · {time}"
+  },
+  "calendar": {
+    "today": "Today",
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
+    "year": "Year"
   }
 }
