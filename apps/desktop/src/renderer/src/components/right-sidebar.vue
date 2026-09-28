@@ -1,6 +1,5 @@
 <script setup lang="ts">
   import dayjs from 'dayjs';
-  import isBetween from 'dayjs/plugin/isBetween';
   import { storeToRefs } from 'pinia';
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
@@ -14,10 +13,9 @@
   import { cn } from '@/lib/utils';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
+  import { occurrencesOnDate, type ScheduleOccurrence } from '@/utils/schedule-occurrences';
 
   import pkg from '../../../../package.json';
-
-  dayjs.extend(isBetween);
 
   const uiStore = useUiStore();
   const scheduleStore = useScheduleStore();
@@ -45,40 +43,24 @@
     isSelectedToday.value ? t('rightSidebar.emptyToday') : t('rightSidebar.emptySelected'),
   );
 
-  // 선택된 날짜에 해당하는 일정만 스토어에서 가져옴
-  const selectedSchedules = computed(() => {
+  // 선택된 날짜에 걸치는 일정의 발생들. 반복 일정은 그날의 발생(옮긴 발생 포함)으로 전개한다.
+  // 시작·끝은 스토어 기준(종료 포함, inclusive)으로 비교한다.
+  const selectedSchedules = computed<ScheduleOccurrence[]>(() => {
     if (!selectedDate.value) {
       return [];
     }
-
-    // 중간 날짜를 클릭했을 때도 해당 일정이 보여야 하므로, 일정의 시작과 끝을 포함하는지 확인
-    // 단순 문자열 비교 시 발생할 수 있는 문제를 방지하기 위해 dayjs로 날짜 비교
-    const target = dayjs(selectedDate.value);
-
-    return scheduleStore.schedules.filter((schedule) => {
-      const start = dayjs(schedule.startDate);
-      const end = schedule.endDate ? dayjs(schedule.endDate) : start;
-
-      /**
-       * [FullCalendar vs Store 날짜 정책 차이]
-       * FullCalendar : 종료일을 실제 마지막 날 + 1일(Exclusive)로 처리
-       *   ex) 2/18~2/20 일정 → FullCalendar 내부 end = '2/21'
-       * scheduleStore: 실제 마지막 날(Inclusive)로 저장
-       *   ex) 2/18~2/20 일정 → endDate = '2/20'
-       *
-       * 스토어 기준으로 필터링하므로 isBetween에 '[]'(양끝 포함)을 사용해야
-       * 마지막 날 클릭 시 해당 일정이 정상적으로 조회됨
-       */
-      return target.isBetween(start, end, 'day', '[]');
-    });
+    const target = dayjs(selectedDate.value).toDate();
+    return scheduleStore.schedules
+      .flatMap((schedule) => occurrencesOnDate(schedule, target))
+      .toSorted((a, b) => a.start.getTime() - b.start.getTime());
   });
 
   // 화면에 보여줄 상태값들을 computed로 자동 계산
   // const todayCount = computed(() => selectedSchedules.value.length);
   // const hasTodayEvent = computed(() => todayCount.value > 0);
 
-  const handleEditTodo = (scheduleId: string) => {
-    uiStore.openScheduleModal('view', scheduleId);
+  const handleEditTodo = (occurrence: ScheduleOccurrence) => {
+    uiStore.openScheduleModal('view', occurrence.schedule.id);
   };
 
   function getPriorityClass(priority: string) {
@@ -182,15 +164,15 @@
             <span v-if="selectedSchedules.length === 0">{{ emptyLabel }}</span>
             <div v-else class="mt-2 flex w-full flex-col gap-1">
               <div
-                v-for="schedule in selectedSchedules"
-                :key="schedule.id"
+                v-for="occurrence in selectedSchedules"
+                :key="`${occurrence.schedule.id}-${occurrence.start.getTime()}`"
                 class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-800"
-                @click="handleEditTodo(schedule.id)"
+                @click="handleEditTodo(occurrence)"
               >
                 <Icon icon="lucide:square-check" class="text-muted-foreground h-4 w-4 shrink-0" />
 
                 <span class="text-foreground flex-1 truncate text-sm">
-                  {{ schedule.title }}
+                  {{ occurrence.schedule.title }}
                 </span>
 
                 <Badge
@@ -198,11 +180,11 @@
                   :class="
                     cn(
                       'text-foreground border-sidebar-ring text-2xs h-4 shrink-0 px-1.5 py-0',
-                      getPriorityClass(schedule.priority),
+                      getPriorityClass(occurrence.schedule.priority),
                     )
                   "
                 >
-                  {{ getPriorityText(schedule.priority) }}
+                  {{ getPriorityText(occurrence.schedule.priority) }}
                 </Badge>
               </div>
             </div>
