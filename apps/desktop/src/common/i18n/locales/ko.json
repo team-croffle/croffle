@@ -342,5 +342,12 @@
   "reminder": {
     "bodyAllDay": "{minutes}분 전 · 종일 일정",
     "bodyTimed": "{minutes}분 후 시작 · {time}"
+  },
+  "calendar": {
+    "today": "오늘",
+    "month": "월",
+    "week": "주",
+    "day": "일",
+    "year": "연"
   }
 }

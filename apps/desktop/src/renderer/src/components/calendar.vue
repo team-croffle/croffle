@@ -14,8 +14,10 @@
 
   import { useCalendarLogic } from '@/composables/use-calendar-logic';
   import { useScheduleDrag } from '@/composables/use-schedule-drag';
+  import { i18n } from '@/i18n';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
+  import { useUiStore } from '@/stores/ui-store';
   import type { SelectedOccurrence } from '@/stores/ui-store';
   import {
     calendarViewToFullCalendar,
@@ -40,6 +42,46 @@
     useCalendarLogic();
 
   const { handleEventDrop } = useScheduleDrag();
+  const uiStore = useUiStore();
+
+  const TODAY_BUTTON = 'todayAlways';
+
+  /** Toolbar labels in the app language (FullCalendar's own are lowercase in English). */
+  function toolbarText(lang: string | undefined) {
+    const locale = lang === 'ko' ? 'ko' : 'en';
+    const label = (key: string) => String(i18n.global.t(`calendar.${key}`, {}, locale));
+    return {
+      buttonText: {
+        today: label('today'),
+        month: label('month'),
+        week: label('week'),
+        day: label('day'),
+        year: label('year'),
+      },
+      todayLabel: label('today'),
+    };
+  }
+
+  /**
+   * FullCalendar disables its own Today button whenever today is in the visible range, so a
+   * different day selected in the current month could not jump back. This one is always on:
+   * it goes to today and selects it (the right sidebar follows the selection).
+   */
+  function goToday() {
+    const api = fullCalendarRef.value?.getApi();
+    if (!api) {
+      return;
+    }
+    const today = dayjs().format('YYYY-MM-DD');
+    clearContextTarget();
+    api.today();
+    api.select(today);
+    uiStore.selectedDate = today;
+  }
+
+  function customButtons(lang: string | undefined): CalendarOptions['customButtons'] {
+    return { [TODAY_BUTTON]: { text: toolbarText(lang).todayLabel, click: goToday } };
+  }
 
   /** Occurrence info for recurring / moved events; one-off schedules open as before. */
   function toSelectedOccurrence(
@@ -110,8 +152,12 @@
       headerToolbar: {
         start: 'title',
         center: '',
-        end: 'prev,today,next',
+        // View switcher, then navigation. Switching here is per session; the default view
+        // stays a setting.
+        end: `dayGridMonth,timeGridWeek,timeGridDay,multiMonthYear prev,${TODAY_BUTTON},next`,
       },
+      buttonText: toolbarText(lang).buttonText,
+      customButtons: customButtons(lang),
 
       // 제목 형식
       titleFormat: { year: 'numeric', month: 'long' },
@@ -202,6 +248,10 @@
 
   const calendarOptions = reactive<CalendarOptions>(buildCalendarOptions());
 
+  // Only a changed default view switches the calendar, so saving any other setting keeps the
+  // view picked from the toolbar.
+  let appliedDefaultView: string | null = null;
+
   const applyCalendarSettings = () => {
     const api = fullCalendarRef.value?.getApi();
     const cal = settings.value?.calendar;
@@ -224,6 +274,8 @@
         minute: '2-digit',
         meridiem: timeFormatToHour12(cal.timeFormat),
       },
+      buttonText: toolbarText(lang).buttonText,
+      customButtons: customButtons(lang),
     };
 
     Object.assign(calendarOptions, patch);
@@ -234,7 +286,13 @@
       api.setOption('weekNumbers', patch.weekNumbers);
       api.setOption('eventTimeFormat', patch.eventTimeFormat);
       api.setOption('slotLabelFormat', patch.slotLabelFormat);
-      api.changeView(calendarViewToFullCalendar(cal.defaultView));
+      api.setOption('buttonText', patch.buttonText);
+      api.setOption('customButtons', patch.customButtons);
+      const defaultView = calendarViewToFullCalendar(cal.defaultView);
+      if (defaultView !== appliedDefaultView) {
+        appliedDefaultView = defaultView;
+        api.changeView(defaultView);
+      }
     }
   };
 
