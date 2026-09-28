@@ -21,10 +21,10 @@ We provide a **powerful extension system** that lets you build your own producti
 
 ### Calendar & schedules
 
-- **Calendar views**: Day, week, month, and year, with week-start and time-format preferences.
+- **Calendar views**: Day, week, month, and year, switched from the toolbar, with a default view, week-start and time-format preferences. **Today** jumps back to today from any date.
 - **Rich schedules**: Priorities, recurrence, color labels, tags, multiple reminders per schedule, and JSON import/export.
-- **Drag to reschedule**: In month and year views, drag a schedule to another day; its time and length stay. For a repeating schedule, move just that occurrence or the whole series.
-- **View, then edit**: Clicking a schedule opens a read-only view with a recurrence summary; switch to the editor with one click.
+- **Drag to reschedule**: Drag a schedule to another day; its time and length stay. For a repeating schedule, move just that occurrence or the whole series. Moved occurrences are marked as rescheduled.
+- **View, then edit**: Clicking a schedule opens a read-only view of that occurrence with a recurrence summary; switch to the editor with one click.
 - **Desktop optimized**: Built for large screens and keyboard-driven use.
 
 ### Personalization
