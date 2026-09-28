@@ -270,6 +270,23 @@
   :deep(.fc) {
     height: 100%;
     width: 100%;
+    /*
+     * FullCalendar's theme defaults are global (white page background, grey borders).
+     * The year (multiMonth) and week/day (timeGrid) views paint with them directly, so map
+     * them to the app tokens to follow light / dark.
+     */
+    --fc-page-bg-color: var(--card);
+    --fc-neutral-bg-color: var(--croffle-bg);
+    --fc-neutral-text-color: var(--muted-foreground);
+    --fc-border-color: var(--croffle-border);
+    --fc-more-link-bg-color: var(--croffle-bg);
+  }
+
+  /* 연도 보기: 월 제목 */
+  :deep(.fc-multimonth-title) {
+    color: var(--croffle-text);
+    font-size: var(--text-base);
+    font-weight: 700;
   }
 
   /* 헤더(제목+버튼) */
