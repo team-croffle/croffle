@@ -1,4 +1,4 @@
-import type { ExtensionInfo } from '../models/extension';
+import type { ExtensionInfo } from '../models/extension.js';
 
 export interface ExtensionInfoApi {
   getInstalled(): Promise<ExtensionInfo[]>;
