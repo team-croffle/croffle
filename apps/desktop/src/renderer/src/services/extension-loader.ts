@@ -134,7 +134,14 @@ class ExtensionLoader {
         registerContextMenu: (target, command, label, callback) => {
           window.dispatchEvent(
             new CustomEvent('extension:register-context-menu', {
-              detail: { extensionId: extension.id, target, command, label, callback },
+              detail: {
+                extensionId: extension.id,
+                extensionName: extension.name,
+                target,
+                command,
+                label,
+                callback,
+              },
             }),
           );
         },

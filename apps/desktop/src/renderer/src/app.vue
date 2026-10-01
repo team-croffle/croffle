@@ -10,6 +10,7 @@
     ContextMenuTrigger,
     ContextMenuContent,
     ContextMenuItem,
+    ContextMenuSeparator,
     ContextMenuRadioGroup,
     ContextMenuRadioItem,
   } from '@/components/ui/context-menu';
@@ -149,12 +150,13 @@
   const handleRegisterContextMenu = (event: Event) => {
     const customEvent = event as CustomEvent<{
       extensionId: string;
+      extensionName: string;
       target: string;
       command: string;
       label: string;
       callback: (element: HTMLElement | null) => void;
     }>;
-    const { extensionId, target, command, label, callback } = customEvent.detail;
+    const { extensionId, extensionName, target, command, label, callback } = customEvent.detail;
 
     contextMenuStore.registerMenu({
       id: `${extensionId}-${command}`,
@@ -162,7 +164,28 @@
       label,
       action: callback,
       extensionId,
+      extensionName,
     });
+  };
+
+  type ContextMenuBindingDetail = {
+    extensionId: string;
+    menuId: string;
+    handler: (element: HTMLElement | null) => void;
+    condition?: (element: HTMLElement | null) => boolean;
+  };
+
+  const handleBindContextMenu = (event: Event) => {
+    const { extensionId, menuId, handler, condition } = (
+      event as CustomEvent<ContextMenuBindingDetail>
+    ).detail;
+    contextMenuStore.bindExtensionMenu(extensionId, menuId, { handler, condition });
+  };
+
+  const handleUnbindContextMenu = (event: Event) => {
+    const { extensionId, menuId, handler } = (event as CustomEvent<ContextMenuBindingDetail>)
+      .detail;
+    contextMenuStore.unbindExtensionMenu(extensionId, menuId, handler);
   };
 
   const handlePluginUnloaded = (event: Event) => {
@@ -197,6 +220,13 @@
 
       viewStore.registerMenus(views);
     }
+    if (extension.contributes?.contextMenus) {
+      contextMenuStore.declareExtensionMenus(
+        extension.id,
+        extension.name,
+        extension.contributes.contextMenus,
+      );
+    }
     if (extension.contributes?.configuration) {
       settingsStore.registerManifestTabs(
         extension.id,
@@ -215,6 +245,8 @@
     window.addEventListener('extension:register-view', handleRegisterView);
     window.addEventListener('extension:register-configuration-tab', handleRegisterSettingsTab);
     window.addEventListener('extension:register-context-menu', handleRegisterContextMenu);
+    window.addEventListener('extension:bind-context-menu', handleBindContextMenu);
+    window.addEventListener('extension:unbind-context-menu', handleUnbindContextMenu);
     window.addEventListener('extension:loaded', handleExtensionLoaded);
     window.addEventListener('extension:unloaded', handlePluginUnloaded);
 
@@ -279,6 +311,8 @@
     window.removeEventListener('extension:register-view', handleRegisterView);
     window.removeEventListener('extension:register-configuration-tab', handleRegisterSettingsTab);
     window.removeEventListener('extension:register-context-menu', handleRegisterContextMenu);
+    window.removeEventListener('extension:bind-context-menu', handleBindContextMenu);
+    window.removeEventListener('extension:unbind-context-menu', handleUnbindContextMenu);
     window.removeEventListener('extension:loaded', handleExtensionLoaded);
     window.removeEventListener('extension:unloaded', handlePluginUnloaded);
     appSettingsStore.dispose();
@@ -380,15 +414,18 @@
                 <router-view />
               </div>
             </ContextMenuTrigger>
-            <ContextMenuContent v-if="contextMenuStore.currentItems.length > 0">
-              <ContextMenuItem
-                v-for="item in contextMenuStore.currentItems"
-                :key="item.id"
-                :disabled="item.disabled"
-                @click="item.action(contextMenuStore.activeElement)"
-              >
-                {{ translateOrRaw(item.label) }}
-              </ContextMenuItem>
+            <ContextMenuContent v-if="contextMenuStore.currentGroups.length > 0">
+              <template v-for="(group, index) in contextMenuStore.currentGroups" :key="index">
+                <ContextMenuSeparator v-if="index > 0" />
+                <ContextMenuItem
+                  v-for="item in group"
+                  :key="item.id"
+                  :disabled="item.disabled"
+                  @click="item.action(contextMenuStore.activeElement)"
+                >
+                  {{ translateOrRaw(item.label) }}
+                </ContextMenuItem>
+              </template>
             </ContextMenuContent>
             <ContextMenuContent v-else>
               <ContextMenuItem disabled>{{ $t('contextMenu.empty') }}</ContextMenuItem>
