@@ -11,10 +11,18 @@
   import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
   import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
+  import { Icon } from '@/components/ui/icon';
+  import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from '@/components/ui/select';
   import { useCalendarLogic } from '@/composables/use-calendar-logic';
   import { useScheduleDrag } from '@/composables/use-schedule-drag';
-  import { i18n } from '@/i18n';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
@@ -44,28 +52,38 @@
   const { handleEventDrop } = useScheduleDrag();
   const uiStore = useUiStore();
 
-  const TODAY_BUTTON = 'todayAlways';
+  const { t } = useI18n();
 
-  /** Toolbar labels in the app language (FullCalendar's own are lowercase in English). */
-  function toolbarText(lang: string | undefined) {
-    const locale = lang === 'ko' ? 'ko' : 'en';
-    const label = (key: string) => String(i18n.global.t(`calendar.${key}`, {}, locale));
-    return {
-      buttonText: {
-        today: label('today'),
-        month: label('month'),
-        week: label('week'),
-        day: label('day'),
-        year: label('year'),
-      },
-      todayLabel: label('today'),
-    };
+  /** Views offered by the toolbar dropdown; the default view stays a setting. */
+  const VIEW_OPTIONS = [
+    { value: 'dayGridMonth', label: 'calendar.month' },
+    { value: 'timeGridWeek', label: 'calendar.week' },
+    { value: 'timeGridDay', label: 'calendar.day' },
+    { value: 'multiMonthYear', label: 'calendar.year' },
+  ] as const;
+
+  // The toolbar is drawn here instead of by FullCalendar so the view picker can be a dropdown.
+  const viewTitle = ref('');
+  const currentView = ref<string>('dayGridMonth');
+
+  function changeView(view: unknown) {
+    if (typeof view === 'string') {
+      fullCalendarRef.value?.getApi().changeView(view);
+    }
+  }
+
+  function goPrev() {
+    fullCalendarRef.value?.getApi().prev();
+  }
+
+  function goNext() {
+    fullCalendarRef.value?.getApi().next();
   }
 
   /**
-   * FullCalendar disables its own Today button whenever today is in the visible range, so a
-   * different day selected in the current month could not jump back. This one is always on:
-   * it goes to today and selects it (the right sidebar follows the selection).
+   * Always enabled (FullCalendar's own Today button is disabled whenever today is visible, so a
+   * different day selected in the current month could not jump back): goes to today and selects
+   * it (the right sidebar follows the selection).
    */
   function goToday() {
     const api = fullCalendarRef.value?.getApi();
@@ -77,10 +95,6 @@
     api.today();
     api.select(today);
     uiStore.selectedDate = today;
-  }
-
-  function customButtons(lang: string | undefined): CalendarOptions['customButtons'] {
-    return { [TODAY_BUTTON]: { text: toolbarText(lang).todayLabel, click: goToday } };
   }
 
   /** Occurrence info for recurring / moved events; one-off schedules open as before. */
@@ -149,15 +163,7 @@
       plugins: [dayGridPlugin, timeGridPlugin, multiMonthPlugin, interactionPlugin, rrulePlugin],
       initialView: cal ? calendarViewToFullCalendar(cal.defaultView) : 'dayGridMonth',
       initialDate: new Date().toISOString().slice(0, 10),
-      headerToolbar: {
-        start: 'title',
-        center: '',
-        // View switcher, then navigation. Switching here is per session; the default view
-        // stays a setting.
-        end: `dayGridMonth,timeGridWeek,timeGridDay,multiMonthYear prev,${TODAY_BUTTON},next`,
-      },
-      buttonText: toolbarText(lang).buttonText,
-      customButtons: customButtons(lang),
+      headerToolbar: false,
 
       // 제목 형식
       titleFormat: { year: 'numeric', month: 'long' },
@@ -219,6 +225,8 @@
       },
 
       datesSet: (info) => {
+        viewTitle.value = info.view.title;
+        currentView.value = info.view.type;
         // 월이 변경될 때마다 호출됨
         const start = dayjs(info.start).subtract(1, 'month').startOf('month').toISOString();
         const end = dayjs(info.end).add(1, 'month').endOf('month').toISOString();
@@ -274,8 +282,6 @@
         minute: '2-digit',
         meridiem: timeFormatToHour12(cal.timeFormat),
       },
-      buttonText: toolbarText(lang).buttonText,
-      customButtons: customButtons(lang),
     };
 
     Object.assign(calendarOptions, patch);
@@ -286,8 +292,6 @@
       api.setOption('weekNumbers', patch.weekNumbers);
       api.setOption('eventTimeFormat', patch.eventTimeFormat);
       api.setOption('slotLabelFormat', patch.slotLabelFormat);
-      api.setOption('buttonText', patch.buttonText);
-      api.setOption('customButtons', patch.customButtons);
       const defaultView = calendarViewToFullCalendar(cal.defaultView);
       if (defaultView !== appliedDefaultView) {
         appliedDefaultView = defaultView;
@@ -329,6 +333,40 @@
     class="calendar-card flex h-full flex-col"
     @contextmenu="handleContextMenu"
   >
+    <div class="calendar-toolbar">
+      <h2 class="calendar-title">{{ viewTitle }}</h2>
+      <div class="flex items-center gap-2">
+        <Select :model-value="currentView" @update:model-value="changeView">
+          <SelectTrigger class="calendar-view-select" :aria-label="t('calendar.view')">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in VIEW_OPTIONS" :key="opt.value" :value="opt.value">
+              {{ t(opt.label) }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <button
+          type="button"
+          class="calendar-nav-btn"
+          :aria-label="t('calendar.prev')"
+          @click="goPrev"
+        >
+          <Icon icon="lucide:chevron-left" class="size-5" />
+        </button>
+        <button type="button" class="calendar-nav-btn px-3" @click="goToday">
+          {{ t('calendar.today') }}
+        </button>
+        <button
+          type="button"
+          class="calendar-nav-btn"
+          :aria-label="t('calendar.next')"
+          @click="goNext"
+        >
+          <Icon icon="lucide:chevron-right" class="size-5" />
+        </button>
+      </div>
+    </div>
     <FullCalendar ref="fullCalendarRef" :options="calendarOptions" class="h-full w-full flex-1" />
   </div>
 </template>
@@ -366,68 +404,52 @@
     font-weight: 700;
   }
 
-  /* 헤더(제목+버튼) */
-  :deep(.fc .fc-toolbar.fc-header-toolbar) {
+  /* 헤더(제목 + 보기 선택 + 이동) */
+  .calendar-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
     margin-bottom: calc(var(--spacing) * 2.5);
     padding: 0 calc(var(--spacing) * 2.5);
   }
 
-  /* 제목 스타일 */
-  :deep(.fc-toolbar-title) {
+  .calendar-title {
     font-size: var(--text-2xl);
     font-weight: 700;
     color: var(--croffle-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* 버튼 그룹 */
-  :deep(.fc-button-group) {
-    display: flex;
-    gap: calc(var(--spacing) * 2);
-  }
-
-  /* 개별 버튼 디자인 */
-  :deep(.fc-button) {
+  .calendar-nav-btn,
+  :deep(.calendar-view-select) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(var(--spacing) * 9);
+    min-width: calc(var(--spacing) * 9);
     background-color: transparent;
     border: 1px solid var(--croffle-border);
+    border-radius: var(--radius-lg);
     color: var(--croffle-text);
+    font-size: var(--text-sm);
     font-weight: 500;
-    border-radius: var(--radius-lg) !important;
-    margin: 0;
     box-shadow: none;
-    padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 3);
     transition: all 0.2s ease;
   }
 
-  :deep(.fc-button:first-child),
-  :deep(.fc-button:last-child) {
-    padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 1.5);
-  }
-
-  :deep(.fc-button:hover) {
+  .calendar-nav-btn:hover,
+  :deep(.calendar-view-select:hover),
+  :deep(.calendar-view-select[data-state='open']) {
     background-color: var(--croffle-bg);
     color: var(--croffle-primary);
     border-color: var(--croffle-primary);
   }
 
-  :deep(.fc-button:disabled) {
-    background-color: var(--croffle-disabled);
-    border-color: var(--croffle-border);
-    color: var(--croffle-muted);
-    opacity: 1;
-    cursor: not-allowed;
-  }
-
-  /* '오늘' 버튼 등 활성 상태 */
-  :deep(.fc-button-primary:not(:disabled).fc-button-active),
-  :deep(.fc-button-primary:not(:disabled):active) {
+  .calendar-nav-btn:active {
     background-color: var(--croffle-hover);
-    color: var(--croffle-primary);
-    border-color: var(--croffle-primary);
-    box-shadow: inset 0 0 0 1px var(--croffle-primary) !important;
-  }
-
-  :deep(.fc-button-primary:focus) {
-    box-shadow: none;
   }
 
   /* 요일 헤더*/

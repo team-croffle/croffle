@@ -345,9 +345,12 @@
   },
   "calendar": {
     "today": "오늘",
-    "month": "월",
-    "week": "주",
-    "day": "일",
-    "year": "연"
+    "month": "월간",
+    "week": "주간",
+    "day": "일간",
+    "year": "연간",
+    "view": "보기",
+    "prev": "이전",
+    "next": "다음"
   }
 }
