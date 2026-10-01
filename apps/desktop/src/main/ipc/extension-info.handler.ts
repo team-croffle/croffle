@@ -8,6 +8,7 @@ import { extensionInfoService } from '../extension/info-service';
 import { ExtensionInstallError } from '../extension/install-error';
 import { extensionManager } from '../extension/manager';
 import { readInstalledManifest } from '../extension/manifest';
+import { t } from '../i18n';
 import { extensionInfoMapper } from '../mapper/extension-info-mapper';
 import { validateExtensionId } from '../utils/extension-validator';
 
@@ -51,7 +52,7 @@ export const registerExtensionInfoIpcHandlers = (): void => {
 
   ipcMain.handle('extensionInfo:installFromLocal', async (): Promise<ExtensionInfo | null> => {
     const result = await dialog.showOpenDialog({
-      title: '로컬 확장 설치 (Zip 파일 선택)',
+      title: t('settings.extensions.selectZipTitle'),
       filters: [{ name: 'Zip Files', extensions: ['zip'] }],
       properties: ['openFile'],
     });

@@ -6,6 +6,7 @@
     CalendarTimeFormat,
     CalendarView,
     CalendarWeekStartDay,
+    extensionInstallErrorCode,
   } from '@croffledev/common';
   import type { ConfigurationTabContribution, ExtensionInfo } from '@croffledev/common';
   import type { AppSettings } from '@croffledev/croffle-types';
@@ -198,6 +199,17 @@
     }
   };
 
+  /** A localized reason when main tagged the error with an install code, else the fallback. */
+  const installErrorMessage = (err: unknown, fallbackKey: string) => {
+    const message = err instanceof Error ? err.message : String(err);
+    const code = extensionInstallErrorCode(message);
+    if (code) {
+      const key = code.replace(/-([a-z])/g, (_, letter: string) => letter.toUpperCase());
+      return t(`settings.errors.installReasons.${key}`);
+    }
+    return t(fallbackKey, { error: message });
+  };
+
   const onInstallPlugin = async () => {
     if (!installUrl.value) {
       return;
@@ -211,7 +223,7 @@
       await fetchInstalledPlugins();
       await extensionLoader.loadPluginById(plugin.id);
     } catch (err) {
-      toast.error(t('settings.errors.install', { error: JSON.stringify(err) }));
+      toast.error(installErrorMessage(err, 'settings.errors.install'));
     } finally {
       isInstalling.value = false;
     }
@@ -226,7 +238,7 @@
         await extensionLoader.loadPluginById(result.id);
       }
     } catch (err) {
-      toast.error(t('settings.errors.installLocal', { error: JSON.stringify(err) }));
+      toast.error(installErrorMessage(err, 'settings.errors.installLocal'));
     } finally {
       isInstalling.value = false;
     }
@@ -1054,7 +1066,7 @@
                     <input
                       v-model="installUrl"
                       type="text"
-                      placeholder="https://github.com/username/repo"
+                      :placeholder="$t('settings.extensions.githubPlaceholder')"
                       class="flex-1 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm placeholder:text-neutral-400 focus:border-[#A68A64] focus:outline-none focus:ring-1 focus:ring-[#A68A64] dark:border-neutral-700"
                       @keydown.enter="onInstallPlugin"
                     />
@@ -1073,6 +1085,9 @@
                       {{ $t('settings.extensions.install') }}
                     </Button>
                   </div>
+                  <p class="mt-2 text-xs text-muted-foreground">
+                    {{ $t('settings.extensions.githubHint') }}
+                  </p>
 
                   <Separator class="my-5" />
 
