@@ -1,6 +1,6 @@
-/** Why an extension install failed; the renderer maps the code to a localized message. */
-export type ExtensionInstallErrorCode = 'invalid-archive';
+import type { ExtensionInstallErrorCode } from '@croffledev/common';
 
+/** An install failure the renderer can localize; the message starts with `[code]`. */
 export class ExtensionInstallError extends Error {
   constructor(
     readonly code: ExtensionInstallErrorCode,

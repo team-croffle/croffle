@@ -2,11 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { CroffleManifest } from '@croffledev/common';
+import { parseGitHubSource } from '@croffledev/common';
 import { app, net, protocol } from 'electron';
 import JSZip from 'jszip';
 
 import type { ExtensionInfoRow } from '../database/schema';
 import { logger } from '../logger';
+import { downloadGitHubSource } from './github-download';
 import { extensionInfoService } from './info-service';
 import { ExtensionInstallError } from './install-error';
 import {
@@ -60,19 +62,32 @@ class ExtensionManager {
   private readAndValidateManifest(dir: string): CroffleManifest {
     const manifestPath = path.join(dir, MANIFEST_FILENAME);
     if (!fs.existsSync(manifestPath)) {
-      throw new Error(`${MANIFEST_FILENAME} not found`);
+      throw new ExtensionInstallError(
+        'manifest-missing',
+        `${MANIFEST_FILENAME} not found at the archive root`,
+      );
     }
 
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as CroffleManifest;
+    let manifest: CroffleManifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as CroffleManifest;
+    } catch (err) {
+      throw new ExtensionInstallError(
+        'manifest-invalid',
+        `${MANIFEST_FILENAME} is not valid JSON: ${String(err)}`,
+      );
+    }
     if (!manifest.id || !manifest.name || !manifest.version || !manifest.author) {
-      throw new Error(
+      throw new ExtensionInstallError(
+        'manifest-invalid',
         `${MANIFEST_FILENAME} is missing required fields (id, name, version, author)`,
       );
     }
 
     const appVersion = app.getVersion();
     if (!satisfiesCroffleEngine(appVersion, manifest.engines?.croffle)) {
-      throw new Error(
+      throw new ExtensionInstallError(
+        'incompatible-engine',
         `Extension requires Croffle ${manifest.engines?.croffle}, but app is ${appVersion}`,
       );
     }
@@ -83,7 +98,12 @@ class ExtensionManager {
   private async extractZip(
     buffer: Buffer | ArrayBuffer,
   ): Promise<{ tempDir: string; contentDir: string }> {
-    const zip = await JSZip.loadAsync(buffer);
+    let zip: JSZip;
+    try {
+      zip = await JSZip.loadAsync(buffer);
+    } catch (err) {
+      throw new ExtensionInstallError('invalid-archive', `Not a zip archive: ${String(err)}`);
+    }
     const tempDir = path.join(app.getPath('temp'), `croffle-extension-${Date.now()}`);
     await fs.promises.mkdir(tempDir, { recursive: true });
 
@@ -164,14 +184,14 @@ class ExtensionManager {
     return this.finalizeInstall(contentDir, tempDir);
   }
 
-  async installFromGitHub(repoUrl: string) {
-    const zipUrl = `${repoUrl}/archive/refs/heads/main.zip`;
-    const resp = await fetch(zipUrl);
-    if (!resp.ok) {
-      throw new Error(`Failed to fetch ${zipUrl}`);
+  /** `input`: `owner/repo`, a github.com URL, `…/tree/<ref>`, or any of them with `@<ref>`. */
+  async installFromGitHub(input: string) {
+    const source = parseGitHubSource(input);
+    if ('error' in source) {
+      throw new ExtensionInstallError('invalid-source', `Not a GitHub repository: ${input}`);
     }
 
-    const buffer = await resp.arrayBuffer();
+    const buffer = await downloadGitHubSource(source);
     const { tempDir, contentDir } = await this.extractZip(buffer);
     return this.finalizeInstall(contentDir, tempDir);
   }

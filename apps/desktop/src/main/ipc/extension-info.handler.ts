@@ -5,6 +5,7 @@ import { ipcMain, dialog } from 'electron';
 import type { ExtensionInfoRow } from '../database/schema';
 import { eventService } from '../event-bus/event-service';
 import { extensionInfoService } from '../extension/info-service';
+import { ExtensionInstallError } from '../extension/install-error';
 import { extensionManager } from '../extension/manager';
 import { readInstalledManifest } from '../extension/manifest';
 import { extensionInfoMapper } from '../mapper/extension-info-mapper';
@@ -38,7 +39,7 @@ export const registerExtensionInfoIpcHandlers = (): void => {
     'extensionInfo:installExtension',
     async (_, pluginData: Partial<ExtensionInfo>): Promise<ExtensionInfo> => {
       if (!pluginData.id) {
-        throw new Error('[ExtensionInfo] Invalid extension id (GitHub URL) provided.');
+        throw new ExtensionInstallError('invalid-source', 'No GitHub repository given');
       }
 
       const entity = await extensionManager.installFromGitHub(pluginData.id);
