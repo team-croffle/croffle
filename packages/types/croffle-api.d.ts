@@ -1,25 +1,25 @@
-import type { CalendarApi } from './api/calendar';
-import type { EventApi } from './api/event';
+import type { CalendarApi } from './api/calendar.js';
+import type { EventApi } from './api/event.js';
 import type {
   ExtensionScopedConfigurationApi,
   ExtensionScopedSessionApi,
   ExtensionScopedStorageApi,
   ExtensionsApi,
-} from './api/extensions';
-import type { HttpApi } from './api/http';
-import type { OsApi } from './api/os';
-import type { SettingsApi } from './api/settings';
-import type { UiApi } from './api/ui';
-import type { WindowApi } from './api/window';
-import type { AppEventType } from './enums';
+} from './api/extensions.js';
+import type { HttpApi } from './api/http.js';
+import type { OsApi } from './api/os.js';
+import type { SettingsApi } from './api/settings.js';
+import type { UiApi } from './api/ui.js';
+import type { WindowApi } from './api/window.js';
+import type { AppEventType } from './enums.js';
 import type {
   AppSettingLanguage,
   AppSettingTheme,
   CalendarTimeFormat,
   CalendarView,
   CalendarWeekStartDay,
-} from './models/app-settings';
-import type { ClipboardDataType } from './models/clipboard';
+} from './models/app-settings.js';
+import type { ClipboardDataType } from './models/clipboard.js';
 
 export interface EnumsApi {
   AppSettingLanguage: typeof AppSettingLanguage;

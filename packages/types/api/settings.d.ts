@@ -1,4 +1,4 @@
-import type { AppSettings } from '../models/app-settings';
+import type { AppSettings } from '../models/app-settings.js';
 
 export interface SettingsApi {
   getAll(): Promise<AppSettings>;

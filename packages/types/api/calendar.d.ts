@@ -1,6 +1,6 @@
-import type { Schedule } from '../models/schedule';
-import type { SearchQuery } from '../models/search';
-import type { Tag } from '../models/tag';
+import type { Schedule } from '../models/schedule.js';
+import type { SearchQuery } from '../models/search.js';
+import type { Tag } from '../models/tag.js';
 
 export interface SchedulesApi {
   getAll(period: { start: string; end: string }): Promise<Schedule[]>;

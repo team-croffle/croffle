@@ -1,4 +1,4 @@
-import type { ConfigurationSectionContribution } from '../models/extension';
+import type { ConfigurationSectionContribution } from '../models/extension.js';
 
 export type RegisterConfigurationTabOptions = {
   label: string;

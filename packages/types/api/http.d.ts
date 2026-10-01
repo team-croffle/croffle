@@ -1,4 +1,4 @@
-import type { HttpResponse } from '../models/http';
+import type { HttpResponse } from '../models/http.js';
 
 export interface HttpApi {
   get(

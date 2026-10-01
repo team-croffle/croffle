@@ -1,4 +1,4 @@
-import type { Tag } from './tag';
+import type { Tag } from './tag.js';
 
 /**
  * Override of one occurrence of a recurring schedule, keyed by the occurrence's
