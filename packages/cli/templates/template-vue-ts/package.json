@@ -10,7 +10,7 @@
     "vue": "^3.5.0"
   },
   "devDependencies": {
-    "@croffledev/croffle-types": "^1.4.1",
+    "@croffledev/croffle-types": "^1.8.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "typescript": "6.0.3",
     "vite": "^8.2.1"

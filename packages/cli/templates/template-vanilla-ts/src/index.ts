@@ -2,6 +2,8 @@ import type { ExtensionContext } from '@croffledev/croffle-types';
 
 import './style.css'; // We will create this
 
+let detachContextMenu: (() => void) | null = null;
+
 export function activated(context: ExtensionContext) {
   console.log('Vanilla Plugin has been activated!');
 
@@ -50,18 +52,17 @@ export function activated(context: ExtensionContext) {
     },
   });
 
-  // 3. Register Context Menu
-  context.ui.registerContextMenu(
-    'calendar',
-    'vanilla-context-hello',
-    'Hello from Vanilla Plugin',
-    (element: HTMLElement | null) => {
-      console.log('Context menu clicked!', element);
-      alert('Hello from Vanilla Plugin!');
-    },
-  );
+  // 3. Context menu: the item is declared in croffle-manifest.json (contributes.contextMenus);
+  // attach its action here. The element is the right-clicked day or schedule (or null).
+  detachContextMenu = context.ui.onContextMenu('hello', (element: HTMLElement | null) => {
+    console.log('Context menu clicked!', element);
+    alert('Hello from Vanilla Plugin!');
+  });
 }
 
 export function deactivated() {
   console.log('Vanilla Plugin has been deactivated!');
+
+  detachContextMenu?.();
+  detachContextMenu = null;
 }
