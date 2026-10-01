@@ -1,4 +1,5 @@
 export * from './enums';
+export * from './extension-manifest';
 export * from './i18n';
 export * from './models';
 export * from './recurrence';
