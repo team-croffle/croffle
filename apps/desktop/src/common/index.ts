@@ -1,5 +1,6 @@
 export * from './enums';
 export * from './extension-manifest';
+export * from './extension-source';
 export * from './i18n';
 export * from './models';
 export * from './recurrence';
