@@ -21,7 +21,7 @@ We provide a **powerful extension system** that lets you build your own producti
 
 ### Calendar & schedules
 
-- **Calendar views**: Day, week, month, and year, switched from the toolbar, with a default view, week-start and time-format preferences. **Today** jumps back to today from any date.
+- **Calendar views**: Day, week, month, and year, switched from the toolbar dropdown, with a default view, week-start and time-format preferences. **Today** jumps back to today from any date.
 - **Rich schedules**: Priorities, recurrence, color labels, tags, multiple reminders per schedule, and JSON import/export.
 - **Drag to reschedule**: Drag a schedule to another day; its time and length stay. For a repeating schedule, move just that occurrence or the whole series. Moved occurrences are marked as rescheduled.
 - **View, then edit**: Clicking a schedule opens a read-only view of that occurrence with a recurrence summary; switch to the editor with one click.
@@ -36,8 +36,9 @@ We provide a **powerful extension system** that lets you build your own producti
 
 ### Extension System
 
-- **Easy Installation**: Install extensions from **GitHub** or a local `.zip`.
+- **Easy Installation**: Install extensions from **GitHub** (`owner/repo`, a repository URL, a branch or a tag) or a local `.zip`.
 - **Your Own Toolkit**: Add only what you need (timers, habit trackers, notes, …).
+- **Built into the app**: Extensions add views, settings tabs and right-click menu items.
 - **Full Control**: Enable or disable extensions anytime.
 
 ### Workflow Automation
@@ -63,9 +64,10 @@ Download the latest build from the [Releases](https://github.com/team-croffle/cr
 ### Using extensions
 
 1. Open **Settings → Extensions**.
-2. Choose **Install Extension**.
-3. Paste a **GitHub repository URL**, or pick a built extension `.zip`.
-4. Enable the extension after install.
+2. Enter a GitHub repository as `owner/repo` or its URL, then choose **Install**. Add `@tag` or `/tree/branch` to install a specific version; otherwise the default branch is used. Or choose a built extension `.zip`.
+3. Enable the extension after install.
+
+Install from GitHub expects `croffle-manifest.json` at the repository root. Use a local `.zip` for extensions that must be built first.
 
 ---
 

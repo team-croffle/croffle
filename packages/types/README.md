@@ -34,43 +34,60 @@ pnpm add -D @croffledev/croffle-types
 
 ## 🛠️ Usage
 
-### Basic Plugin Definition
+### Extension entry
 
-Import the types to define your plugin structure. This ensures your plugin correctly implements the required lifecycle hooks and metadata.
+An extension's entry module exports `activated(context)` and optionally `deactivated()`. `ExtensionContext` is the host API (`croffle.*`) plus storage, session and configuration already bound to your extension, and `ui` for adding views, settings tabs and context menu items.
 
 ```typescript
-import type { ICrofflePlugin, PluginContext } from '@croffledev/croffle-types';
+import type { ExtensionContext } from '@croffledev/croffle-types';
 
-const myPlugin: ICrofflePlugin = {
-  name: 'MyAwesomePlugin',
-  version: '1.0.0',
+let detachMenu: (() => void) | null = null;
 
-  onLoad(context: PluginContext) {
-    console.log('Croffle Plugin Loaded!', context.appVersion);
-  },
+export function activated(context: ExtensionContext) {
+  context.ui.registerView('my-view', (container) => {
+    container.textContent = 'Hello from my extension';
+  });
 
-  onUnload() {
-    console.log('Cleaning up...');
-  },
-};
+  // Declared in croffle-manifest.json → contributes.contextMenus: [{ "id": "hello", ... }]
+  detachMenu = context.ui.onContextMenu('hello', (target) => {
+    // target: the right-clicked day cell or schedule element, or null
+    console.log('clicked', target);
+  });
+}
 
-export default myPlugin;
+export function deactivated() {
+  detachMenu?.();
+}
 ```
 
-### Type Augmentation (Optional)
+### Manifest context menus
 
-If your plugin extends the global `window` object or adds custom IPC channels, you can use these types to maintain a robust development environment.
+```json
+{
+  "contributes": {
+    "contextMenus": [{ "id": "hello", "label": "Say hello", "targetView": ["calendar"] }]
+  }
+}
+```
+
+- `id`: unique within the extension; pass it to `onContextMenu`.
+- `label`: shown as written.
+- `targetView`: where the item appears (`calendar` or one of your view ids); omit for every screen.
+- `disabled`: show the item greyed out.
+
+Items appear only after `onContextMenu` attaches an action. `onContextMenu(id, handler, { condition })` hides the item for a right-click when `condition(target)` returns `false`. Requires Croffle 1.2.5 or later.
 
 ---
 
 ## 📖 Key Definitions
 
-| Type / Interface | Description                                                                    |
-| :--------------- | :----------------------------------------------------------------------------- |
-| `ICrofflePlugin` | The base interface for every Croffle plugin.                                   |
-| `PluginContext`  | Provides access to Croffle's internal APIs (Database, Storage, Notifications). |
-| `BridgeAPI`      | Types for IPC communication between the Renderer and Main process.             |
-| `ThemeConfig`    | Interfaces for accessing Croffle's CSS variables and theme state.              |
+| Type / Interface      | Description                                                                         |
+| :-------------------- | :---------------------------------------------------------------------------------- |
+| `ExtensionContext`    | What `activated` receives: host API plus extension-bound storage, session, config.  |
+| `UiApi`               | `registerView`, `registerConfigurationTab`, `onContextMenu`, `registerContextMenu`. |
+| `CroffleManifest`     | Shape of `croffle-manifest.json`, including `contributes`.                          |
+| `ContextMenuManifest` | One `contributes.contextMenus` entry.                                               |
+| `CroffleAPI`          | The host API exposed as `window.croffle`.                                           |
 
 ---
 
