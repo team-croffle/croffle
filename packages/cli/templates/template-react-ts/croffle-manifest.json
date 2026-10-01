@@ -6,7 +6,7 @@
   "description": "An example Croffle extension with a view and schema-based configuration",
   "main": "index.js",
   "engines": {
-    "croffle": ">=1.0.0"
+    "croffle": ">=1.2.5"
   },
   "contributes": {
     "views": [
@@ -17,6 +17,9 @@
         "icon": "",
         "url": "/extension/example-view"
       }
+    ],
+    "contextMenus": [
+      { "id": "hello", "label": "Hello from React Plugin", "targetView": ["calendar"] }
     ],
     "configuration": [
       {
