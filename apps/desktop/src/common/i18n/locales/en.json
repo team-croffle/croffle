@@ -348,6 +348,9 @@
     "month": "Month",
     "week": "Week",
     "day": "Day",
-    "year": "Year"
+    "year": "Year",
+    "view": "View",
+    "prev": "Previous",
+    "next": "Next"
   }
 }
