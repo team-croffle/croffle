@@ -1,7 +1,7 @@
 {
   "name": "@croffledev/croffle",
   "private": true,
-  "version": "1.2.5-rc.2",
+  "version": "1.2.5",
   "description": "Croffle monorepo",
   "author": {
     "name": "Croffle Dev.",
