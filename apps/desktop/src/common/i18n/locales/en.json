@@ -108,12 +108,15 @@
       "selectAndInstall": "Choose file and install",
       "installed": "Installed extensions",
       "emptyTitle": "No extensions installed.",
-      "emptyHint": "Enter a GitHub URL in the form above to add an extension.",
+      "emptyHint": "Enter owner/repo or a GitHub URL above to add an extension.",
       "enabled": "On",
       "disabled": "Off",
       "enableAria": "Enable extension",
       "uninstallConfirm": "Uninstall '{name}'?",
-      "configHeading": "{name} configuration"
+      "configHeading": "{name} configuration",
+      "githubPlaceholder": "owner/repo or GitHub URL",
+      "githubHint": "Add {'@'}tag or /tree/branch to pick a version; otherwise the default branch is used.",
+      "selectZipTitle": "Install extension from a zip file"
     },
     "errors": {
       "load": "Failed to load settings: {error}",
@@ -124,7 +127,16 @@
       "uninstall": "Failed to uninstall extension: {error}",
       "export": "Failed to export schedules: {error}",
       "import": "Failed to import schedules: {error}",
-      "save": "Failed to save settings: {error}"
+      "save": "Failed to save settings: {error}",
+      "installReasons": {
+        "invalidSource": "Enter owner/repo or a github.com repository URL.",
+        "repoOrRefNotFound": "Repository, branch or tag not found. Private repositories cannot be installed.",
+        "network": "Could not reach GitHub. Check your connection and try again.",
+        "invalidArchive": "The archive is not a valid extension zip.",
+        "manifestMissing": "croffle-manifest.json was not found at the root of the extension.",
+        "manifestInvalid": "croffle-manifest.json is invalid or missing required fields (id, name, version, author).",
+        "incompatibleEngine": "This extension needs a newer version of Croffle."
+      }
     }
   },
   "sidebar": {

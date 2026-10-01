@@ -108,12 +108,15 @@
       "selectAndInstall": "파일 선택 및 설치",
       "installed": "설치된 확장",
       "emptyTitle": "설치된 확장이 없습니다.",
-      "emptyHint": "위쪽 설치 폼에 GitHub URL을 입력하여 확장을 추가해보세요.",
+      "emptyHint": "위 입력란에 owner/repo 또는 GitHub URL을 입력해 확장을 추가해보세요.",
       "enabled": "사용 중",
       "disabled": "사용 안 함",
       "enableAria": "확장 활성화",
       "uninstallConfirm": "'{name}' 확장을 삭제하시겠습니까?",
-      "configHeading": "{name} 확장 구성"
+      "configHeading": "{name} 확장 구성",
+      "githubPlaceholder": "owner/repo 또는 GitHub URL",
+      "githubHint": "{'@'}태그 또는 /tree/브랜치를 붙여 버전을 고를 수 있습니다. 없으면 기본 브랜치를 받습니다.",
+      "selectZipTitle": "Zip 파일로 확장 설치"
     },
     "errors": {
       "load": "설정 로드 실패: {error}",
@@ -124,7 +127,16 @@
       "uninstall": "확장 삭제 실패: {error}",
       "export": "일정 내보내기 실패: {error}",
       "import": "일정 가져오기 실패: {error}",
-      "save": "설정 저장 실패: {error}"
+      "save": "설정 저장 실패: {error}",
+      "installReasons": {
+        "invalidSource": "owner/repo 또는 github.com 저장소 URL을 입력하세요.",
+        "repoOrRefNotFound": "저장소, 브랜치 또는 태그를 찾을 수 없습니다. 비공개 저장소는 설치할 수 없습니다.",
+        "network": "GitHub에 연결하지 못했습니다. 연결을 확인하고 다시 시도하세요.",
+        "invalidArchive": "올바른 확장 zip 파일이 아닙니다.",
+        "manifestMissing": "확장 최상위에서 croffle-manifest.json을 찾을 수 없습니다.",
+        "manifestInvalid": "croffle-manifest.json이 올바르지 않거나 필수 항목(id, name, version, author)이 없습니다.",
+        "incompatibleEngine": "이 확장은 더 새로운 버전의 Croffle이 필요합니다."
+      }
     }
   },
   "sidebar": {
