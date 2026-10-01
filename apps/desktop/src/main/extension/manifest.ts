@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { CroffleManifest } from '@croffledev/common';
+import { is } from '@electron-toolkit/utils';
 import { app } from 'electron';
 
 /**
@@ -42,8 +43,14 @@ export function satisfiesCroffleEngine(appVersion: string, range: string | undef
 
 export const MANIFEST_FILENAME = 'croffle-manifest.json';
 
+/**
+ * Installed extensions root. Dev runs keep extensions next to the dev DB so they never mix with
+ * the packaged app's; every reader and writer goes through here.
+ */
 export function getExtensionDir(extensionId?: string): string {
-  const root = path.join(app.getPath('userData'), 'extensions');
+  const root = is.dev
+    ? path.join(process.cwd(), 'dev/extensions')
+    : path.join(app.getPath('userData'), 'extensions');
   return extensionId ? path.join(root, extensionId) : root;
 }
 
@@ -59,4 +66,11 @@ export function readInstalledManifest(extensionId: string): CroffleManifest | nu
   } catch {
     return null;
   }
+}
+
+/** True when `target` resolves to `root` itself or somewhere below it. */
+export function isInsideDir(root: string, target: string): boolean {
+  const relative = path.relative(path.resolve(root), path.resolve(target));
+  const escapes = relative === '..' || relative.startsWith(`..${path.sep}`);
+  return !escapes && !path.isAbsolute(relative);
 }

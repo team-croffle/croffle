@@ -2,21 +2,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { CroffleManifest } from '@croffledev/common';
-import { is } from '@electron-toolkit/utils';
 import { app, net, protocol } from 'electron';
 import JSZip from 'jszip';
 
 import type { ExtensionInfoRow } from '../database/schema';
 import { logger } from '../logger';
 import { extensionInfoService } from './info-service';
-import { MANIFEST_FILENAME, satisfiesCroffleEngine } from './manifest';
+import { ExtensionInstallError } from './install-error';
+import {
+  getExtensionDir,
+  isInsideDir,
+  MANIFEST_FILENAME,
+  satisfiesCroffleEngine,
+} from './manifest';
 import { clearItem as clearSession } from './session-service';
 import { clear as clearStorage } from './storage';
 
 class ExtensionManager {
-  private extensionDir = is.dev
-    ? path.join(process.cwd(), 'dev/extensions')
-    : path.join(app.getPath('userData'), 'extensions');
+  private extensionDir = getExtensionDir();
 
   constructor() {
     app.whenReady().then(() => {
@@ -35,6 +38,9 @@ class ExtensionManager {
 
       const safePath = path.normalize(url).replace(/^(\.\.(\/|\\|$))+/, '');
       const localPath = path.join(this.extensionDir, safePath);
+      if (!isInsideDir(this.extensionDir, localPath)) {
+        return new Response(null, { status: 404 });
+      }
 
       const response = await net.fetch(`file://${localPath}`);
 
@@ -80,6 +86,18 @@ class ExtensionManager {
     const zip = await JSZip.loadAsync(buffer);
     const tempDir = path.join(app.getPath('temp'), `croffle-extension-${Date.now()}`);
     await fs.promises.mkdir(tempDir, { recursive: true });
+
+    // Zip-slip: an entry like `../x` or an absolute path must not write outside tempDir.
+    const unsafeEntry = Object.keys(zip.files).find(
+      (relativePath) => !isInsideDir(tempDir, path.join(tempDir, relativePath)),
+    );
+    if (unsafeEntry) {
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+      throw new ExtensionInstallError(
+        'invalid-archive',
+        `Archive entry escapes the install folder: ${unsafeEntry}`,
+      );
+    }
 
     const writes: Promise<void>[] = [];
 
