@@ -55,11 +55,17 @@ export type FeatureView = ViewManifest & {
   extensionId?: string;
 };
 
-/** Manifest `contributes.contextMenus` 항목 */
+/**
+ * Manifest `contributes.contextMenus` 항목. 동작은 코드에서 `context.ui.onContextMenu(id, …)`로 붙입니다.
+ */
 export type ContextMenuManifest = {
+  /** 확장 안에서 고유. `onContextMenu`의 id */
   id: string;
+  /** 메뉴에 그대로 표시되는 문구 */
   label: string;
+  /** 메뉴가 뜨는 화면 (`calendar` 또는 확장 viewId). 생략하면 모든 화면 */
   targetView?: string[];
+  /** `true`면 항목을 비활성으로 표시 */
   disabled?: boolean;
 };
 

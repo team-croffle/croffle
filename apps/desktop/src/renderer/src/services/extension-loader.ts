@@ -138,6 +138,18 @@ class ExtensionLoader {
             }),
           );
         },
+        onContextMenu: (menuId, handler, options) => {
+          const detail = {
+            extensionId: extension.id,
+            menuId,
+            handler,
+            condition: options?.condition,
+          };
+          window.dispatchEvent(new CustomEvent('extension:bind-context-menu', { detail }));
+          return () => {
+            window.dispatchEvent(new CustomEvent('extension:unbind-context-menu', { detail }));
+          };
+        },
         registerConfigurationTab: (tabId: string, options: RegisterConfigurationTabOptions) => {
           window.dispatchEvent(
             new CustomEvent('extension:register-configuration-tab', {
