@@ -31,13 +31,9 @@ export type Schedule = {
    * Reminder offsets in minutes before the schedule starts, ascending.
    * `null` = follow the app-wide notifications.defaultReminderMinutes.
    * `[]` = no reminder at all.
+   * (The 1.2.0 single-value `reminderMinutes` mirror was removed in types 2.0.)
    */
   reminders: number[] | null;
-  /**
-   * @deprecated Mirror of the first entry in `reminders`, kept for extensions
-   * written against 1.2.0. Removed in 1.3 — read `reminders` instead.
-   */
-  reminderMinutes?: number | null;
   /**
    * Per-occurrence overrides of a recurring schedule (empty or missing for one-off schedules).
    * Extensions that expand `recurrenceRule` themselves must apply these: skip each

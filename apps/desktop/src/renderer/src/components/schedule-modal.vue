@@ -358,7 +358,6 @@
       recurrenceRule,
       colorLabel: form.colorLabel || '#DCA780',
       priority: form.priority,
-      // reminderMinutes(deprecated)는 보내지 않는다 — mapper가 reminders를 우선한다
       reminders: form.reminders ? [...form.reminders] : null,
       // Pinia Proxy를 IPC(structuredClone)에 넘기지 않도록 plain 객체로
       tags: form.tags.map((tag) => ({ ...toRaw(tag) })),

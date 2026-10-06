@@ -96,8 +96,6 @@ export const scheduleMapper = {
       colorLabel: entity.colorLabel,
       priority: entity.priority,
       reminders,
-      // Deprecated mirror for extensions written against 1.2.0 (removed in 1.3).
-      reminderMinutes: reminders === null ? null : (reminders[0] ?? 0),
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       tags: entity.tags.map(toTagDto),
@@ -138,7 +136,6 @@ export const scheduleMapper = {
     if (data.priority !== undefined) {
       entity.priority = data.priority;
     }
-    // `reminders` wins; `reminderMinutes` is the deprecated single-value path.
     if (data.reminders !== undefined) {
       if (data.reminders === null) {
         entity.useDefaultReminder = true;
@@ -146,14 +143,6 @@ export const scheduleMapper = {
       } else {
         entity.useDefaultReminder = false;
         entity.reminders = normalizeReminders(data.reminders);
-      }
-    } else if (data.reminderMinutes !== undefined) {
-      if (data.reminderMinutes === null) {
-        entity.useDefaultReminder = true;
-        entity.reminders = [];
-      } else {
-        entity.useDefaultReminder = false;
-        entity.reminders = data.reminderMinutes > 0 ? [data.reminderMinutes] : [];
       }
     }
     if (data.createdAt !== undefined) {
