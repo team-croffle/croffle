@@ -51,9 +51,4 @@ export function registerWindowIpcHandlers() {
     validateSender(event);
     await windowService.checkForUpdates();
   });
-
-  ipcMain.handle('window:setCloseToTrayMode', (event, enabled: boolean) => {
-    validateSender(event);
-    windowService.setCloseToTrayMode(enabled);
-  });
 }

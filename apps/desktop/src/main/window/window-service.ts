@@ -60,19 +60,6 @@ class WindowService {
   }
 
   /**
-   * @deprecated Kept for the public `window.setCloseToTrayMode` API. Writes the
-   * `general.closeBehavior` setting so the choice survives restarts.
-   */
-  public setCloseToTrayMode(enabled: boolean): void {
-    const closeBehavior = enabled ? AppCloseBehavior.TRAY : AppCloseBehavior.QUIT;
-    const updated = settingService.update({
-      general: { ...settingService.get().general, closeBehavior },
-    });
-    eventService.emit(AppEventType.SETTINGS_UPDATE, updated);
-    logger.info('WindowService', `Close behavior set to: ${closeBehavior}`);
-  }
-
-  /**
    * Close button behavior from settings. Old settings files (≤ 1.2.1) have no value;
    * the merge in SettingService fills in `ASK` so the first close prompts once.
    */
