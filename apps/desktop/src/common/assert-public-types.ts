@@ -8,6 +8,7 @@ import type {
   ConfigurationTabManifest as PublicConfigurationTabManifest,
   ContextMenuManifest as PublicContextMenuManifest,
   CroffleManifest as PublicCroffleManifest,
+  EnumsApi as PublicEnumsApi,
   ExtensionContributes as PublicExtensionContributes,
   ExtensionInfo as PublicExtensionInfo,
   Schedule as PublicSchedule,
@@ -17,6 +18,7 @@ import type {
   ViewManifest as PublicViewManifest,
 } from '@croffledev/croffle-types';
 
+import type { HostEnums } from './api';
 import type {
   ConfigItemSchema,
   ConfigurationSectionContribution,
@@ -51,4 +53,6 @@ export type PublicTypeIntegrity = {
   extensionContributes: AssertTrue<AssertEqual<ExtensionContributes, PublicExtensionContributes>>;
   croffleManifest: AssertTrue<AssertEqual<CroffleManifest, PublicCroffleManifest>>;
   extensionInfo: AssertTrue<AssertEqual<ExtensionInfo, PublicExtensionInfo>>;
+  /** Enum declarations differ (`declare enum` vs `enum`), so only the key set is compared. */
+  hostEnums: AssertTrue<AssertEqual<keyof HostEnums, keyof PublicEnumsApi>>;
 };
