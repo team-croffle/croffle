@@ -1,4 +1,4 @@
-import type { ExtensionSessionApi } from '@croffledev/croffle-types';
+import type { ExtensionSessionApi } from '@croffledev/common';
 import { ipcRenderer } from 'electron';
 
 export const extensionSessionApi = {

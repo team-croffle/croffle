@@ -1,5 +1,4 @@
-import type { Schedule } from '@croffledev/common';
-import type { SchedulesApi } from '@croffledev/croffle-types';
+import type { InternalSchedulesApi, Schedule } from '@croffledev/common';
 import { ipcRenderer } from 'electron';
 
 export const scheduleApi = {
@@ -39,4 +38,4 @@ export const scheduleApi = {
   ): Promise<{ created: number; updated: number } | null> => {
     return ipcRenderer.invoke('schedule:importScheduleFromFile', mode);
   },
-} satisfies SchedulesApi;
+} satisfies InternalSchedulesApi;

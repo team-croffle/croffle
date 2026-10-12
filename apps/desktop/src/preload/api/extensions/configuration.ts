@@ -1,4 +1,4 @@
-import type { ExtensionConfigurationApi } from '@croffledev/croffle-types';
+import type { ExtensionConfigurationApi } from '@croffledev/common';
 import { ipcRenderer } from 'electron';
 
 const DEFAULT_STORAGE_KEY = '__croffle_configuration__';

@@ -1,5 +1,4 @@
-import type { ExtensionInfo } from '@croffledev/common';
-import type { ExtensionInfoApi } from '@croffledev/croffle-types';
+import type { ExtensionInfo, InternalExtensionInfoApi } from '@croffledev/common';
 import { ipcRenderer } from 'electron';
 
 export const extensionInfoApi = {
@@ -30,4 +29,4 @@ export const extensionInfoApi = {
   uninstall: async (name: string): Promise<boolean> => {
     return ipcRenderer.invoke('extensionInfo:uninstallExtension', name);
   },
-} satisfies ExtensionInfoApi;
+} satisfies InternalExtensionInfoApi;

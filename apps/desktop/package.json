@@ -26,7 +26,6 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@fullcalendar/core": "^6.1.21",
     "@fullcalendar/daygrid": "^6.1.21",

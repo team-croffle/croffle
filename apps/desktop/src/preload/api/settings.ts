@@ -1,4 +1,5 @@
-import type { AppSettings, SettingsApi } from '@croffledev/croffle-types';
+import type { InternalSettingsApi } from '@croffledev/common';
+import type { AppSettings } from '@croffledev/croffle-types';
 import { ipcRenderer } from 'electron';
 
 export const settingsApi = {
@@ -13,4 +14,4 @@ export const settingsApi = {
   update: async (partialSettings: Partial<AppSettings>): Promise<AppSettings> => {
     return ipcRenderer.invoke('settings:update', partialSettings);
   },
-} satisfies SettingsApi;
+} satisfies InternalSettingsApi;

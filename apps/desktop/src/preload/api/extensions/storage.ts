@@ -1,4 +1,4 @@
-import type { ExtensionStorageApi } from '@croffledev/croffle-types';
+import type { ExtensionStorageApi } from '@croffledev/common';
 import { ipcRenderer } from 'electron';
 
 export const extensionStorageApi = {
