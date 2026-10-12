@@ -39,6 +39,7 @@ We provide a **powerful extension system** that lets you build your own producti
 - **Easy Installation**: Install extensions from **GitHub** (`owner/repo`, a repository URL, a branch or a tag) or a local `.zip`.
 - **Your Own Toolkit**: Add only what you need (timers, habit trackers, notes, …).
 - **Built into the app**: Extensions add views, settings tabs and right-click menu items.
+- **Bounded**: Extensions see a public API only (schedules, tags, settings read, events, their own storage); window control, settings writes and extension management stay with the app.
 - **Full Control**: Enable or disable extensions anytime.
 
 ### Workflow Automation
