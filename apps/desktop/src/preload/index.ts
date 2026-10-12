@@ -1,5 +1,6 @@
 import type { CroffleInternalAPI, HostEnums } from '@croffledev/common';
 import {
+  AppCloseBehavior,
   AppEventType,
   AppSettingLanguage,
   AppSettingTheme,
@@ -8,6 +9,7 @@ import {
   CalendarWeekStartDay,
   ClipboardDataType,
 } from '@croffledev/common';
+import type { CroffleAPI } from '@croffledev/croffle-types';
 import { contextBridge } from 'electron';
 
 import { scheduleApi } from './api/calendar/schedules';
@@ -30,30 +32,40 @@ const enums = {
   CalendarView,
   CalendarWeekStartDay,
   CalendarTimeFormat,
+  AppCloseBehavior,
   ClipboardDataType,
   AppEventType,
 } satisfies HostEnums;
 
-/** Host API reachable by extensions (narrowed to the public surface in 2.0). */
+/** Public host API: exactly what `@croffledev/croffle-types` declares, nothing more. */
 const api = {
-  window: windowApi,
   os: osApi,
   http: httpApi,
   event: eventApi,
   calendar: {
-    schedules: scheduleApi,
+    schedules: {
+      getAll: scheduleApi.getAll,
+      create: scheduleApi.create,
+      update: scheduleApi.update,
+      remove: scheduleApi.remove,
+      moveOccurrence: scheduleApi.moveOccurrence,
+    },
     tags: tagApi,
     search: searchApi,
   },
-  settings: settingsApi,
+  settings: {
+    getAll: settingsApi.getAll,
+    getOf: settingsApi.getOf,
+  },
   extensions: {
-    info: extensionInfoApi,
-    configuration: extensionConfigurationApi,
-    storage: extensionStorageApi,
-    session: extensionSessionApi,
+    info: {
+      getInstalled: extensionInfoApi.getInstalled,
+      getEnabled: extensionInfoApi.getEnabled,
+      getByName: extensionInfoApi.getByName,
+    },
   },
   enums,
-};
+} satisfies CroffleAPI;
 
 /** Host-only API. The extension loader never hands this to an extension. */
 const internalApi = {

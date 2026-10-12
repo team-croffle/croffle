@@ -1,6 +1,7 @@
 import type { ExtensionInfo } from '@croffledev/common';
 import { AppEventType } from '@croffledev/common';
 import type {
+  CroffleAPI,
   EventApi,
   ExtensionContext,
   RegisterConfigurationTabOptions,
@@ -49,35 +50,10 @@ function createScopedEventApi(extensionId: string): EventApi {
  * The public host surface handed to extensions. Listed field by field on purpose:
  * nothing from `croffle` reaches an extension unless it is named here.
  */
-function createPublicApi(extensionId: string) {
-  const { schedules, tags, search } = croffle.calendar;
+function createPublicApi(extensionId: string): CroffleAPI {
   return {
-    os: croffle.os,
-    http: croffle.http,
+    ...croffle,
     event: createScopedEventApi(extensionId),
-    calendar: {
-      schedules: {
-        getAll: schedules.getAll,
-        create: schedules.create,
-        update: schedules.update,
-        remove: schedules.remove,
-        moveOccurrence: schedules.moveOccurrence,
-      },
-      tags,
-      search,
-    },
-    settings: {
-      getAll: croffle.settings.getAll,
-      getOf: croffle.settings.getOf,
-    },
-    extensions: {
-      info: {
-        getInstalled: croffle.extensions.info.getInstalled,
-        getEnabled: croffle.extensions.info.getEnabled,
-        getByName: croffle.extensions.info.getByName,
-      },
-    },
-    enums: croffle.enums,
   };
 }
 
@@ -250,9 +226,7 @@ class ExtensionLoader {
       },
     };
 
-    // Until types 2.0 narrows `CroffleAPI`, the public shape is a strict subset of
-    // `ExtensionContext`; the cast goes away with that release.
-    return { ...createPublicApi(id), ...scoped, ui } as unknown as ExtensionContext;
+    return { ...createPublicApi(id), ...scoped, ui };
   }
 }
 

@@ -6,7 +6,6 @@ export * from './models/app-settings.js';
 export * from './models/clipboard.js';
 export * from './models/http.js';
 export * from './enums.js';
-export * from './api/window.js';
 export * from './api/calendar.js';
 export * from './api/extensions.js';
 export * from './api/settings.js';

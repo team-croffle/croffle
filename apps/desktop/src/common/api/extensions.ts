@@ -13,10 +13,22 @@ export interface InternalExtensionInfoApi extends ExtensionInfoApi {
 /**
  * extensionId-keyed storage, session and configuration. Host-only: the loader binds
  * the id and hands extensions the scoped variants (`ExtensionScoped*Api`).
- * Re-exported from the public package until 2.0 drops them there.
  */
-export type {
-  ExtensionConfigurationApi,
-  ExtensionSessionApi,
-  ExtensionStorageApi,
-} from '@croffledev/croffle-types';
+export interface ExtensionConfigurationApi {
+  get<T = Record<string, unknown>>(extensionId: string, storageKey?: string): Promise<T>;
+  set(extensionId: string, values: Record<string, unknown>, storageKey?: string): Promise<void>;
+}
+
+export interface ExtensionStorageApi {
+  get<T = unknown>(extensionId: string, key: string): Promise<T | null>;
+  set(extensionId: string, key: string, value: unknown): Promise<void>;
+  delete(extensionId: string, key: string): Promise<boolean>;
+  clear(extensionId: string): Promise<void>;
+}
+
+export interface ExtensionSessionApi {
+  get<T = unknown>(extensionId: string, key: string): Promise<T | null>;
+  set<T = unknown>(extensionId: string, key: string, value: T): Promise<void>;
+  delete(extensionId: string, key: string): Promise<boolean>;
+  clear(extensionId: string): Promise<void>;
+}
