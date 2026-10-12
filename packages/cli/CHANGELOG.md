@@ -1,5 +1,11 @@
 # @croffledev/croffle-cli
 
+## 1.3.0
+
+### Minor Changes
+
+- c6486d8: Templates now depend on `@croffledev/croffle-types` 2.0. The generated extensions only use the public surface (`context.ui`, `context.storage`, …), so nothing else changes.
+
 ## 1.2.0
 
 ### Minor Changes
