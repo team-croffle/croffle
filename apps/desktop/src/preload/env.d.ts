@@ -1,13 +1,15 @@
+import type { CroffleInternalAPI } from '@croffledev/common';
 import type { CroffleAPI } from '@croffledev/croffle-types';
-import type { ElectronAPI } from '@electron-toolkit/preload';
 
 declare global {
   /** contextBridge로 노출된 호스트 API (bare identifier) */
   const croffle: CroffleAPI;
+  /** 호스트 전용 API. 확장 컨텍스트에는 절대 넘기지 않는다 */
+  const croffleInternal: CroffleInternalAPI;
 
   interface Window {
-    electron: ElectronAPI;
     croffle: CroffleAPI;
+    croffleInternal: CroffleInternalAPI;
   }
 }
 

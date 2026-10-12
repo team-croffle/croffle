@@ -1,4 +1,4 @@
-import type { WindowApi } from '@croffledev/croffle-types';
+import type { InternalWindowApi } from '@croffledev/common';
 import { ipcRenderer } from 'electron';
 
 export const windowApi = {
@@ -7,4 +7,4 @@ export const windowApi = {
   close: () => ipcRenderer.invoke('window:close'),
   exitApp: () => ipcRenderer.invoke('window:exitApp'),
   checkForUpdates: () => ipcRenderer.invoke('window:checkForUpdates'),
-} satisfies WindowApi;
+} satisfies InternalWindowApi;

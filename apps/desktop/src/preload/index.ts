@@ -1,5 +1,13 @@
-import * as Enums from '@croffledev/common';
-import { electronAPI } from '@electron-toolkit/preload';
+import type { CroffleInternalAPI, HostEnums } from '@croffledev/common';
+import {
+  AppEventType,
+  AppSettingLanguage,
+  AppSettingTheme,
+  CalendarTimeFormat,
+  CalendarView,
+  CalendarWeekStartDay,
+  ClipboardDataType,
+} from '@croffledev/common';
 import { contextBridge } from 'electron';
 
 import { scheduleApi } from './api/calendar/schedules';
@@ -15,6 +23,18 @@ import { osApi } from './api/os';
 import { settingsApi } from './api/settings';
 import { windowApi } from './api/window';
 
+/** Only the enum objects — never the rest of `@croffledev/common`. */
+const enums = {
+  AppSettingLanguage,
+  AppSettingTheme,
+  CalendarView,
+  CalendarWeekStartDay,
+  CalendarTimeFormat,
+  ClipboardDataType,
+  AppEventType,
+} satisfies HostEnums;
+
+/** Host API reachable by extensions (narrowed to the public surface in 2.0). */
 const api = {
   window: windowApi,
   os: osApi,
@@ -32,18 +52,43 @@ const api = {
     storage: extensionStorageApi,
     session: extensionSessionApi,
   },
-  enums: Enums,
+  enums,
 };
+
+/** Host-only API. The extension loader never hands this to an extension. */
+const internalApi = {
+  window: windowApi,
+  settings: {
+    update: settingsApi.update,
+  },
+  extensions: {
+    info: {
+      install: extensionInfoApi.install,
+      installFromLocal: extensionInfoApi.installFromLocal,
+      toggle: extensionInfoApi.toggle,
+      uninstall: extensionInfoApi.uninstall,
+    },
+    configuration: extensionConfigurationApi,
+    storage: extensionStorageApi,
+    session: extensionSessionApi,
+  },
+  calendar: {
+    schedules: {
+      exportSchedulesToFile: scheduleApi.exportSchedulesToFile,
+      importScheduleFromFile: scheduleApi.importScheduleFromFile,
+    },
+  },
+} satisfies CroffleInternalAPI;
 
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
     contextBridge.exposeInMainWorld('croffle', api);
+    contextBridge.exposeInMainWorld('croffleInternal', internalApi);
   } catch {
     // oxlint-disable-next-line no-console
     console.error('Failed to expose API to main world');
   }
 } else {
-  window.electron = electronAPI;
   window.croffle = api;
+  window.croffleInternal = internalApi;
 }
