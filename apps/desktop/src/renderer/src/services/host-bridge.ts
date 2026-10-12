@@ -1,22 +1,14 @@
 import type { CroffleInternalAPI } from '@croffledev/common';
 
 /**
- * Host-only bridge. Captured once at startup (this module is evaluated before any
- * extension loads) and removed from `window` so extension code cannot reach it by
- * name. If the contextBridge property cannot be deleted, the boundary is only
- * enforced by types and by the extension context (see extension-loader).
+ * Host-only bridge. The preload hands the internal API out exactly once; this module
+ * is evaluated before any extension loads, so it is the host that gets it and an
+ * extension calling `window.croffleInternal.take()` later receives `undefined`.
  */
-const captured: CroffleInternalAPI = window.croffleInternal;
+const captured: CroffleInternalAPI | undefined = window.croffleInternal?.take();
 
-try {
-  delete (window as { croffleInternal?: CroffleInternalAPI }).croffleInternal;
-} catch {
-  // Non-configurable bridge property — nothing more to do here.
+if (!captured) {
+  throw new Error('[croffle] internal host bridge unavailable (already taken or preload missing)');
 }
 
-if (import.meta.env.DEV && 'croffleInternal' in window) {
-  // oxlint-disable-next-line no-console
-  console.warn('[croffle] window.croffleInternal could not be removed from the main world');
-}
-
-export const croffleInternal = captured;
+export const croffleInternal: CroffleInternalAPI = captured;

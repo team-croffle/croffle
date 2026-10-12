@@ -1,4 +1,4 @@
-import type { CroffleInternalAPI, HostEnums } from '@croffledev/common';
+import type { CroffleInternalAPI, CroffleInternalBridge, HostEnums } from '@croffledev/common';
 import {
   AppCloseBehavior,
   AppEventType,
@@ -92,15 +92,27 @@ const internalApi = {
   },
 } satisfies CroffleInternalAPI;
 
+/** Handed out once (see `CroffleInternalBridge`); the renderer host takes it at startup. */
+let internalTaken = false;
+const internalBridge = {
+  take: (): CroffleInternalAPI | undefined => {
+    if (internalTaken) {
+      return undefined;
+    }
+    internalTaken = true;
+    return internalApi;
+  },
+} satisfies CroffleInternalBridge;
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('croffle', api);
-    contextBridge.exposeInMainWorld('croffleInternal', internalApi);
+    contextBridge.exposeInMainWorld('croffleInternal', internalBridge);
   } catch {
     // oxlint-disable-next-line no-console
     console.error('Failed to expose API to main world');
   }
 } else {
   window.croffle = api;
-  window.croffleInternal = internalApi;
+  window.croffleInternal = internalBridge;
 }

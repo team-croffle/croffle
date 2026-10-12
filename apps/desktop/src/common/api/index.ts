@@ -19,6 +19,15 @@ export * from './window';
  * passes any of this to an extension; the public surface is `CroffleAPI` in
  * `@croffledev/croffle-types`.
  */
+/**
+ * What the preload actually puts on `window.croffleInternal`: the API is handed out
+ * once. The renderer host takes it at startup, so extension code calling `take()`
+ * later gets `undefined`.
+ */
+export interface CroffleInternalBridge {
+  take(): CroffleInternalAPI | undefined;
+}
+
 export interface CroffleInternalAPI {
   window: InternalWindowApi;
   settings: Pick<InternalSettingsApi, 'update'>;
