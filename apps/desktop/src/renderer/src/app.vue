@@ -32,6 +32,7 @@
   import { SHORTCUT_LEFT_SIDEBAR, useGlobalShortcuts } from './composables/use-global-shortcuts.ts';
   import { defaultMenus } from './data/default-context-menus.ts';
   import { extensionLoader } from './services/extension-loader.ts';
+  import { croffleInternal } from './services/host-bridge.ts';
   import { useAppSettingsStore } from './stores/app-settings-store.ts';
   import { useContextMenuStore } from './stores/context-menu-store.ts';
   import { useSettingsStore } from './stores/settings-store.ts';
@@ -74,7 +75,7 @@
     }
     try {
       // SETTINGS_UPDATE 이벤트가 app-settings-store를 거쳐 테마를 적용한다.
-      await croffle.settings.update({ general: { ...general, theme } });
+      await croffleInternal.settings.update({ general: { ...general, theme } });
     } catch (error) {
       toast.error(t('settings.errors.save', { error: JSON.stringify(error) }));
     }
@@ -91,13 +92,13 @@
 
   // Electron 윈도우 제어 함수
   const minimizeWindow = async () => {
-    croffle.window.minimize();
+    croffleInternal.window.minimize();
   };
   const maximizeWindow = async () => {
-    croffle.window.maximize();
+    croffleInternal.window.maximize();
   };
   const closeWindow = async () => {
-    croffle.window.close();
+    croffleInternal.window.close();
   };
 
   const handleRegisterView = (event: Event) => {

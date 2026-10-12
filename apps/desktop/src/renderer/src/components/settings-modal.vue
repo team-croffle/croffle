@@ -36,6 +36,7 @@
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
   import { extensionLoader } from '@/services/extension-loader';
+  import { croffleInternal } from '@/services/host-bridge';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useSettingsStore } from '@/stores/settings-store';
@@ -146,7 +147,7 @@
       return;
     }
     const compositeId = settingsStore.getTabCompositeId(tab);
-    const stored = await croffle.extensions.configuration.get<Record<string, unknown>>(
+    const stored = await croffleInternal.extensions.configuration.get<Record<string, unknown>>(
       tab.extensionId,
     );
     const merged = mergeWithSchemaDefaults(tab.sections, stored);
@@ -163,7 +164,7 @@
         continue;
       }
       const compositeId = settingsStore.getTabCompositeId(tab);
-      const stored = await croffle.extensions.configuration.get<Record<string, unknown>>(
+      const stored = await croffleInternal.extensions.configuration.get<Record<string, unknown>>(
         tab.extensionId,
       );
       const merged = mergeWithSchemaDefaults(tab.sections, stored);
@@ -216,7 +217,7 @@
     }
     isInstalling.value = true;
     try {
-      const plugin = await croffle.extensions.info.install({
+      const plugin = await croffleInternal.extensions.info.install({
         id: installUrl.value,
       });
       installUrl.value = '';
@@ -232,7 +233,7 @@
   const onLocalZipSelect = async () => {
     isInstalling.value = true;
     try {
-      const result = await croffle.extensions.info.installFromLocal();
+      const result = await croffleInternal.extensions.info.installFromLocal();
       if (result) {
         await fetchInstalledPlugins();
         await extensionLoader.loadPluginById(result.id);
@@ -246,7 +247,7 @@
 
   const onTogglePlugin = async (plugin: ExtensionInfo) => {
     try {
-      await croffle.extensions.info.toggle(plugin.id, plugin.enabled);
+      await croffleInternal.extensions.info.toggle(plugin.id, plugin.enabled);
       await fetchInstalledPlugins();
 
       if (plugin.enabled) {
@@ -265,7 +266,7 @@
     }
     try {
       await extensionLoader.unloadPlugin(plugin.id);
-      await croffle.extensions.info.uninstall(plugin.id);
+      await croffleInternal.extensions.info.uninstall(plugin.id);
       await fetchInstalledPlugins();
     } catch (err) {
       toast.error(t('settings.errors.uninstall', { error: JSON.stringify(err) }));
@@ -307,7 +308,7 @@
       return;
     }
     try {
-      await croffle.settings.update(cloneSettings(settings.value));
+      await croffleInternal.settings.update(cloneSettings(settings.value));
 
       for (const tab of settingsStore.sortedExtensionTabs) {
         if (!tab.sections?.length) {
@@ -316,7 +317,7 @@
         const compositeId = settingsStore.getTabCompositeId(tab);
         const draft = extensionDrafts.value[compositeId];
         if (draft) {
-          await croffle.extensions.configuration.set(tab.extensionId, draft);
+          await croffleInternal.extensions.configuration.set(tab.extensionId, draft);
         }
       }
 
@@ -503,7 +504,7 @@
     }
     isExporting.value = true;
     try {
-      const result = await croffle.calendar.schedules.exportSchedulesToFile();
+      const result = await croffleInternal.calendar.schedules.exportSchedulesToFile();
       if (result) {
         toast.success(
           t('settings.calendar.exportDone', { count: result.count, path: result.filePath }),
@@ -522,7 +523,9 @@
     }
     isImporting.value = true;
     try {
-      const result = await croffle.calendar.schedules.importScheduleFromFile(importMode.value);
+      const result = await croffleInternal.calendar.schedules.importScheduleFromFile(
+        importMode.value,
+      );
       if (result) {
         toast.success(
           t('settings.calendar.importDone', { created: result.created, updated: result.updated }),
