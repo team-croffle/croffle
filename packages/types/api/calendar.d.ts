@@ -17,13 +17,6 @@ export interface SchedulesApi {
     occurrenceStart: Date | string,
     newStart: Date | string,
   ): Promise<Schedule>;
-  exportSchedulesToFile(period?: {
-    start: string;
-    end: string;
-  }): Promise<{ filePath: string; count: number } | null>;
-  importScheduleFromFile(
-    mode?: 'merge' | 'duplicate',
-  ): Promise<{ created: number; updated: number } | null>;
 }
 
 export interface TagsApi {

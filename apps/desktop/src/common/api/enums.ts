@@ -1,4 +1,5 @@
 import type {
+  AppCloseBehavior,
   AppEventType,
   AppSettingLanguage,
   AppSettingTheme,
@@ -18,6 +19,7 @@ export interface HostEnums {
   CalendarView: typeof CalendarView;
   CalendarWeekStartDay: typeof CalendarWeekStartDay;
   CalendarTimeFormat: typeof CalendarTimeFormat;
+  AppCloseBehavior: typeof AppCloseBehavior;
   ClipboardDataType: typeof ClipboardDataType;
   AppEventType: typeof AppEventType;
 }

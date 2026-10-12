@@ -10,9 +10,9 @@ import type { HttpApi } from './api/http.js';
 import type { OsApi } from './api/os.js';
 import type { SettingsApi } from './api/settings.js';
 import type { UiApi } from './api/ui.js';
-import type { WindowApi } from './api/window.js';
 import type { AppEventType } from './enums.js';
 import type {
+  AppCloseBehavior,
   AppSettingLanguage,
   AppSettingTheme,
   CalendarTimeFormat,
@@ -27,13 +27,17 @@ export interface EnumsApi {
   CalendarView: typeof CalendarView;
   CalendarWeekStartDay: typeof CalendarWeekStartDay;
   CalendarTimeFormat: typeof CalendarTimeFormat;
+  AppCloseBehavior: typeof AppCloseBehavior;
   ClipboardDataType: typeof ClipboardDataType;
   AppEventType: typeof AppEventType;
 }
 
-/** Preload에 노출되는 호스트 API (ui 제외) */
+/**
+ * Host API reachable from an extension (`window.croffle` and `ExtensionContext`).
+ * Window control, settings writes, extension management and file dialogs are
+ * host-only and not part of this surface.
+ */
 export interface CroffleAPI {
-  window: WindowApi;
   os: OsApi;
   http: HttpApi;
   event: EventApi;
