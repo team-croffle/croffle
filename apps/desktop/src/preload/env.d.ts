@@ -1,4 +1,4 @@
-import type { CroffleInternalAPI } from '@croffledev/common';
+import type { CroffleInternalBridge } from '@croffledev/common';
 import type { CroffleAPI } from '@croffledev/croffle-types';
 
 declare global {
@@ -7,8 +7,8 @@ declare global {
 
   interface Window {
     croffle: CroffleAPI;
-    /** 호스트 전용. renderer는 `services/host-bridge`로 캡처한 뒤 전역에서 지운다 */
-    croffleInternal: CroffleInternalAPI;
+    /** 호스트 전용. `take()`는 한 번만 API를 돌려준다 — renderer host가 `services/host-bridge`에서 가져간다 */
+    croffleInternal: CroffleInternalBridge;
   }
 }
 
