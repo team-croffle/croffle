@@ -13,6 +13,7 @@
     DialogHeader,
     DialogTitle,
   } from '@/components/ui/dialog';
+  import { croffleInternal } from '@/services/host-bridge';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
 
   /**
@@ -36,12 +37,12 @@
     try {
       const general =
         appSettingsStore.settings?.general ?? (await croffle.settings.getAll()).general;
-      await croffle.settings.update({ general: { ...general, closeBehavior } });
+      await croffleInternal.settings.update({ general: { ...general, closeBehavior } });
       isOpen.value = false;
       if (closeBehavior === AppCloseBehavior.QUIT) {
-        await croffle.window.exitApp();
+        await croffleInternal.window.exitApp();
       } else {
-        await croffle.window.close();
+        await croffleInternal.window.close();
       }
     } catch (error) {
       toast.error(t('settings.errors.save', { error: JSON.stringify(error) }));
