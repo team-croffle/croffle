@@ -21,7 +21,7 @@
   - `window.electron` (a raw `ipcRenderer`) is no longer exposed to page code.
 
 - 77a7df0: Remove the deprecated `Schedule.reminderMinutes` mirror. Read and write `Schedule.reminders` (`number[] | null`) instead: `null` follows the app-wide default, `[]` means no reminder, and `[m]` replaces the old single value `m`.
-- 9377e00: Remove the deprecated `WindowApi.setCloseToTrayMode`. The close-button behavior is the `general.closeBehavior` setting (`ask` | `tray` | `quit`); write it with `settings.update({ general: { ...general, closeBehavior } })`.
+- 9377e00: Remove the deprecated `WindowApi.setCloseToTrayMode`. The close-button behavior is the `general.closeBehavior` setting (`ask` | `tray` | `quit`), which the user sets in the app; extensions can read it with `settings.getOf('general')`. (Writing settings is host-only in 2.0.)
 
 ## 1.8.1
 
