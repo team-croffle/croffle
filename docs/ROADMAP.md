@@ -4,9 +4,9 @@
 
 - 내부: [ROADMAP.md](./ROADMAP.md) (데스크톱) · [ROADMAP.server.md](./ROADMAP.server.md) (서버)
 - 계획은 바뀔 수 있음. 일정 약속이 아님.
-- 현재 데스크톱 **1.2.5**. 서버는 아직 없음.
+- 현재 데스크톱 **1.2.6**. 서버는 아직 없음.
 
-최종 갱신: 2026-10-01
+최종 갱신: 2026-10-20
 
 ---
 
@@ -25,6 +25,7 @@
 - 일정 리마인더, 태그, 가져오기/보내기
 - 캘린더에서 일정을 다른 날로 옮기기
 - 확장 연결을 더 넓힘 (컨텍스트 메뉴 등)
+- 확장이 쓸 수 있는 API와 앱만 쓰는 API를 나눔 (동기화가 붙기 전에)
 
 ### 1.3 — 선택적 동기화 (beta) + 할 일
 
@@ -83,7 +84,7 @@ Go로 만들어 **바이너리 하나로 띄우는 것**을 목표로 합니다.
 
 Croffle stays a **calendar-first local desktop**. Extensions are here now. **Self-hosted sync is optional** and comes later (desktop 1.3 / server 0.1 beta). The app works without a server.
 
-- **1.2** — richer local schedules (reminders, tags, import/export, drag to another day) and deeper extension hooks.
+- **1.2** — richer local schedules (reminders, tags, import/export, drag to another day) and deeper extension hooks, with a clear line between the API extensions use and the app's own.
 - **1.3** — optional device sync, share a schedule with a team, To-Do with deadlines. No team admin inside the desktop app.
 - **1.3.5** — share permissions, tags, and optional reminder sharing.
 - **Server** — self-host only, a single Go binary with no heavy dependencies; dashboard for account/team admin; desktop stays the calendar.
