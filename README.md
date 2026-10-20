@@ -78,6 +78,7 @@ This repository is a **pnpm monorepo**.
 
 ```text
 apps/desktop          Electron app (main / preload / renderer)
+apps/server           croffle-server, the optional sync backend (Go)
 packages/types        @croffledev/croffle-types (publishable)
 packages/cli          @croffledev/croffle-cli (publishable)
 ```
@@ -101,6 +102,7 @@ Requirements: **Node.js ≥ 24**, **pnpm** (via Corepack).
 
 - Extension scaffolding: [`@croffledev/croffle-cli`](./packages/cli/README.md)
 - Types for extensions: [`@croffledev/croffle-types`](./packages/types/README.md)
+- Optional sync backend: [`croffle-server`](./apps/server/README.md) — self-hosted, for syncing several devices of one account (0.1 beta; Croffle works fully without it)
 - Full contribution guide: **[CONTRIBUTING.md](./CONTRIBUTING.md)** · [한국어](./CONTRIBUTING.ko.md)
 
 ---
