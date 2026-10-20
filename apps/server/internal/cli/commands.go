@@ -384,10 +384,13 @@ func (c *command) database() error {
 		return c.dbMigrate()
 	case "info":
 		return c.dbInfo()
+	case "vacuum":
+		return c.dbVacuum()
 	default:
 		return c.usage(
 			"croffle-server db migrate",
-			"croffle-server db info [--json]")
+			"croffle-server db info [--json]",
+			"croffle-server db vacuum")
 	}
 }
 
@@ -434,7 +437,35 @@ func (c *command) dbInfo() error {
 		{"commits", strconv.FormatInt(info.Commits, 10)},
 		{"oldest seq", strconv.FormatInt(info.OldestSeq, 10)},
 		{"newest seq", strconv.FormatInt(info.NewestSeq, 10)},
+		{"purged through seq", strconv.FormatInt(info.PurgedThroughSeq, 10)},
 	})
+	return nil
+}
+
+// dbVacuum is a separate command on purpose: VACUUM holds an exclusive lock
+// for as long as it takes to copy the database, so the operator picks the
+// moment rather than having a sweep decide it.
+func (c *command) dbVacuum() error {
+	fs := c.flags("vacuum", false)
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+
+	before, err := c.db.Info(c.ctx)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.errOut, "rebuilding %s; sync requests will block until this finishes\n", before.Path)
+	if err := c.db.Vacuum(c.ctx); err != nil {
+		return err
+	}
+
+	after, err := c.db.Info(c.ctx)
+	if err != nil {
+		return err
+	}
+	c.printf("vacuumed %s: %s -> %s\n", after.Path, formatBytes(before.SizeBytes), formatBytes(after.SizeBytes))
 	return nil
 }
 

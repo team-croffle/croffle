@@ -300,16 +300,21 @@ func TestOpenRejectsEmptyPath(t *testing.T) {
 	}
 }
 
-func TestPendingOperationsReportNotImplemented(t *testing.T) {
+// Every operation of the boundary is implemented now; the compile-time checks
+// in sqlite.go and admin.go are what keep it that way.
+func TestStoreBoundaryIsFullyImplemented(t *testing.T) {
 	db := open(t, tempPath(t))
-	ctx := context.Background()
 
-	_, err := db.Sweep(ctx, store.SweepConfig{})
-	if !errors.Is(err, store.ErrNotImplemented) {
-		t.Errorf("Sweep error = %v, want ErrNotImplemented", err)
+	var _ store.Store = db
+	var _ store.Admin = db
+
+	// A caller error, not "not built yet".
+	_, sweepErr := db.Sweep(context.Background(), store.SweepConfig{})
+	if sweepErr == nil {
+		t.Fatal("Sweep without cut-offs succeeded")
 	}
-	if !strings.Contains(err.Error(), "server-0.1.0#8") {
-		t.Errorf("error = %v, want it to name the work item", err)
+	if errors.Is(sweepErr, store.ErrNotImplemented) {
+		t.Errorf("Sweep still reports ErrNotImplemented: %v", sweepErr)
 	}
 }
 

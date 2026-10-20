@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Environment variable names. Flags use the same name without the prefix and
@@ -30,6 +31,9 @@ const (
 	EnvLogLevel   = "CROFFLE_LOG_LEVEL"
 	EnvTrustProxy = "CROFFLE_TRUST_PROXY"
 	EnvBasePath   = "CROFFLE_BASE_PATH"
+
+	EnvRetainCommitsDays = "CROFFLE_RETAIN_COMMITS_DAYS"
+	EnvRetainOpsDays     = "CROFFLE_RETAIN_OPS_DAYS"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -39,6 +43,15 @@ const (
 	DefaultDBPath   = "/var/lib/croffle/server.db"
 	DefaultLogLevel = "info"
 	DefaultBasePath = "/"
+
+	// Retention. 90 days of history is far longer than a device is normally
+	// away, and 30 days of idempotency keys is far longer than any retry.
+	DefaultRetainCommitsDays = 90
+	DefaultRetainOpsDays     = 30
+	// Below this, retention starts breaking the guarantees it supports: a
+	// cursor would expire while a laptop is on holiday, and a late retry could
+	// be applied twice.
+	MinRetainDays = 7
 )
 
 // ErrVersionRequested is returned by Load when --version was passed. The caller
@@ -61,6 +74,12 @@ type Config struct {
 	// with one (except the root "/"). Set it when the proxy forwards a subpath
 	// without stripping it.
 	BasePath string
+	// RetainCommits is how long the commit log is kept. A client whose cursor
+	// falls outside it has to bootstrap again.
+	RetainCommits time.Duration
+	// RetainOps is how long idempotency keys are kept. A retry arriving later
+	// than this could be applied a second time.
+	RetainOps time.Duration
 }
 
 // Load parses args (without the program name) and the environment.
@@ -77,6 +96,10 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 	logLevel := fs.String("log-level", envOr(getenv, EnvLogLevel, DefaultLogLevel), "debug | info | warn | error")
 	trustProxy := fs.String("trust-proxy", envOr(getenv, EnvTrustProxy, ""), "trust X-Forwarded-* headers (true/false)")
 	basePath := fs.String("base-path", envOr(getenv, EnvBasePath, DefaultBasePath), "mount point, e.g. /croffle")
+	retainCommits := fs.String("retain-commits-days", envOr(getenv, EnvRetainCommitsDays, ""),
+		fmt.Sprintf("days of commit log to keep (default %d, minimum %d)", DefaultRetainCommitsDays, MinRetainDays))
+	retainOps := fs.String("retain-ops-days", envOr(getenv, EnvRetainOpsDays, ""),
+		fmt.Sprintf("days of idempotency keys to keep (default %d, minimum %d)", DefaultRetainOpsDays, MinRetainDays))
 	showVersion := fs.Bool("version", false, "print version and exit")
 
 	if err := fs.Parse(args); err != nil {
@@ -105,6 +128,12 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 		return nil, err
 	}
 	if cfg.BasePath, err = parseBasePath(*basePath); err != nil {
+		return nil, err
+	}
+	if cfg.RetainCommits, err = parseRetainDays(EnvRetainCommitsDays, *retainCommits, DefaultRetainCommitsDays); err != nil {
+		return nil, err
+	}
+	if cfg.RetainOps, err = parseRetainDays(EnvRetainOpsDays, *retainOps, DefaultRetainOpsDays); err != nil {
 		return nil, err
 	}
 
@@ -172,6 +201,27 @@ func parseBool(name, raw string) (bool, error) {
 	default:
 		return false, fmt.Errorf("%s %q: want true or false", name, raw)
 	}
+}
+
+// parseRetainDays refuses a retention that is too short rather than accepting
+// it: a window below MinRetainDays silently breaks cursors and idempotency,
+// and the symptom (a device re-bootstrapping, or a duplicate row) would show up
+// far from the setting that caused it.
+func parseRetainDays(name, raw string, fallback int) (time.Duration, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return time.Duration(fallback) * 24 * time.Hour, nil
+	}
+
+	days, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s %q: want a number of days", name, raw)
+	}
+	if days < MinRetainDays {
+		return 0, fmt.Errorf("%s %d: must be at least %d days, otherwise cursors and idempotency keys expire while they are still needed",
+			name, days, MinRetainDays)
+	}
+	return time.Duration(days) * 24 * time.Hour, nil
 }
 
 func parseBasePath(raw string) (string, error) {

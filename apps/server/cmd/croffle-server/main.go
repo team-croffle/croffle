@@ -26,6 +26,7 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/httpapi"
 	"github.com/team-croffle/croffle/apps/server/internal/logging"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
+	"github.com/team-croffle/croffle/apps/server/internal/retention"
 	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
 )
 
@@ -103,6 +104,17 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		Health:     db.Ping,
 		Auth:       authService,
 		Sync:       db,
+		Retention: func(ctx context.Context) (int64, int64, error) {
+			oldest, err := db.OldestCommitSeq(ctx)
+			if err != nil {
+				return 0, 0, err
+			}
+			purged, err := db.PurgedThroughSeq(ctx)
+			if err != nil {
+				return 0, 0, err
+			}
+			return oldest, purged, nil
+		},
 	})
 
 	// Listen before announcing: a bind failure should be the error the operator
@@ -124,6 +136,10 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Sweeps once now and then daily; a server that restarts often still
+	// collects its garbage.
+	go retention.New(db, logger, cfg.RetainCommits, cfg.RetainOps).Run(ctx)
+
 	serveErr := make(chan error, 1)
 	go func() {
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -140,6 +156,8 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		slog.String("base_path", cfg.BasePath),
 		slog.String("db_path", cfg.DBPath),
 		slog.Bool("trust_proxy", cfg.TrustProxy),
+		slog.Duration("retain_commits", cfg.RetainCommits),
+		slog.Duration("retain_ops", cfg.RetainOps),
 		slog.Int("protocol_min", protocol.Min),
 		slog.Int("protocol_max", protocol.Max),
 	)
