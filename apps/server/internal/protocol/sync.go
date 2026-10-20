@@ -21,12 +21,9 @@ var Tables = []string{
 
 // Limits on one push. The desktop batches 100 commits, so these leave room
 // while keeping a single request bounded.
+// Paging limits live in the store package, which is what pages.
 const (
 	MaxCommitsPerPush = 500
-	MaxPullLimit      = 1000
-	DefaultPullLimit  = 200
-	MaxSnapshotLimit  = 2000
-	DefaultSnapshot   = 500
 	MaxIDLength       = 200
 )
 

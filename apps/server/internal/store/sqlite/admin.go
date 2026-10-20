@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -192,7 +191,7 @@ func (db *DB) DumpCommitLog(ctx context.Context, sinceSeq int64, limit int) ([]s
 	}
 
 	rows, err := db.read.QueryContext(ctx, `
-		SELECT serverSeq, tbl, rowKey, op, version, updatedAtMs, lastWriterId, teamId, payload
+		SELECT serverSeq, tbl, rowKey, op, ownerId, teamId, version, updatedAtMs, lastWriterId, deletedAt, payload
 		FROM commit_log
 		WHERE serverSeq > ?
 		ORDER BY serverSeq
@@ -204,19 +203,9 @@ func (db *DB) DumpCommitLog(ctx context.Context, sinceSeq int64, limit int) ([]s
 
 	changes := []store.Change{}
 	for rows.Next() {
-		var (
-			change  store.Change
-			op      string
-			payload *string
-		)
-		if err := rows.Scan(&change.ServerSeq, &change.Table, &change.RowID, &op,
-			&change.Version, &change.UpdatedAtMs, &change.LastWriterID, &change.TeamID,
-			&payload); err != nil {
-			return nil, fmt.Errorf("sqlite: scan commit: %w", err)
-		}
-		change.Op = store.Op(op)
-		if payload != nil {
-			change.Payload = json.RawMessage(*payload)
+		change, err := scanChange(rows)
+		if err != nil {
+			return nil, err
 		}
 		changes = append(changes, change)
 	}
