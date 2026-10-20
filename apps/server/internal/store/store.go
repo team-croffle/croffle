@@ -30,6 +30,11 @@ var ErrNotImplemented = errors.New("store: not implemented")
 // so a caller cannot forget to check.
 var ErrNotFound = errors.New("store: not found")
 
+// ErrForeignTeam means a commit claimed a team its account does not belong to.
+// Filing a row under the wrong team would make it visible to strangers, so
+// both the handler and the store refuse it.
+var ErrForeignTeam = errors.New("store: account is not a member of that team")
+
 // ErrDuplicate means a uniquely named thing already exists. It exists so the
 // CLI can say "that username is taken" instead of printing a raw constraint
 // violation at an operator.
@@ -116,12 +121,19 @@ type Commit struct {
 	Op    Op
 	// BaseVersion is the version the client believed the server had. A
 	// mismatch is a conflict, not an error.
-	BaseVersion  int64
+	BaseVersion int64
+	// Version must be greater than BaseVersion so row versions keep
+	// increasing; a client that wins a conflict has to lift its version above
+	// the server's before retrying, or the next comparison means nothing.
 	Version      int64
 	UpdatedAtMs  int64
 	LastWriterID string
 	TeamID       *string
-	Payload      json.RawMessage
+	// DeletedAt is the tombstone timestamp, set for OpDelete. Nil on an
+	// upsert; the store falls back to its own clock if a delete arrives
+	// without one.
+	DeletedAt *int64
+	Payload   json.RawMessage
 }
 
 // Conflict reports a commit that was not applied because the server row had

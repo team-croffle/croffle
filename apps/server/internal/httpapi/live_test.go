@@ -69,6 +69,7 @@ func startServer(t *testing.T) *liveServer {
 		Logger:   slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError + 1})),
 		Health:   db.Ping,
 		Auth:     auth.NewService(db, time.Now),
+		Sync:     db,
 	})
 
 	srv := httptest.NewServer(handler)
@@ -155,11 +156,12 @@ func TestLiveLoginThenAuthenticatedCall(t *testing.T) {
 		t.Errorf("teamId = %v, want %s", who.TeamID, store.DefaultTeamID)
 	}
 
-	// The sync handlers are not built yet, but the credential already carries
-	// through to them.
-	res, _ = srv.post(t, "/sync/push", nil, token)
-	if res.StatusCode != http.StatusNotImplemented {
-		t.Errorf("authenticated push status = %d, want 501", res.StatusCode)
+	// Still to come in their own work items, but the credential already
+	// carries through to them.
+	for _, path := range []string{"/sync/pull", "/sync/bootstrap"} {
+		if res, _ := srv.post(t, path, nil, token); res.StatusCode != http.StatusNotImplemented {
+			t.Errorf("authenticated %s status = %d, want 501", path, res.StatusCode)
+		}
 	}
 }
 
@@ -299,4 +301,136 @@ func exec(t *testing.T, path, query string, args ...any) {
 func queryRow(t *testing.T, path, query string, args ...any) *sql.Row {
 	t.Helper()
 	return openRaw(t, path).QueryRow(query, args...)
+}
+
+// --- push (work item #5) ---
+
+func livePush(t *testing.T, srv *liveServer, token string, commits ...protocol.Commit) protocol.PushResponse {
+	t.Helper()
+	res, body := srv.post(t, "/sync/push", protocol.PushRequest{ClientID: testClientID, Commits: commits}, token)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("push status = %d (%s)", res.StatusCode, body)
+	}
+
+	var parsed protocol.PushResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("decode push: %v", err)
+	}
+	return parsed
+}
+
+func liveCommit(opID, rowID string, base, version int64) protocol.Commit {
+	return protocol.Commit{
+		OpID: opID, Table: "schedule", RowID: rowID, Op: protocol.OpUpsert,
+		BaseVersion: base, Version: version, UpdatedAtMs: 1_700_000_000_000 + version,
+		LastWriterID: "device:" + testClientID,
+		Row: protocol.Row{
+			"id": rowID, "title": "standup", "isAllDay": float64(0),
+			"version": float64(version), "updatedAtMs": float64(1_700_000_000_000 + version),
+			"ownerId": "acct-1", "teamId": nil, "deletedAt": nil,
+		},
+	}
+}
+
+func TestLivePushStoresRowsAndIsIdempotent(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	first := livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1), liveCommit("op-2", "row-2", 0, 1))
+	if len(first.Accepted) != 2 || len(first.Conflicts) != 0 {
+		t.Fatalf("response = %+v, want two accepted", first)
+	}
+	if first.ServerSeq != 2 {
+		t.Errorf("serverSeq = %d, want 2", first.ServerSeq)
+	}
+
+	// Retrying the same batch, as a client does when a response is lost.
+	retry := livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1), liveCommit("op-2", "row-2", 0, 1))
+	if len(retry.Accepted) != 2 {
+		t.Errorf("retry accepted = %v, want both", retry.Accepted)
+	}
+	if retry.ServerSeq != 2 {
+		t.Errorf("retry serverSeq = %d, want 2 (no new commits)", retry.ServerSeq)
+	}
+
+	var commits int
+	if err := queryRow(t, srv.path, "SELECT COUNT(*) FROM commit_log").Scan(&commits); err != nil {
+		t.Fatalf("count commits: %v", err)
+	}
+	if commits != 2 {
+		t.Errorf("commit log entries = %d, want 2", commits)
+	}
+}
+
+func TestLivePushReturnsConflictsWithTheServerRow(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1))
+
+	// A second device that still believes the row is new.
+	stale := livePush(t, srv, token, liveCommit("op-2", "row-1", 0, 2))
+	if len(stale.Accepted) != 0 || len(stale.Conflicts) != 1 {
+		t.Fatalf("response = %+v, want one conflict", stale)
+	}
+
+	conflict := stale.Conflicts[0]
+	if conflict.ServerVersion != 1 {
+		t.Errorf("serverVersion = %d, want 1", conflict.ServerVersion)
+	}
+	if conflict.ServerRow["title"] != "standup" {
+		t.Errorf("serverRow = %v, want the stored payload", conflict.ServerRow)
+	}
+
+	// Settling it the way the desktop would: adopt the server's version as the
+	// base and push again with a higher version.
+	settled := livePush(t, srv, token, liveCommit("op-3", "row-1", conflict.ServerVersion, conflict.ServerVersion+1))
+	if len(settled.Accepted) != 1 {
+		t.Fatalf("settled = %+v, want it accepted", settled)
+	}
+}
+
+func TestLivePushRefusesAForeignTeam(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	commit := liveCommit("op-1", "row-1", 0, 1)
+	commit.Row["teamId"] = "team-not-mine"
+
+	res, body := srv.post(t, "/sync/push",
+		protocol.PushRequest{ClientID: testClientID, Commits: []protocol.Commit{commit}}, token)
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 (%s)", res.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "foreign_team") {
+		t.Errorf("body = %s, want the foreign_team code", body)
+	}
+}
+
+func TestLivePushRequiresAToken(t *testing.T) {
+	srv := startServer(t)
+
+	res, _ := srv.post(t, "/sync/push",
+		protocol.PushRequest{ClientID: testClientID, Commits: []protocol.Commit{liveCommit("op-1", "row-1", 0, 1)}}, "")
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", res.StatusCode)
+	}
+}
+
+func TestLivePushRowIsOwnedByTheTokensAccount(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	// The body claims someone else owns the row; the server must ignore that.
+	commit := liveCommit("op-1", "row-1", 0, 1)
+	commit.Row["ownerId"] = "acct-somebody-else"
+	livePush(t, srv, token, commit)
+
+	var owner string
+	if err := queryRow(t, srv.path, "SELECT ownerId FROM sync_row WHERE rowKey = 'row-1'").Scan(&owner); err != nil {
+		t.Fatalf("read owner: %v", err)
+	}
+	if owner != "acct-1" {
+		t.Errorf("ownerId = %q, want the authenticated account", owner)
+	}
 }
