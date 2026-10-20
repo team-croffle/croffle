@@ -1,0 +1,75 @@
+{
+  "name": "push-rejects-foreign-team",
+  "protocol": 1,
+  "description": "Sharing into a team the account does not belong to answers 403 and stores nothing. Accepting it would make the row visible to strangers.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "leak",
+                "ownerId": "acct-1",
+                "teamId": "team-not-mine",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 403, "body": { "code": "foreign_team" } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 200, "body": { "changes": [] } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "shared",
+                "ownerId": "acct-1",
+                "teamId": "team-default",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-2"] } }
+    }
+  ]
+}

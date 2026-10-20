@@ -1,0 +1,89 @@
+{
+  "name": "pull-scope-isolation",
+  "protocol": 1,
+  "description": "One account never sees another's private rows, and sees a shared row only while it is a member of that team. Visibility comes from the token, not from the request.",
+  "accounts": [
+    { "id": "acct-1", "username": "alice", "teams": ["team-default"] },
+    { "id": "acct-2", "username": "bob", "teams": ["team-default"] },
+    { "id": "acct-3", "username": "carol", "teams": [] }
+  ],
+  "devices": [
+    { "id": "client-1", "accountId": "acct-1" },
+    { "id": "client-2", "accountId": "acct-2" },
+    { "id": "client-3", "accountId": "acct-3" }
+  ],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-private",
+              "table": "schedule",
+              "rowId": "row-private",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-private",
+                "title": "mine only",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            },
+            {
+              "opId": "op-shared",
+              "table": "schedule",
+              "rowId": "row-shared",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-shared",
+                "title": "for the team",
+                "ownerId": "acct-1",
+                "teamId": "team-default",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-private", "op-shared"] } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-2", "body": { "lastServerSeq": 0 } },
+      "expect": {
+        "status": 200,
+        "body": { "changes": [{ "rowId": "row-shared", "row": { "teamId": "team-default" } }] }
+      }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-3", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 200, "body": { "changes": [] } }
+    },
+    {
+      "request": { "endpoint": "/sync/bootstrap", "as": "client-2", "body": {} },
+      "expect": { "status": 200, "body": { "rows": [{ "rowId": "row-shared" }] } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 0 } },
+      "expect": {
+        "status": 200,
+        "body": { "changes": [{ "rowId": "row-private" }, { "rowId": "row-shared" }] }
+      }
+    }
+  ]
+}

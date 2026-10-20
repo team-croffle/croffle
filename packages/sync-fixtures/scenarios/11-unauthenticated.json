@@ -1,0 +1,32 @@
+{
+  "name": "unauthenticated",
+  "protocol": 1,
+  "description": "Every sync endpoint needs a bearer token, and a revoked one stops working at once.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [
+    { "id": "client-1", "accountId": "acct-1" },
+    { "id": "client-2", "accountId": "acct-1", "revoked": true }
+  ],
+  "steps": [
+    {
+      "request": { "endpoint": "/sync/push", "body": { "clientId": "client-1", "commits": [] } },
+      "expect": { "status": 401, "body": { "code": "unauthorized" } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 401, "body": { "code": "unauthorized" } }
+    },
+    {
+      "request": { "endpoint": "/sync/bootstrap", "body": {} },
+      "expect": { "status": 401, "body": { "code": "unauthorized" } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-2", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 401, "body": { "code": "unauthorized" } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 200, "body": { "changes": [] } }
+    }
+  ]
+}

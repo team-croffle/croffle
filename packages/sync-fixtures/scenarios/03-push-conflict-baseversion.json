@@ -1,0 +1,119 @@
+{
+  "name": "push-conflict-baseversion",
+  "protocol": 1,
+  "description": "A stale baseVersion is a conflict, not an error: the batch answers 200 and the server row rides along so the client can settle it. Retrying with the server's version, and a version above it, is accepted.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "mine",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1"] } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 2,
+              "updatedAtMs": 1700000002000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "stale write",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000002000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": [],
+          "serverSeq": 1,
+          "conflicts": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-1",
+              "serverVersion": 1,
+              "serverUpdatedAtMs": 1700000000000,
+              "serverLastWriterId": "device:client-1",
+              "serverRow": { "title": "mine", "version": 1, "ownerId": "acct-1" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-3",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000003000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "settled",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000003000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-3"], "conflicts": [], "serverSeq": 2 } }
+    }
+  ]
+}
