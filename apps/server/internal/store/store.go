@@ -30,6 +30,11 @@ var ErrNotImplemented = errors.New("store: not implemented")
 // so a caller cannot forget to check.
 var ErrNotFound = errors.New("store: not found")
 
+// ErrCursorTooOld means the commits a client still needs have been swept by
+// retention. The client has to bootstrap from a snapshot instead; retrying the
+// same cursor would fail forever.
+var ErrCursorTooOld = errors.New("store: cursor is older than the retained log")
+
 // ErrForeignTeam means a commit claimed a team its account does not belong to.
 // Filing a row under the wrong team would make it visible to strangers, so
 // both the handler and the store refuse it.
@@ -165,6 +170,15 @@ type ApplyResult struct {
 	ServerSeq int64
 }
 
+// Paging limits. They belong to the store because it is what pages; the
+// protocol package owns the wire limits (how big a push may be).
+const (
+	DefaultPullLimit     = 200
+	MaxPullLimit         = 1000
+	DefaultSnapshotLimit = 500
+	MaxSnapshotLimit     = 2000
+)
+
 // PullQuery asks for commits after a cursor, within one account's visibility.
 type PullQuery struct {
 	AccountID string
@@ -179,14 +193,18 @@ type PullQuery struct {
 // package for that — but they keep `croffle-server log dump` output in the same
 // field names, so a commit can be diffed against what the client sent.
 type Change struct {
-	ServerSeq    int64           `json:"serverSeq"`
-	Table        string          `json:"table"`
-	RowID        string          `json:"rowId"`
-	Op           Op              `json:"op"`
+	ServerSeq int64  `json:"serverSeq"`
+	Table     string `json:"table"`
+	RowID     string `json:"rowId"`
+	Op        Op     `json:"op"`
+	// OwnerID and DeletedAt are needed to rebuild the wire row, which carries
+	// every column the client's own table has.
+	OwnerID      string          `json:"ownerId"`
 	Version      int64           `json:"version"`
 	UpdatedAtMs  int64           `json:"updatedAtMs"`
 	LastWriterID *string         `json:"lastWriterId,omitempty"`
 	TeamID       *string         `json:"teamId,omitempty"`
+	DeletedAt    *int64          `json:"deletedAt,omitempty"`
 	Payload      json.RawMessage `json:"payload,omitempty"`
 }
 

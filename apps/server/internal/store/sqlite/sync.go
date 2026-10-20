@@ -144,11 +144,11 @@ func currentRow(ctx context.Context, tx *sql.Tx, table, rowID string) (*store.Ro
 func appendCommit(ctx context.Context, tx *sql.Tx, req store.ApplyRequest, commit store.Commit, nowMs int64) (int64, error) {
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO commit_log
-			(tbl, rowKey, op, ownerId, teamId, version, updatedAtMs, lastWriterId, payload, deviceId, createdAt)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			(tbl, rowKey, op, ownerId, teamId, version, updatedAtMs, lastWriterId, deletedAt, payload, deviceId, createdAt)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		commit.Table, commit.RowID, string(commit.Op), req.AccountID, commit.TeamID,
 		commit.Version, commit.UpdatedAtMs, nullString(commit.LastWriterID),
-		payloadOrNil(commit.Payload), req.DeviceID, nowMs)
+		tombstoneOf(commit, nowMs), payloadOrNil(commit.Payload), req.DeviceID, nowMs)
 	if err != nil {
 		return 0, fmt.Errorf("sqlite: append commit %s: %w", commit.OpID, err)
 	}
@@ -161,13 +161,7 @@ func appendCommit(ctx context.Context, tx *sql.Tx, req store.ApplyRequest, commi
 }
 
 func upsertRow(ctx context.Context, tx *sql.Tx, accountID string, commit store.Commit, seq, nowMs int64) error {
-	deletedAt := commit.DeletedAt
-	if commit.Op == store.OpDelete && deletedAt == nil {
-		// A delete without a tombstone timestamp would be indistinguishable
-		// from a live row; stamp it rather than storing something ambiguous.
-		ms := nowMs
-		deletedAt = &ms
-	}
+	deletedAt := tombstoneOf(commit, nowMs)
 
 	payload := commit.Payload
 	if len(payload) == 0 {
@@ -213,6 +207,20 @@ func (db *DB) maxServerSeq(ctx context.Context) (int64, error) {
 		return 0, fmt.Errorf("sqlite: read max sequence: %w", err)
 	}
 	return seq, nil
+}
+
+// tombstoneOf is the deletedAt to store. A delete that arrived without one is
+// stamped with the apply time: storing a delete with an empty tombstone would
+// make it indistinguishable from a live row.
+func tombstoneOf(commit store.Commit, nowMs int64) *int64 {
+	if commit.DeletedAt != nil {
+		return commit.DeletedAt
+	}
+	if commit.Op == store.OpDelete {
+		ms := nowMs
+		return &ms
+	}
+	return nil
 }
 
 func nullString(value string) any {

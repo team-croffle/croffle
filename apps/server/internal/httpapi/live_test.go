@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -156,12 +157,10 @@ func TestLiveLoginThenAuthenticatedCall(t *testing.T) {
 		t.Errorf("teamId = %v, want %s", who.TeamID, store.DefaultTeamID)
 	}
 
-	// Still to come in their own work items, but the credential already
-	// carries through to them.
-	for _, path := range []string{"/sync/pull", "/sync/bootstrap"} {
-		if res, _ := srv.post(t, path, nil, token); res.StatusCode != http.StatusNotImplemented {
-			t.Errorf("authenticated %s status = %d, want 501", path, res.StatusCode)
-		}
+	// Still to come in its own work item, but the credential already carries
+	// through to it.
+	if res, _ := srv.post(t, "/sync/bootstrap", nil, token); res.StatusCode != http.StatusNotImplemented {
+		t.Errorf("authenticated bootstrap status = %d, want 501", res.StatusCode)
 	}
 }
 
@@ -432,5 +431,133 @@ func TestLivePushRowIsOwnedByTheTokensAccount(t *testing.T) {
 	}
 	if owner != "acct-1" {
 		t.Errorf("ownerId = %q, want the authenticated account", owner)
+	}
+}
+
+// --- pull (work item #6) ---
+
+func livePull(t *testing.T, srv *liveServer, token string, since int64, limit int) protocol.PullResponse {
+	t.Helper()
+	res, body := srv.post(t, "/sync/pull", protocol.PullRequest{LastServerSeq: since, Limit: limit}, token)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("pull status = %d (%s)", res.StatusCode, body)
+	}
+
+	var parsed protocol.PullResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("decode pull: %v", err)
+	}
+	return parsed
+}
+
+func TestLivePushThenPullRoundTripsTheRow(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	sent := liveCommit("op-1", "row-1", 0, 1)
+	livePush(t, srv, token, sent)
+
+	pulled := livePull(t, srv, token, 0, 0)
+	if len(pulled.Changes) != 1 {
+		t.Fatalf("changes = %+v, want 1", pulled.Changes)
+	}
+
+	change := pulled.Changes[0]
+	if change.ServerSeq != 1 || change.Table != "schedule" || change.RowID != "row-1" {
+		t.Errorf("change = %+v", change)
+	}
+
+	// What comes back has to be the row that went in: the opaque payload plus
+	// the promoted columns, with ownership as the server resolved it.
+	for _, key := range []string{"id", "title", "isAllDay", "version", "updatedAtMs", "ownerId", "teamId", "deletedAt"} {
+		if _, ok := change.Row[key]; !ok {
+			t.Errorf("row is missing %q: %v", key, change.Row)
+		}
+	}
+	if change.Row["title"] != sent.Row["title"] {
+		t.Errorf("title = %v, want %v", change.Row["title"], sent.Row["title"])
+	}
+	if change.Row["ownerId"] != "acct-1" {
+		t.Errorf("ownerId = %v, want the authenticated account", change.Row["ownerId"])
+	}
+
+	// The cursor is now current, so there is nothing left.
+	again := livePull(t, srv, token, pulled.ServerSeq, 0)
+	if len(again.Changes) != 0 {
+		t.Errorf("changes after the cursor = %+v, want none", again.Changes)
+	}
+}
+
+func TestLivePullPagesWithHasMore(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	commits := make([]protocol.Commit, 0, 3)
+	for i := range 3 {
+		id := strconv.Itoa(i)
+		commits = append(commits, liveCommit("op-"+id, "row-"+id, 0, 1))
+	}
+	livePush(t, srv, token, commits...)
+
+	first := livePull(t, srv, token, 0, 2)
+	if len(first.Changes) != 2 || !first.HasMore || first.ServerSeq != 2 {
+		t.Fatalf("first page = %+v", first)
+	}
+
+	second := livePull(t, srv, token, first.ServerSeq, 2)
+	if len(second.Changes) != 1 || second.HasMore || second.ServerSeq != 3 {
+		t.Fatalf("second page = %+v", second)
+	}
+}
+
+func TestLivePullRejectsAnExpiredCursorWithGone(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1))
+	// Pretend retention swept past this client (work item #8 does this for
+	// real).
+	exec(t, srv.path, "UPDATE sync_meta SET value = 9 WHERE key = 'purgedThroughSeq'")
+
+	res, body := srv.post(t, "/sync/pull", protocol.PullRequest{LastServerSeq: 1}, token)
+	if res.StatusCode != http.StatusGone {
+		t.Fatalf("status = %d, want 410 (%s)", res.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "cursor_too_old") {
+		t.Errorf("body = %s, want the cursor_too_old code", body)
+	}
+}
+
+func TestLivePullIsScopedToTheAccount(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+	livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1))
+
+	// A second account on the same server must not see the first one's rows.
+	ctx := context.Background()
+	hash, err := auth.HashPassword("other-secret")
+	if err != nil {
+		t.Fatalf("hash: %v", err)
+	}
+	if err := srv.db.CreateAccount(ctx, store.Account{
+		ID: "acct-2", Username: "bob", PasswordHash: hash, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("create bob: %v", err)
+	}
+
+	res, body := srv.post(t, "/auth/login", protocol.LoginRequest{
+		Username: "bob", Password: "other-secret", ClientID: "client-2",
+	}, "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("bob's login = %d (%s)", res.StatusCode, body)
+	}
+	var login protocol.LoginResponse
+	if err := json.Unmarshal(body, &login); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	pulled := livePull(t, srv, login.Token, 0, 0)
+	if len(pulled.Changes) != 0 {
+		t.Errorf("bob pulled %+v, want nothing", pulled.Changes)
 	}
 }

@@ -17,6 +17,7 @@ import (
 // handlers arrive (pull in #6, bootstrap in #7).
 type Syncer interface {
 	ApplyCommits(ctx context.Context, req store.ApplyRequest) (store.ApplyResult, error)
+	PullSince(ctx context.Context, query store.PullQuery) (store.PullResult, error)
 }
 
 func (s *server) push(w http.ResponseWriter, r *http.Request) {
@@ -171,6 +172,12 @@ func (s *server) writeSyncError(w http.ResponseWriter, r *http.Request, err erro
 		writeError(w, http.StatusForbidden, "foreign_team",
 			"this account is not a member of that team")
 
+	case errors.Is(err, store.ErrCursorTooOld):
+		// Retrying the same cursor would fail forever; the client has to
+		// bootstrap from a snapshot instead.
+		writeError(w, http.StatusGone, "cursor_too_old",
+			"the changes after this cursor are no longer retained; bootstrap instead")
+
 	case errors.Is(err, store.ErrNotImplemented):
 		writeError(w, http.StatusNotImplemented, "not_implemented",
 			"this endpoint is not available in this build")
@@ -183,4 +190,84 @@ func (s *server) writeSyncError(w http.ResponseWriter, r *http.Request, err erro
 		s.logger.LogAttrs(r.Context(), slog.LevelError, "sync failed", attrs...)
 		writeError(w, http.StatusInternalServerError, "internal", "unexpected server error")
 	}
+}
+
+func (s *server) pull(w http.ResponseWriter, r *http.Request) {
+	if s.sync == nil {
+		s.notImplemented(w, r)
+		return
+	}
+	identity, ok := IdentityOf(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "authentication required")
+		return
+	}
+
+	var req protocol.PullRequest
+	if !DecodeJSON(w, r, &req) {
+		return
+	}
+	if req.LastServerSeq < 0 {
+		writeError(w, http.StatusBadRequest, "invalid_cursor", "lastServerSeq must not be negative")
+		return
+	}
+
+	result, err := s.sync.PullSince(r.Context(), store.PullQuery{
+		AccountID: identity.AccountID,
+		TeamIDs:   identity.TeamIDs,
+		SinceSeq:  req.LastServerSeq,
+		Limit:     req.Limit,
+	})
+	if err != nil {
+		s.writeSyncError(w, r, err, slog.Int64("cursor", req.LastServerSeq))
+		return
+	}
+
+	changes := make([]protocol.Change, 0, len(result.Changes))
+	for _, change := range result.Changes {
+		mapped, err := toWireChange(change)
+		if err != nil {
+			s.writeSyncError(w, r, err)
+			return
+		}
+		changes = append(changes, mapped)
+	}
+
+	s.logger.DebugContext(r.Context(), "pull served",
+		slog.String("account_id", identity.AccountID),
+		slog.Int64("cursor", req.LastServerSeq),
+		slog.Int("changes", len(changes)),
+		slog.Bool("has_more", result.HasMore),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+
+	writeJSON(w, http.StatusOK, protocol.PullResponse{
+		Changes:   changes,
+		ServerSeq: result.ServerSeq,
+		HasMore:   result.HasMore,
+	})
+}
+
+// toWireChange rebuilds the row a client sent from the promoted columns and the
+// opaque payload, so what comes back out has the shape that went in.
+func toWireChange(change store.Change) (protocol.Change, error) {
+	row, err := protocol.MergeRow(change.Payload, change.Version, change.UpdatedAtMs,
+		change.LastWriterID, change.OwnerID, change.TeamID, change.DeletedAt)
+	if err != nil {
+		return protocol.Change{}, err
+	}
+
+	out := protocol.Change{
+		ServerSeq:   change.ServerSeq,
+		Table:       change.Table,
+		RowID:       change.RowID,
+		Op:          string(change.Op),
+		Row:         row,
+		Version:     change.Version,
+		UpdatedAtMs: change.UpdatedAtMs,
+	}
+	if change.LastWriterID != nil {
+		out.LastWriterID = *change.LastWriterID
+	}
+	return out, nil
 }

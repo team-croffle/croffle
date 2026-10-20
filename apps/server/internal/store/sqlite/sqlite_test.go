@@ -38,7 +38,7 @@ func TestOpenCreatesSchemaAndIsIdempotent(t *testing.T) {
 		t.Fatalf("Ping: %v", err)
 	}
 
-	want := []string{"account", "applied_op", "commit_log", "device", "schema_migrations", "sync_row", "team", "team_member"}
+	want := []string{"account", "applied_op", "commit_log", "device", "schema_migrations", "sync_meta", "sync_row", "team", "team_member"}
 	got := tableNames(t, db)
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("tables = %v, want %v", got, want)
@@ -304,11 +304,11 @@ func TestPendingOperationsReportNotImplemented(t *testing.T) {
 	db := open(t, tempPath(t))
 	ctx := context.Background()
 
-	_, err := db.PullSince(ctx, store.PullQuery{})
+	_, err := db.Snapshot(ctx, store.SnapshotQuery{})
 	if !errors.Is(err, store.ErrNotImplemented) {
-		t.Errorf("PullSince error = %v, want ErrNotImplemented", err)
+		t.Errorf("Snapshot error = %v, want ErrNotImplemented", err)
 	}
-	if !strings.Contains(err.Error(), "server-0.1.0#6") {
+	if !strings.Contains(err.Error(), "server-0.1.0#7") {
 		t.Errorf("error = %v, want it to name the work item", err)
 	}
 }

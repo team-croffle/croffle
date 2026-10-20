@@ -87,6 +87,10 @@ CREATE TABLE commit_log (
     version      INTEGER NOT NULL,
     updatedAtMs  INTEGER NOT NULL,
     lastWriterId TEXT,
+    -- The tombstone the client sent. Not derived from updatedAtMs: the two
+    -- happen to be equal in today's client, and a sync server should hand back
+    -- what it was told rather than something it inferred.
+    deletedAt    INTEGER,
     payload      TEXT,
     deviceId     TEXT    NOT NULL,
     createdAt    INTEGER NOT NULL

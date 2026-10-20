@@ -17,11 +17,20 @@ type fakeSyncer struct {
 	result store.ApplyResult
 	err    error
 	got    store.ApplyRequest
+
+	pullResult store.PullResult
+	pullErr    error
+	gotPull    store.PullQuery
 }
 
 func (f *fakeSyncer) ApplyCommits(_ context.Context, req store.ApplyRequest) (store.ApplyResult, error) {
 	f.got = req
 	return f.result, f.err
+}
+
+func (f *fakeSyncer) PullSince(_ context.Context, query store.PullQuery) (store.PullResult, error) {
+	f.gotPull = query
+	return f.pullResult, f.pullErr
 }
 
 // syncHandler wires an authenticated caller that belongs to the default team.
@@ -259,5 +268,113 @@ func TestPushAcceptsAnEmptyBatch(t *testing.T) {
 	}
 	if body.Accepted == nil || body.Conflicts == nil {
 		t.Error("accepted and conflicts must be empty arrays, not null")
+	}
+}
+
+// --- pull (work item #6) ---
+
+func TestPullMapsChangesBackToTheWire(t *testing.T) {
+	writer := "device:other"
+	deletedAt := int64(1_700_000_002_000)
+
+	syncer := &fakeSyncer{pullResult: store.PullResult{
+		Changes: []store.Change{
+			{
+				ServerSeq: 4, Table: "schedule", RowID: "row-1", Op: store.OpUpsert,
+				OwnerID: "acct-1", Version: 2, UpdatedAtMs: 1_700_000_001_000,
+				LastWriterID: &writer, Payload: json.RawMessage(`{"title":"standup"}`),
+			},
+			{
+				ServerSeq: 5, Table: "schedule", RowID: "row-2", Op: store.OpDelete,
+				OwnerID: "acct-1", Version: 3, UpdatedAtMs: deletedAt,
+				DeletedAt: &deletedAt, Payload: json.RawMessage(`{"title":"gone"}`),
+			},
+		},
+		ServerSeq: 5,
+		HasMore:   true,
+	}}
+
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":3,"limit":2}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (%s)", rec.Code, rec.Body.String())
+	}
+
+	var body protocol.PullResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(body.Changes) != 2 || body.ServerSeq != 5 || !body.HasMore {
+		t.Fatalf("body = %+v", body)
+	}
+
+	// The row the client receives has to be the shape it sent: payload plus
+	// the promoted columns.
+	first := body.Changes[0]
+	if first.Row["title"] != "standup" || first.Row["version"] != float64(2) {
+		t.Errorf("row = %v", first.Row)
+	}
+	if first.Row["ownerId"] != "acct-1" {
+		t.Errorf("ownerId = %v", first.Row["ownerId"])
+	}
+	if first.LastWriterID != writer {
+		t.Errorf("lastWriterId = %q", first.LastWriterID)
+	}
+
+	// A delete carries its tombstone, so the client can apply it as a delete
+	// rather than guessing.
+	second := body.Changes[1]
+	if second.Op != protocol.OpDelete || second.Row["deletedAt"] != float64(deletedAt) {
+		t.Errorf("delete change = %+v", second)
+	}
+
+	// Visibility comes from the token, not from the request.
+	if syncer.gotPull.AccountID != "acct-1" || syncer.gotPull.SinceSeq != 3 {
+		t.Errorf("store received %+v", syncer.gotPull)
+	}
+	if len(syncer.gotPull.TeamIDs) != 1 {
+		t.Errorf("teams = %v, want the token's teams", syncer.gotPull.TeamIDs)
+	}
+}
+
+func TestPullReportsAnExpiredCursorAsGone(t *testing.T) {
+	syncer := &fakeSyncer{pullErr: store.ErrCursorTooOld}
+
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":1}`, "tok")
+	// 410 rather than 400: the request was well formed, the data is gone. The
+	// client has to bootstrap, and retrying the cursor would fail forever.
+	if rec.Code != http.StatusGone {
+		t.Fatalf("status = %d, want 410", rec.Code)
+	}
+	if got := errorCode(t, rec); got != "cursor_too_old" {
+		t.Errorf("code = %q, want cursor_too_old", got)
+	}
+}
+
+func TestPullRejectsANegativeCursor(t *testing.T) {
+	rec := postJSON(t, syncHandler(t, &fakeSyncer{}), "/sync/pull", `{"lastServerSeq":-1}`, "tok")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", rec.Code)
+	}
+	if got := errorCode(t, rec); got != "invalid_cursor" {
+		t.Errorf("code = %q, want invalid_cursor", got)
+	}
+}
+
+func TestPullNeedsAToken(t *testing.T) {
+	rec := postJSON(t, syncHandler(t, &fakeSyncer{}), "/sync/pull", `{"lastServerSeq":0}`, "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", rec.Code)
+	}
+}
+
+func TestPullReturnsEmptyArraysRatherThanNull(t *testing.T) {
+	syncer := &fakeSyncer{pullResult: store.PullResult{Changes: []store.Change{}, ServerSeq: 9}}
+
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":9}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), `"changes":[]`) {
+		t.Errorf("body = %s, want an empty array", rec.Body.String())
 	}
 }
