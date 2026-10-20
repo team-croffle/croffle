@@ -1,8 +1,11 @@
 # CI — lint / format check / typecheck / build, scoped to what changed.
 #
-# Scopes (see the `changes` job): desktop, types, cli, root.
+# Scopes (see the `changes` job): desktop, types, cli, server, root.
 # `root` = shared config (package.json, lockfile, oxlint/oxfmt, tsconfig, workflows)
 # and forces every scope to run.
+#
+# The server is Go and has its own gates; a Node-only change must not pay for a
+# Go toolchain, and a Go-only change must not pay for pnpm install.
 
 name: CI
 
@@ -23,6 +26,7 @@ permissions:
 
 env:
   NODE_VERSION: '24'
+  GO_VERSION: '1.26'
 
 jobs:
   changes:
@@ -33,6 +37,9 @@ jobs:
       desktop: ${{ steps.filter.outputs.desktop == 'true' || steps.filter.outputs.root == 'true' }}
       types: ${{ steps.filter.outputs.types == 'true' || steps.filter.outputs.root == 'true' }}
       cli: ${{ steps.filter.outputs.cli == 'true' || steps.filter.outputs.root == 'true' }}
+      server: ${{ steps.filter.outputs.server == 'true' }}
+      serverWeb: ${{ steps.filter.outputs.serverWeb == 'true' }}
+      # The Node jobs; the server has its own and is deliberately not in here.
       any: ${{ steps.filter.outputs.desktop == 'true' || steps.filter.outputs.types == 'true' || steps.filter.outputs.cli == 'true' || steps.filter.outputs.root == 'true' }}
     steps:
       - name: Checkout
@@ -60,6 +67,14 @@ jobs:
             cli:
               - 'packages/cli/**'
               - 'packages/types/**'
+            server:
+              - 'apps/server/**'
+              # The shared protocol scenarios are read by the server's
+              # conformance test, so a fixture change has to run it.
+              - 'packages/sync-fixtures/**'
+              - '.github/workflows/ci.yml'
+            serverWeb:
+              - 'apps/server/web/**'
 
   quality:
     name: Lint · format · typecheck
@@ -158,11 +173,77 @@ jobs:
       - name: Build (tsup)
         run: pnpm --filter @croffledev/croffle-cli build
 
+  server:
+    name: Server (Go)
+    needs: changes
+    if: ${{ needs.changes.outputs.server == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/server/go.sum
+
+      - name: Format check (gofmt)
+        working-directory: apps/server
+        run: |
+          set -euo pipefail
+          out="$(gofmt -l .)"
+          if [[ -n "$out" ]]; then
+            echo "::error::gofmt needed in:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: Vet
+        working-directory: apps/server
+        run: go vet ./...
+
+      - name: Build
+        working-directory: apps/server
+        run: go build ./...
+
+      # Includes the shared protocol conformance scenarios.
+      - name: Test
+        working-directory: apps/server
+        run: go test ./...
+
+  server-web:
+    name: Server dashboard
+    needs: changes
+    if: ${{ needs.changes.outputs.serverWeb == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Its own pnpm root with its own lockfile: the dashboard's dependencies
+      # are not in the repository lockfile.
+      - name: Install dependencies
+        working-directory: apps/server/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and build
+        working-directory: apps/server/web
+        run: pnpm build
+
   # Single required check for branch protection: passes when every scoped job
   # either succeeded or was skipped because its scope did not change.
   ci-ok:
     name: CI result
-    needs: [changes, quality, build-desktop, build-cli]
+    needs: [changes, quality, build-desktop, build-cli, server, server-web]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:

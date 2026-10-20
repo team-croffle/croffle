@@ -1,0 +1,190 @@
+# Croffle-Server release — builds the container image and tags the commit.
+#
+# Distribution is the ghcr image only. This workflow deliberately does NOT
+# create a GitHub Release: electron-updater resolves "the latest release" across
+# the whole repository, so a server release here would hijack the desktop app's
+# update check and every installed client would stop updating.
+#
+# Trigger: Actions → "Croffle Server Release" → Run workflow
+#   - version: exact semver without a leading v (e.g. 0.1.0)
+#   - prerelease_suffix: optional (e.g. rc.1) → 0.1.0-rc.1, not tagged :latest
+#   - dry_run: build and test only; no push, no tag
+
+name: Croffle Server Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without a leading v (e.g. 0.1.0)
+        required: true
+        type: string
+      prerelease_suffix:
+        description: Pre-release suffix without the hyphen (e.g. rc.1). Empty = stable.
+        required: false
+        type: string
+        default: ''
+      dry_run:
+        description: Build and test only (no image push, no tag)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: croffle-server-release
+  cancel-in-progress: false
+
+env:
+  GO_VERSION: '1.26'
+  NODE_VERSION: '24'
+  IMAGE: ghcr.io/${{ github.repository_owner }}/croffle-server
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: resolve
+        env:
+          VERSION: ${{ inputs.version }}
+          SUFFIX: ${{ inputs.prerelease_suffix }}
+        run: |
+          set -euo pipefail
+
+          core="${VERSION#v}"
+          if [[ ! "$core" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must be X.Y.Z without a leading v (got '$VERSION')"
+            exit 1
+          fi
+
+          full="$core"
+          if [[ -n "$SUFFIX" ]]; then
+            full="$core-${SUFFIX#-}"
+          fi
+
+          # Tags are prefixed per product: the desktop uses desktop-v*, so the
+          # two never collide and `git describe --match` can tell them apart.
+          tag="server-v$full"
+          if [[ "${{ inputs.dry_run }}" != "true" ]] && git ls-remote --tags origin "refs/tags/$tag" | grep -q .; then
+            echo "::error::tag $tag already exists"
+            exit 1
+          fi
+
+          {
+            echo "version=$full"
+            echo "tag=$tag"
+            echo "stable=$([[ -z "$SUFFIX" ]] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $full as $tag"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/server/go.sum
+
+      # The gates run here too: an image is not worth publishing if the tests
+      # that pin the protocol do not pass on this commit.
+      - name: Gates
+        working-directory: apps/server
+        run: |
+          set -euo pipefail
+          out="$(gofmt -l .)"
+          if [[ -n "$out" ]]; then
+            echo "::error::gofmt needed in:"; echo "$out"; exit 1
+          fi
+          go vet ./...
+          go test ./...
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr
+        if: ${{ inputs.dry_run != true }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags
+        id: tags
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+          STABLE: ${{ steps.resolve.outputs.stable }}
+        run: |
+          set -euo pipefail
+          tags="$IMAGE:$VERSION"
+          # Only a stable release moves :latest; a pre-release must never
+          # become what `docker pull` without a tag gives you.
+          if [[ "$STABLE" == "true" ]]; then
+            tags="$tags,$IMAGE:latest"
+          fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "$tags"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/server
+          file: apps/server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.dry_run != true }}
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.resolve.outputs.version }}
+            COMMIT=${{ github.sha }}
+          labels: |
+            org.opencontainers.image.title=croffle-server
+            org.opencontainers.image.description=Optional self-hosted sync backend for Croffle
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.resolve.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Tag the commit
+        if: ${{ inputs.dry_run != true }}
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+          TAGS: ${{ steps.tags.outputs.tags }}
+          DRY: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## croffle-server ${{ steps.resolve.outputs.version }}"
+            echo
+            if [[ "$DRY" == "true" ]]; then
+              echo "Dry run: nothing was pushed or tagged."
+            else
+              echo "- images: \`${TAGS//,/\`, \`}\`"
+              echo "- git tag: \`$TAG\`"
+            fi
+            echo
+            echo "No GitHub Release is created on purpose: the desktop updater"
+            echo "resolves the repository's latest release, and a server release"
+            echo "there would stop desktop clients from updating."
+          } >> "$GITHUB_STEP_SUMMARY"
