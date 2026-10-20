@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
@@ -385,5 +386,117 @@ func TestPullReturnsEmptyArraysRatherThanNull(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"changes":[]`) {
 		t.Errorf("body = %s, want an empty array", rec.Body.String())
+	}
+}
+
+// --- hooks (work item #13) ---
+
+type recordingEmitter struct {
+	events []hooks.Event
+}
+
+func (r *recordingEmitter) Emit(_ context.Context, event hooks.Event) {
+	r.events = append(r.events, event)
+}
+
+func (r *recordingEmitter) typesSeen() []string {
+	seen := make([]string, 0, len(r.events))
+	for _, event := range r.events {
+		seen = append(seen, event.Type)
+	}
+	return seen
+}
+
+func TestPushEmitsCommitsAppliedWithoutPayloads(t *testing.T) {
+	team := store.DefaultTeamID
+	syncer := &fakeSyncer{result: store.ApplyResult{
+		Accepted:  []string{"op-1"},
+		ServerSeq: 4,
+		Applied: []store.AppliedChange{{
+			Table: "schedule", RowID: "row-1", Op: store.OpUpsert,
+			Version: 2, ServerSeq: 4, TeamID: &team, BecameShared: true,
+		}},
+	}}
+	recorder := &recordingEmitter{}
+
+	h := testHandler(t, func(o *Options) {
+		o.Auth = &fakeAuth{identity: auth.Identity{
+			AccountID: "acct-1", DeviceID: "client-1", TeamIDs: []string{team},
+		}}
+		o.Sync = syncer
+		o.Hooks = recorder
+	})
+
+	if rec := postJSON(t, h, "/sync/push", pushBody(wireCommit()), "tok"); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d (%s)", rec.Code, rec.Body.String())
+	}
+
+	// A row gaining a team is the one change whose meaning the server
+	// understands, so it gets its own event.
+	want := []string{hooks.TypeCommitsApplied, hooks.TypeRowShared}
+	if got := recorder.typesSeen(); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+
+	applied, ok := recorder.events[0].Data.(hooks.CommitsApplied)
+	if !ok {
+		t.Fatalf("event data = %T", recorder.events[0].Data)
+	}
+	if applied.AccountID != "acct-1" || applied.ServerSeqTo != 4 || len(applied.Changes) != 1 {
+		t.Errorf("commits_applied = %+v", applied)
+	}
+
+	// An event says which row moved, never what the appointment says.
+	encoded, err := hooks.Marshal(recorder.events[0])
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	for _, leak := range []string{"standup", "payload"} {
+		if strings.Contains(string(encoded), leak) {
+			t.Errorf("the event leaks row content (%q): %s", leak, encoded)
+		}
+	}
+}
+
+func TestPushEmitsNoSharedEventForAnAlreadySharedRow(t *testing.T) {
+	team := store.DefaultTeamID
+	syncer := &fakeSyncer{result: store.ApplyResult{
+		Accepted:  []string{"op-1"},
+		ServerSeq: 5,
+		Applied: []store.AppliedChange{{
+			Table: "schedule", RowID: "row-1", Op: store.OpUpsert,
+			Version: 3, ServerSeq: 5, TeamID: &team, BecameShared: false,
+		}},
+	}}
+	recorder := &recordingEmitter{}
+
+	h := testHandler(t, func(o *Options) {
+		o.Auth = &fakeAuth{identity: auth.Identity{AccountID: "acct-1", DeviceID: "client-1", TeamIDs: []string{team}}}
+		o.Sync = syncer
+		o.Hooks = recorder
+	})
+	postJSON(t, h, "/sync/push", pushBody(wireCommit()), "tok")
+
+	if got := recorder.typesSeen(); len(got) != 1 || got[0] != hooks.TypeCommitsApplied {
+		t.Errorf("events = %v, want only commits_applied", got)
+	}
+}
+
+func TestPushEmitsNothingWhenEverythingConflicted(t *testing.T) {
+	syncer := &fakeSyncer{result: store.ApplyResult{
+		Conflicts: []store.Conflict{{OpID: "op-1", Table: "schedule", RowID: "row-1"}},
+		ServerSeq: 1,
+	}}
+	recorder := &recordingEmitter{}
+
+	h := testHandler(t, func(o *Options) {
+		o.Auth = &fakeAuth{identity: auth.Identity{AccountID: "acct-1", DeviceID: "client-1"}}
+		o.Sync = syncer
+		o.Hooks = recorder
+	})
+	postJSON(t, h, "/sync/push", pushBody(wireCommit()), "tok")
+
+	if got := recorder.typesSeen(); len(got) != 0 {
+		t.Errorf("events = %v, want none when nothing was applied", got)
 	}
 }

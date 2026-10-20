@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
@@ -70,6 +71,18 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		slog.String("device_id", result.Identity.DeviceID),
 		slog.String("request_id", RequestID(r.Context())),
 	)
+
+	s.hooks.Emit(r.Context(), hooks.Event{Type: hooks.TypeDeviceRegistered, Data: hooks.DeviceRegistered{
+		AccountID: result.Identity.AccountID,
+		DeviceID:  result.Identity.DeviceID,
+		Name:      req.DeviceName,
+	}})
+	s.hooks.Emit(r.Context(), hooks.Event{Type: hooks.TypeAuthSucceeded, Data: hooks.AuthSucceeded{
+		AccountID: result.Identity.AccountID,
+		DeviceID:  result.Identity.DeviceID,
+		Method:    "password",
+		Surface:   "sync",
+	}})
 }
 
 func (s *server) whoami(w http.ResponseWriter, r *http.Request) {

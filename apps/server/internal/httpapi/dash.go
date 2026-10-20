@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
@@ -103,6 +104,12 @@ func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
 		slog.String("account_id", account.ID),
 		slog.String("request_id", RequestID(r.Context())),
 	)
+
+	s.hooks.Emit(r.Context(), hooks.Event{Type: hooks.TypeAuthSucceeded, Data: hooks.AuthSucceeded{
+		AccountID: account.ID,
+		Method:    "password",
+		Surface:   "dashboard",
+	}})
 
 	teams, _ := s.dash.TeamsOf(r.Context(), account.ID)
 	writeJSON(w, http.StatusOK, dashMeResponse{

@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
@@ -93,6 +94,52 @@ func (s *server) push(w http.ResponseWriter, r *http.Request) {
 		Conflicts: conflicts,
 		ServerSeq: result.ServerSeq,
 	})
+
+	// After the response: a hook must not be able to delay a sync, and the
+	// dispatcher only queues anyway.
+	s.emitApplied(r.Context(), identity, result)
+}
+
+// emitApplied turns an apply result into hook events. Payloads are left out on
+// purpose: an event says which row moved, not what the appointment says.
+func (s *server) emitApplied(ctx context.Context, identity auth.Identity, result store.ApplyResult) {
+	if len(result.Applied) == 0 {
+		return
+	}
+
+	changes := make([]hooks.ChangedRow, 0, len(result.Applied))
+	from := result.Applied[0].ServerSeq
+	for _, applied := range result.Applied {
+		changes = append(changes, hooks.ChangedRow{
+			Table: applied.Table, RowID: applied.RowID, Op: string(applied.Op),
+			Version: applied.Version, ServerSeq: applied.ServerSeq, TeamID: applied.TeamID,
+		})
+	}
+
+	s.hooks.Emit(ctx, hooks.Event{Type: hooks.TypeCommitsApplied, Data: hooks.CommitsApplied{
+		AccountID:     identity.AccountID,
+		DeviceID:      identity.DeviceID,
+		ServerSeqFrom: from,
+		ServerSeqTo:   result.ServerSeq,
+		Changes:       changes,
+		Conflicts:     len(result.Conflicts),
+	}})
+
+	for _, applied := range result.Applied {
+		if !applied.BecameShared || applied.TeamID == nil {
+			continue
+		}
+		// The one change whose meaning the server understands: everything else
+		// is an opaque payload, but "this became visible to a team" is a fact
+		// worth acting on.
+		s.hooks.Emit(ctx, hooks.Event{Type: hooks.TypeRowShared, Data: hooks.RowShared{
+			AccountID: identity.AccountID,
+			Table:     applied.Table,
+			RowID:     applied.RowID,
+			TeamID:    *applied.TeamID,
+			ServerSeq: applied.ServerSeq,
+		}})
+	}
 }
 
 // toStoreCommit validates one wire commit and splits its row into the promoted

@@ -34,6 +34,10 @@ const (
 
 	EnvRetainCommitsDays = "CROFFLE_RETAIN_COMMITS_DAYS"
 	EnvRetainOpsDays     = "CROFFLE_RETAIN_OPS_DAYS"
+
+	EnvWebhookURL    = "CROFFLE_WEBHOOK_URL"
+	EnvWebhookSecret = "CROFFLE_WEBHOOK_SECRET"
+	EnvWebhookEvents = "CROFFLE_WEBHOOK_EVENTS"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -80,6 +84,12 @@ type Config struct {
 	// RetainOps is how long idempotency keys are kept. A retry arriving later
 	// than this could be applied a second time.
 	RetainOps time.Duration
+	// Webhook is the one hook sink 0.1 ships. Env-only on purpose: an operator
+	// sets it, not a logged-in user, so there is no endpoint that could be
+	// pointed at an internal address.
+	WebhookURL    string
+	WebhookSecret string
+	WebhookEvents []string
 }
 
 // Load parses args (without the program name) and the environment.
@@ -136,6 +146,10 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 	if cfg.RetainOps, err = parseRetainDays(EnvRetainOpsDays, *retainOps, DefaultRetainOpsDays); err != nil {
 		return nil, err
 	}
+
+	cfg.WebhookURL = strings.TrimSpace(getenv(EnvWebhookURL))
+	cfg.WebhookSecret = getenv(EnvWebhookSecret)
+	cfg.WebhookEvents = splitList(getenv(EnvWebhookEvents))
 
 	return cfg, nil
 }
@@ -222,6 +236,18 @@ func parseRetainDays(name, raw string, fallback int) (time.Duration, error) {
 			name, days, MinRetainDays)
 	}
 	return time.Duration(days) * 24 * time.Hour, nil
+}
+
+// splitList reads a comma-separated env value, dropping blanks so a trailing
+// comma is not an error.
+func splitList(raw string) []string {
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 func parseBasePath(raw string) (string, error) {

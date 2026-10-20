@@ -5,10 +5,12 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
@@ -36,11 +38,30 @@ func quiet() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError + 1}))
 }
 
+// recordingEmitter captures hook events so a test can assert on them.
+type recordingEmitter struct {
+	mu     sync.Mutex
+	events []hooks.Event
+}
+
+func (r *recordingEmitter) Emit(_ context.Context, event hooks.Event) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, event)
+}
+
+func (r *recordingEmitter) all() []hooks.Event {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return slices.Clone(r.events)
+}
+
 func TestSweepOnceUsesTheConfiguredWindows(t *testing.T) {
 	sweeper := &fakeSweeper{result: store.SweepResult{DeletedCommits: 2, OldestCommitSeq: 7}}
 	now := time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
+	recorder := &recordingEmitter{}
 
-	service := New(sweeper, quiet(), 90*24*time.Hour, 30*24*time.Hour)
+	service := New(sweeper, quiet(), recorder, 90*24*time.Hour, 30*24*time.Hour)
 	service.now = func() time.Time { return now }
 	service.SweepOnce(context.Background())
 
@@ -56,12 +77,33 @@ func TestSweepOnceUsesTheConfiguredWindows(t *testing.T) {
 	if want := now.Add(-30 * 24 * time.Hour); !cfg.OpsBefore.Equal(want) {
 		t.Errorf("opsBefore = %v, want %v", cfg.OpsBefore, want)
 	}
+
+	// A sweep that removed something is worth telling an observer about.
+	events := recorder.all()
+	if len(events) != 1 || events[0].Type != hooks.TypeRetentionSwept {
+		t.Fatalf("events = %+v, want one retention_swept", events)
+	}
+	swept, ok := events[0].Data.(hooks.RetentionSwept)
+	if !ok || swept.DeletedCommits != 2 || swept.OldestCommitSeq != 7 {
+		t.Errorf("event data = %+v", events[0].Data)
+	}
+}
+
+func TestSweepOnceEmitsNothingWhenItRemovedNothing(t *testing.T) {
+	recorder := &recordingEmitter{}
+	service := New(&fakeSweeper{}, quiet(), recorder, 90*24*time.Hour, 30*24*time.Hour)
+
+	service.SweepOnce(context.Background())
+	if events := recorder.all(); len(events) != 0 {
+		t.Errorf("events = %+v, want none for an empty sweep", events)
+	}
 }
 
 // Retention falling behind is not a reason to stop serving sync.
 func TestSweepOnceSwallowsFailures(t *testing.T) {
 	sweeper := &fakeSweeper{err: errors.New("disk on fire")}
-	service := New(sweeper, quiet(), 90*24*time.Hour, 30*24*time.Hour)
+	// A nil emitter is allowed and becomes the no-op one.
+	service := New(sweeper, quiet(), nil, 90*24*time.Hour, 30*24*time.Hour)
 
 	service.SweepOnce(context.Background()) // must not panic
 	if sweeper.count() != 1 {
@@ -73,7 +115,7 @@ func TestSweepOnceSwallowsFailures(t *testing.T) {
 // that restarts often would otherwise never collect its garbage.
 func TestRunSweepsImmediatelyAndStopsWithTheContext(t *testing.T) {
 	sweeper := &fakeSweeper{}
-	service := New(sweeper, quiet(), 90*24*time.Hour, 30*24*time.Hour)
+	service := New(sweeper, quiet(), nil, 90*24*time.Hour, 30*24*time.Hour)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

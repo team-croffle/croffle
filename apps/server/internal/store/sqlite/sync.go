@@ -20,6 +20,7 @@ func (db *DB) ApplyCommits(ctx context.Context, req store.ApplyRequest) (store.A
 	result := store.ApplyResult{
 		Accepted:  []string{},
 		Conflicts: []store.Conflict{},
+		Applied:   []store.AppliedChange{},
 	}
 	if req.AccountID == "" || req.DeviceID == "" {
 		return result, errors.New("sqlite: apply needs an account and a device")
@@ -84,6 +85,13 @@ func (db *DB) ApplyCommits(ctx context.Context, req store.ApplyRequest) (store.A
 
 			result.Accepted = append(result.Accepted, commit.OpID)
 			result.ServerSeq = seq
+			result.Applied = append(result.Applied, store.AppliedChange{
+				Table: commit.Table, RowID: commit.RowID, Op: commit.Op,
+				Version: commit.Version, ServerSeq: seq, TeamID: commit.TeamID,
+				// Only the store can tell: it is the one that saw the row
+				// before this commit.
+				BecameShared: commit.TeamID != nil && (current == nil || current.TeamID == nil),
+			})
 		}
 		return nil
 	})
