@@ -39,6 +39,18 @@ cli:
       - any-glob-to-any-file:
           - packages/cli/**
 
+server:
+  - changed-files:
+      - any-glob-to-any-file:
+          - apps/server/**
+          # The protocol scenarios are read by the server's conformance test.
+          - packages/sync-fixtures/**
+
+server-web:
+  - changed-files:
+      - any-glob-to-any-file:
+          - apps/server/web/**
+
 # --- Cross-cutting ---
 documentation:
   - changed-files:

@@ -1,0 +1,8 @@
+bin/
+web/node_modules/
+web/embedded/
+*.db
+*.db-wal
+*.db-shm
+Dockerfile
+.dockerignore

@@ -31,6 +31,7 @@ Follows the global instructions (`~/.claude/CLAUDE.md`) and `AGENTS.md`; this fi
   ROADMAP.server.md / ROADMAP.docs.md / ROADMAP.pub.md
   conversation/<date>-<topic>.md     decision logs
   plan/<version>_<feature>.md        one plan per version; <feature> = short slug of the version theme
+  plan/server-<version>_<feature>.md server (apps/server) plans; separate number space from the desktop
   work/<version>_<N>.md              one work item per file, N = work number (1, 2, …); deleted when finished
   history/<YYYY-MM-DD-HHmm>_<task>.md  written when a work item finishes; first line `decisions: …`
   test/<YYYY-MM-DD-HHmm>_<version>.md  test run report
@@ -56,7 +57,7 @@ types → desktop 순서, 네이티브 모듈, 마이그레이션, i18n 등.
 어떻게 나눌지, 왜 그 순서인지.
 
 ## 작업 목록
-| # | 작업 | 영역 (main/preload/renderer/common/types/cli/ci/docs) | 의존 | 배포 | 상태 |
+| # | 작업 | 영역 (main/preload/renderer/common/types/cli/server/ci/docs) | 의존 | 배포 | 상태 |
 |---|---|---|---|---|---|
 
 ## 검증 계획
@@ -76,7 +77,7 @@ version: <version>
 id: <N>                # work number, not an rc
 release: <version>-rc.A   # target pre-release this item ships in (shared by items shipped together)
 title: <제목>
-area: main | preload | renderer | common | types | cli | ci | docs
+area: main | preload | renderer | common | types | cli | server | ci | docs
 depends: []            # e.g. [1, 2] (same version) or ["1.1.1_3"] (other version)
 status: todo | doing | blocked
 branch: feat/<version>-<feature>

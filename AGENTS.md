@@ -10,19 +10,22 @@
   - dev: `pnpm dev` (desktop) · `pnpm --filter @croffledev/croffle-cli dev`
   - lint: `pnpm lint` / `pnpm lint:fix` · format: `pnpm format`
   - typecheck: `pnpm typecheck` (all packages) · `pnpm typecheck:desktop`
-  - test: none yet
+  - test: `pnpm -r test` (desktop fixture reader) · server: `cd apps/server && make check` (gofmt, vet, go test incl. protocol conformance)
   - build: `pnpm build` (desktop) · `pnpm build:unpack` / `build:win` / `build:mac` / `build:linux` · `pnpm --filter @croffledev/croffle-cli build`
   - db: `pnpm --filter @croffledev/desktop db:generate` / `db:studio` (drizzle-kit)
   - release: `pnpm changeset` (types/cli), desktop via GitHub Actions (see CI/CD)
 
 ## Layout
 
-| Path             | Package                     | Published                 |
-| ---------------- | --------------------------- | ------------------------- |
-| `apps/desktop`   | `@croffledev/desktop`       | GitHub Releases (private) |
-| `packages/types` | `@croffledev/croffle-types` | npm                       |
-| `packages/cli`   | `@croffledev/croffle-cli`   | npm                       |
+| Path                     | Package                     | Published                             |
+| ------------------------ | --------------------------- | ------------------------------------- |
+| `apps/desktop`           | `@croffledev/desktop`       | GitHub Releases (private)             |
+| `apps/server`            | `croffle-server` (Go)       | ghcr image only — **never a Release** |
+| `packages/types`         | `@croffledev/croffle-types` | npm                                   |
+| `packages/cli`           | `@croffledev/croffle-cli`   | npm                                   |
+| `packages/sync-fixtures` | —                           | not published (shared test data)      |
 
+- `apps/server` is Go (stdlib only + `modernc.org/sqlite` + `x/crypto`), outside the pnpm workspace: tasks live in its `Makefile` (`make check`, `make build`, `make build-all`). Its dashboard (`apps/server/web`) is a Vue app with **its own pnpm root and lockfile**, embedded into the binary with `go:embed`.
 - Desktop is split into `src/main` (Node: DB, IPC, extensions, reminders, tray), `src/preload` (contextBridge → `window.croffle`), `src/renderer` (Vue, sandboxed) and `src/common` (shared code, alias `@croffledev/common`).
 - Host API is **domain-flat**: `croffle.window`, `croffle.calendar.schedules`, `croffle.extensions.info`, `croffle.event`, … Adding an API: IPC handler (`main/ipc/*.handler.ts`) → preload (`preload/api/**`) → public types (`packages/types`).
 - Public types live in `packages/types`; runtime enums used by the app live in `apps/desktop/src/common`.
@@ -39,7 +42,7 @@
 
 ## Commits / PRs
 
-- Commit subject: `type(scope): title`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `ci`, `release`. Scopes: `desktop`, `types`, `cli`, `ci` (omit when repo-wide).
+- Commit subject: `type(scope): title`. Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `ci`, `release`, `test`. Scopes: `desktop`, `server`, `types`, `cli`, `ci` (omit when repo-wide).
 - Branch from `master`: `feat/…`, `fix/…`, `refactor/…`. Labeler (`.github/labeler.yaml`) labels PRs by path (`desktop`, `desktop-main/preload/renderer`, `i18n`, `types`, `cli`) and branch prefix.
 - PR templates in `.github/pull_request_template/` (default / bug fix / feature). Fill package scope and Electron surface (main / preload / renderer).
 
@@ -56,16 +59,18 @@
 
 ## Versioning
 
-`vX.Y.Z`; pre-release `vX.Y.Z-rc.N`. Desktop version lives in `apps/desktop/package.json` (bumped by the release workflow). `packages/*` are versioned independently by Changesets.
+Tags are prefixed per product: **`desktop-vX.Y.Z`** and **`server-vX.Y.Z`**, pre-release `…-rc.N`. The server release workflow already uses its prefix; the desktop workflow switches with its first 1.3.0 pre-release, so `v1.2.6` and earlier stay on the old unprefixed scheme and are never renamed.
+Desktop version lives in `apps/desktop/package.json` (bumped by the release workflow); the server version is an input to its release workflow. `packages/*` are versioned independently by Changesets.
 
 ## CI/CD (`.github/workflows`)
 
-Workflows: `ci`, `secret-scan`, `labeler`, `publish-packages`, `release`.
+Workflows: `ci`, `secret-scan`, `labeler`, `publish-packages`, `release`, `server-release`.
 
-- `ci`: on `master` push / PR (opened, synchronize, reopened, ready_for_review) / manual. Detects changed scopes (`desktop`, `types`, `cli`; shared config = all) and runs oxlint, `oxfmt --check`, typecheck only on those scopes, then builds the changed app/package (desktop: electron-vite build; cli: tsup). `CI result` is the single required check.
+- `ci`: on `master` push / PR (opened, synchronize, reopened, ready_for_review) / manual. Detects changed scopes (`desktop`, `types`, `cli`, `server`, `serverWeb`; shared config = all Node scopes) and runs oxlint, `oxfmt --check`, typecheck only on those scopes, then builds the changed app/package (desktop: electron-vite build; cli: tsup). The `server` scope runs its own Go gates instead, so a Node change never installs Go and a Go change never installs pnpm. `CI result` is the single required check.
 - `secret-scan`: on every branch push and PRs. TruffleHog (verified + unknown) and Gitleaks over the full history.
 - `labeler`: on PR open/reopen/sync; `actions/labeler@v5` with `.github/labeler.yaml`, creates missing labels.
 - `publish-packages`: on `master` push touching `.changeset/**`, `packages/**`, `package.json`, lockfile, or manual. `changesets/action` opens a "chore: version packages" PR or publishes `@croffledev/croffle-types` / `@croffledev/croffle-cli` to npm.
+- `server-release` ("Croffle Server Release"): manual only. Inputs: `version` (exact, no `v`), `prerelease_suffix` (e.g. `rc.1`), `dry_run`. Runs the Go gates, builds the multi-arch image, pushes `ghcr.io/<owner>/croffle-server:<version>` (plus `:latest` for a stable release) and tags `server-v<version>`. **It must never create a GitHub Release**: electron-updater resolves the repository's latest release, so one here would stop every desktop client from updating.
 - `release` ("Croffle Release"): manual only. Inputs: `release_type` (patch|minor|major|rc), `version` (exact, no `v`), `version_suffix` (e.g. `rc.1`), `draft` (default false), `dry_run`. Bumps `apps/desktop/package.json`, commits, tags `v<version>`, creates one draft Release first, then mac/linux/win electron-builder jobs attach unsigned installers. The release stays a **draft** (default `draft: true`); the release note body is written from `.ai/release/` (templates in `.claude/skills/croffle-workflow/release-notes.md`) and published with `gh release edit … --draft=false`. Titles: `Pre-Release vX.Y.Z-rc.A` for rc, `Croffle vX.Y.Z — Release Note` for stable. Note: electron-updater cannot see draft releases, so publishing is a required step.
 
 ## Branch / PR / release rules
