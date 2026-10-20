@@ -75,49 +75,64 @@ func NewService(st store.Store, now func() time.Time) *Service {
 	return &Service{store: st, now: now, limiter: NewLimiter(now)}
 }
 
-// Login verifies a username and password and issues a device token.
+// CheckPassword verifies a username and password without issuing anything.
 //
-// Logging in again from the same clientId replaces that device's token: the
-// desktop keeps one credential per installation, and a replaced token stops
-// working immediately.
-func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, error) {
-	username := strings.TrimSpace(req.Username)
-	clientID := strings.TrimSpace(req.ClientID)
-
-	if username == "" || req.Password == "" {
-		return LoginResult{}, ErrInvalidCredentials
-	}
-	if clientID == "" {
-		return LoginResult{}, ErrMissingClientID
+// The dashboard uses it: a browser login must not create a device or a sync
+// token. Rate limiting and the equal-time failure path are shared with Login,
+// because an attacker should not be able to pick the cheaper door.
+func (s *Service) CheckPassword(ctx context.Context, username, password, remoteIP string) (*store.Account, error) {
+	username = strings.TrimSpace(username)
+	if username == "" || password == "" {
+		return nil, ErrInvalidCredentials
 	}
 
-	limitKey := req.RemoteIP + "|" + username
+	limitKey := remoteIP + "|" + username
 	if !s.limiter.Allow(limitKey) {
-		return LoginResult{}, ErrRateLimited
+		return nil, ErrRateLimited
 	}
 
 	account, err := s.store.FindAccountByUsername(ctx, username)
 	if errors.Is(err, store.ErrNotFound) {
 		// Spend the same time a real verification would, so the response time
 		// does not reveal which usernames exist.
-		BurnPasswordTime(req.Password)
-		return LoginResult{}, ErrInvalidCredentials
+		BurnPasswordTime(password)
+		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
-		return LoginResult{}, fmt.Errorf("find account: %w", err)
+		return nil, fmt.Errorf("find account: %w", err)
 	}
 
-	ok, err := VerifyPassword(account.PasswordHash, req.Password)
+	ok, err := VerifyPassword(account.PasswordHash, password)
 	if err != nil {
 		// A hash this server cannot read is an operational problem, not a
 		// wrong password; surface it instead of logging the user out silently.
-		return LoginResult{}, fmt.Errorf("verify password for %s: %w", account.ID, err)
+		return nil, fmt.Errorf("verify password for %s: %w", account.ID, err)
 	}
 	if !ok {
-		return LoginResult{}, ErrInvalidCredentials
+		return nil, ErrInvalidCredentials
 	}
 	if account.Disabled() {
-		return LoginResult{}, ErrAccountDisabled
+		return nil, ErrAccountDisabled
+	}
+
+	s.limiter.Reset(limitKey)
+	return account, nil
+}
+
+// Login verifies a username and password and issues a device token.
+//
+// Logging in again from the same clientId replaces that device's token: the
+// desktop keeps one credential per installation, and a replaced token stops
+// working immediately.
+func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, error) {
+	clientID := strings.TrimSpace(req.ClientID)
+	if clientID == "" {
+		return LoginResult{}, ErrMissingClientID
+	}
+
+	account, err := s.CheckPassword(ctx, req.Username, req.Password, req.RemoteIP)
+	if err != nil {
+		return LoginResult{}, err
 	}
 
 	token, hash, err := NewToken()
@@ -142,8 +157,6 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, err
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("teams of %s: %w", account.ID, err)
 	}
-
-	s.limiter.Reset(limitKey)
 
 	return LoginResult{
 		Token: token,

@@ -38,7 +38,12 @@ func TestOpenCreatesSchemaAndIsIdempotent(t *testing.T) {
 		t.Fatalf("Ping: %v", err)
 	}
 
-	want := []string{"account", "applied_op", "commit_log", "device", "schema_migrations", "sync_meta", "sync_row", "team", "team_member"}
+	// Named rather than counted, so a migration that forgets a table or adds
+	// an unintended one is visible here.
+	want := []string{
+		"account", "applied_op", "commit_log", "dash_session", "device",
+		"schema_migrations", "sync_meta", "sync_row", "team", "team_member",
+	}
 	got := tableNames(t, db)
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("tables = %v, want %v", got, want)

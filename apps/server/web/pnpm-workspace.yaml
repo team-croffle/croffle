@@ -1,0 +1,11 @@
+# Having this file makes pnpm treat apps/server/web as its own root, so it does
+# not climb to the repository workspace. The dashboard belongs to the Go binary,
+# not to the desktop app, and a workspace entry would put a lockfile change in
+# the repository root for something the Node side never builds.
+
+packages: []
+
+# esbuild ships a prebuilt binary and needs its install script, the same as in
+# the root workspace.
+allowBuilds:
+  esbuild: true

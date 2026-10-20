@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
 var fixedNow = time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
@@ -40,6 +41,10 @@ func (allowAnyToken) Login(context.Context, auth.LoginRequest) (auth.LoginResult
 
 func (allowAnyToken) Authenticate(context.Context, string) (auth.Identity, error) {
 	return auth.Identity{AccountID: "acct-1", DeviceID: "client-1"}, nil
+}
+
+func (allowAnyToken) CheckPassword(context.Context, string, string, string) (*store.Account, error) {
+	return nil, auth.ErrInvalidCredentials
 }
 
 func testHandler(t *testing.T, mutate func(*Options)) http.Handler {

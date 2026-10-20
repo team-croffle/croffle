@@ -245,6 +245,17 @@ type SnapshotResult struct {
 type SweepConfig struct {
 	CommitsBefore time.Time
 	OpsBefore     time.Time
+	// At is the moment the sweep runs, used for anything whose expiry is
+	// absolute rather than an age (dashboard sessions). Zero means now.
+	At time.Time
+}
+
+// Now is the sweep's reference time.
+func (c SweepConfig) Now() time.Time {
+	if c.At.IsZero() {
+		return time.Now()
+	}
+	return c.At
 }
 
 // SweepResult reports what a sweep removed. OldestCommitSeq is what decides
@@ -252,6 +263,7 @@ type SweepConfig struct {
 type SweepResult struct {
 	DeletedCommits  int64
 	DeletedOps      int64
+	DeletedSessions int64
 	OldestCommitSeq int64
 }
 
@@ -311,6 +323,26 @@ type Admin interface {
 	// debugging a sync problem. It is the first tool to reach for when a client
 	// and the server disagree.
 	DumpCommitLog(ctx context.Context, sinceSeq int64, limit int) ([]Change, error)
+}
+
+// Session is a dashboard login.
+//
+// It is not a device token: a sync token can write, and the dashboard is
+// read-only. Keeping them separate means an XSS in the dashboard cannot be
+// turned into a push.
+type Session struct {
+	TokenHash []byte
+	AccountID string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+}
+
+// Sessions is the dashboard's slice of the store.
+type Sessions interface {
+	CreateSession(ctx context.Context, session Session) error
+	// FindSession returns ErrNotFound for a missing or expired session.
+	FindSession(ctx context.Context, tokenHash []byte, now time.Time) (*Session, error)
+	DeleteSession(ctx context.Context, tokenHash []byte) error
 }
 
 // Store is the persistence contract.

@@ -7,6 +7,7 @@ package httpapi
 
 import (
 	"context"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -40,34 +41,44 @@ type Options struct {
 	// Retention reports (oldestCommitSeq, purgedThroughSeq) for GET /health.
 	// Optional: without it the health body simply omits the section.
 	Retention RetentionFunc
+	// Dash backs the read-only dashboard. Without it the /dash routes are not
+	// registered at all, so a build without a dashboard has no session surface.
+	Dash Dash
+	// Assets is the built dashboard. Without it the catch-all answers the JSON
+	// 404 it always did, so an API-only build behaves the same as before.
+	Assets fs.FS
 	// Now is injectable so tests can assert on the health timestamp.
 	Now func() time.Time
 }
 
 type server struct {
-	version   string
-	commit    string
-	basePath  string
-	logger    *slog.Logger
-	healthFn  HealthFunc
-	auth      Authenticator
-	sync      Syncer
-	retention RetentionFunc
-	now       func() time.Time
+	version    string
+	commit     string
+	basePath   string
+	logger     *slog.Logger
+	healthFn   HealthFunc
+	auth       Authenticator
+	sync       Syncer
+	retention  RetentionFunc
+	dash       Dash
+	trustProxy bool
+	now        func() time.Time
 }
 
 // NewHandler builds the whole HTTP handler: middleware, routes and stubs.
 func NewHandler(o Options) http.Handler {
 	s := &server{
-		version:   valueOr(o.Version, "dev"),
-		commit:    o.Commit,
-		basePath:  normaliseBase(o.BasePath),
-		logger:    o.Logger,
-		healthFn:  o.Health,
-		auth:      o.Auth,
-		sync:      o.Sync,
-		retention: o.Retention,
-		now:       o.Now,
+		version:    valueOr(o.Version, "dev"),
+		commit:     o.Commit,
+		basePath:   normaliseBase(o.BasePath),
+		logger:     o.Logger,
+		healthFn:   o.Health,
+		auth:       o.Auth,
+		sync:       o.Sync,
+		retention:  o.Retention,
+		dash:       o.Dash,
+		trustProxy: o.TrustProxy,
+		now:        o.Now,
 	}
 	if s.logger == nil {
 		s.logger = slog.Default()
@@ -87,9 +98,16 @@ func NewHandler(o Options) http.Handler {
 
 	s.route(mux, http.MethodPost, "/sync/bootstrap", s.requireAuth(s.bootstrap))
 
-	// Catch-all so unknown paths get the same JSON error shape as everything
-	// else instead of net/http's plain-text 404.
-	mux.HandleFunc(s.prefix("/"), s.notFound)
+	s.dashRoutes(mux)
+
+	// Catch-all. With a dashboard it serves the single-page app; without one it
+	// keeps answering the JSON 404. Either way the specific patterns above win,
+	// so this can never shadow an endpoint.
+	if o.Assets != nil {
+		mux.HandleFunc(s.prefix("/"), s.spaHandler(o.Assets))
+	} else {
+		mux.HandleFunc(s.prefix("/"), s.notFound)
+	}
 
 	// Outermost first: a panic anywhere below still produces a logged 500, and
 	// the access log sees the status that the body limit may have written.
