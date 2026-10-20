@@ -157,10 +157,11 @@ func TestLiveLoginThenAuthenticatedCall(t *testing.T) {
 		t.Errorf("teamId = %v, want %s", who.TeamID, store.DefaultTeamID)
 	}
 
-	// Still to come in its own work item, but the credential already carries
-	// through to it.
-	if res, _ := srv.post(t, "/sync/bootstrap", nil, token); res.StatusCode != http.StatusNotImplemented {
-		t.Errorf("authenticated bootstrap status = %d, want 501", res.StatusCode)
+	// Every sync endpoint accepts the credential.
+	for _, path := range []string{"/sync/push", "/sync/pull", "/sync/bootstrap"} {
+		if res, _ := srv.post(t, path, nil, token); res.StatusCode == http.StatusUnauthorized {
+			t.Errorf("%s rejected a valid token", path)
+		}
 	}
 }
 
@@ -559,5 +560,105 @@ func TestLivePullIsScopedToTheAccount(t *testing.T) {
 	pulled := livePull(t, srv, login.Token, 0, 0)
 	if len(pulled.Changes) != 0 {
 		t.Errorf("bob pulled %+v, want nothing", pulled.Changes)
+	}
+}
+
+// --- bootstrap (work item #7) ---
+
+func liveBootstrap(t *testing.T, srv *liveServer, token, cursor string, limit int) protocol.BootstrapResponse {
+	t.Helper()
+	res, body := srv.post(t, "/sync/bootstrap", protocol.BootstrapRequest{Cursor: cursor, Limit: limit}, token)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("bootstrap status = %d (%s)", res.StatusCode, body)
+	}
+
+	var parsed protocol.BootstrapResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatalf("decode bootstrap: %v", err)
+	}
+	return parsed
+}
+
+// The recovery a client performs when its cursor is too old: snapshot, then
+// pull from the instant the snapshot was taken.
+func TestLiveBootstrapThenPullConverges(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	commits := make([]protocol.Commit, 0, 4)
+	for i := range 4 {
+		id := strconv.Itoa(i)
+		commits = append(commits, liveCommit("op-"+id, "row-"+id, 0, 1))
+	}
+	livePush(t, srv, token, commits...)
+
+	page := liveBootstrap(t, srv, token, "", 3)
+	if len(page.Rows) != 3 || !page.HasMore || page.Cursor == "" {
+		t.Fatalf("first page = %+v", page)
+	}
+	base := page.ServerSeq
+
+	rows := len(page.Rows)
+	for page.HasMore {
+		page = liveBootstrap(t, srv, token, page.Cursor, 3)
+		if page.ServerSeq != base {
+			t.Fatalf("serverSeq = %d, want the pinned %d", page.ServerSeq, base)
+		}
+		rows += len(page.Rows)
+	}
+	if rows != 4 {
+		t.Errorf("snapshot rows = %d, want 4", rows)
+	}
+
+	// Having applied the snapshot, the client stores its instant as the cursor
+	// and is immediately up to date.
+	pulled := livePull(t, srv, token, base, 0)
+	if len(pulled.Changes) != 0 {
+		t.Errorf("pull right after bootstrap returned %+v, want nothing", pulled.Changes)
+	}
+
+	// Later changes arrive through pull as usual.
+	livePush(t, srv, token, liveCommit("op-later", "row-later", 0, 1))
+	pulled = livePull(t, srv, token, base, 0)
+	if len(pulled.Changes) != 1 || pulled.Changes[0].RowID != "row-later" {
+		t.Errorf("pull after bootstrap = %+v, want just the later row", pulled.Changes)
+	}
+}
+
+func TestLiveBootstrapReportsDeletesAsDeletes(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1))
+
+	remove := liveCommit("op-2", "row-1", 1, 2)
+	remove.Op = protocol.OpDelete
+	remove.Row["deletedAt"] = float64(1_700_000_009_000)
+	livePush(t, srv, token, remove)
+
+	page := liveBootstrap(t, srv, token, "", 0)
+	if len(page.Rows) != 1 {
+		t.Fatalf("rows = %+v, want the tombstone", page.Rows)
+	}
+	// A fresh device has to learn the row is deleted, or its empty copy would
+	// look authoritative.
+	if page.Rows[0].Op != protocol.OpDelete {
+		t.Errorf("op = %q, want delete", page.Rows[0].Op)
+	}
+	if page.Rows[0].Row["deletedAt"] == nil {
+		t.Error("the tombstone timestamp is missing")
+	}
+}
+
+func TestLiveBootstrapRejectsAForgedCursor(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	res, body := srv.post(t, "/sync/bootstrap", protocol.BootstrapRequest{Cursor: "not-a-cursor!!"}, token)
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 (%s)", res.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "invalid_cursor") {
+		t.Errorf("body = %s, want the invalid_cursor code", body)
 	}
 }
