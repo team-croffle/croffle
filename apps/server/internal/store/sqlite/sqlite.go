@@ -154,6 +154,10 @@ func (db *DB) withWriteTx(ctx context.Context, fn func(tx *sql.Tx) error) error 
 	return nil
 }
 
+// timeNow is a package-level seam so bookkeeping writes can be made
+// deterministic in tests without threading a clock through every call.
+var timeNow = time.Now
+
 // toMillis converts a time to the unix milliseconds used by every timestamp
 // column. The zero time becomes 0 so a forgotten clock is obvious rather than
 // a date in 1754.

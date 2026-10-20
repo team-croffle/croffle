@@ -236,16 +236,31 @@ type Store interface {
 	Ping(ctx context.Context) error
 	Close() error
 
+	// CreateAccount inserts a login whose password is already hashed; the
+	// store never handles a plaintext password.
+	CreateAccount(ctx context.Context, account Account) error
 	// FindAccountByUsername returns ErrNotFound when there is no such account.
 	FindAccountByUsername(ctx context.Context, username string) (*Account, error)
-	// UpsertDevice registers or updates a device and its token hash.
+	// FindAccountByID is the lookup behind every authenticated request, since
+	// a token resolves to a device and a device to its account.
+	FindAccountByID(ctx context.Context, id string) (*Account, error)
+	// UpsertDevice registers a device or replaces its token.
+	//
+	// It must refuse to move an existing device row to a different account:
+	// device ids come from the client, so without that check a caller could
+	// claim someone else's device id and invalidate their token.
 	UpsertDevice(ctx context.Context, device Device) error
+	// TouchDevice records that a device was seen. Callers throttle it; it is
+	// bookkeeping and must not become a write per request.
+	TouchDevice(ctx context.Context, deviceID string, at time.Time) error
 	// FindDeviceByTokenHash resolves a bearer token to its device. Revoked
 	// devices and disabled accounts are the caller's business to reject.
 	FindDeviceByTokenHash(ctx context.Context, tokenHash []byte) (*Device, error)
 	// TeamsOf lists the teams an account belongs to; it defines what the
 	// account can pull beyond its own rows.
 	TeamsOf(ctx context.Context, accountID string) ([]string, error)
+	// AddTeamMember grants an account access to a team's shared rows.
+	AddTeamMember(ctx context.Context, teamID, accountID, role string) error
 
 	// ApplyCommits applies one push batch in a single transaction.
 	ApplyCommits(ctx context.Context, req ApplyRequest) (ApplyResult, error)

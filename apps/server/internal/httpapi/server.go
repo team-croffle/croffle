@@ -29,6 +29,9 @@ type Options struct {
 	TrustProxy bool
 	Logger     *slog.Logger
 	Health     HealthFunc
+	// Auth resolves credentials. When nil the auth and sync routes answer 501,
+	// which is what a build without it should say.
+	Auth Authenticator
 	// Now is injectable so tests can assert on the health timestamp.
 	Now func() time.Time
 }
@@ -39,6 +42,7 @@ type server struct {
 	basePath string
 	logger   *slog.Logger
 	healthFn HealthFunc
+	auth     Authenticator
 	now      func() time.Time
 }
 
@@ -50,6 +54,7 @@ func NewHandler(o Options) http.Handler {
 		basePath: normaliseBase(o.BasePath),
 		logger:   o.Logger,
 		healthFn: o.Health,
+		auth:     o.Auth,
 		now:      o.Now,
 	}
 	if s.logger == nil {
@@ -62,13 +67,17 @@ func NewHandler(o Options) http.Handler {
 	mux := http.NewServeMux()
 	s.route(mux, http.MethodGet, "/health", s.health)
 
-	// 0.1 endpoints. The contract (paths, request and response bodies) is fixed
-	// by the desktop side; the implementations arrive in their own work items,
-	// so until then the route exists and answers 501 instead of 404. That keeps
-	// "not built yet" distinguishable from "wrong URL" while the client is
-	// being written against this server.
-	for _, p := range []string{"/auth/login", "/auth/whoami", "/sync/push", "/sync/pull", "/sync/bootstrap"} {
-		s.route(mux, http.MethodPost, p, s.notImplemented)
+	s.route(mux, http.MethodPost, "/auth/login", s.login)
+	s.route(mux, http.MethodPost, "/auth/whoami", s.requireAuth(s.whoami))
+
+	// Sync endpoints. The contract (paths, request and response bodies) is
+	// fixed by the desktop side; the handlers arrive in their own work items,
+	// so until then the route exists and answers 501 instead of 404 — "not
+	// built yet" stays distinguishable from "wrong URL" while the client is
+	// written against this server. Authentication is already in front of them,
+	// so an unauthenticated call gets the 401 it will always get.
+	for _, p := range []string{"/sync/push", "/sync/pull", "/sync/bootstrap"} {
+		s.route(mux, http.MethodPost, p, s.requireAuth(s.notImplemented))
 	}
 
 	// Catch-all so unknown paths get the same JSON error shape as everything
@@ -107,11 +116,6 @@ func (s *server) notImplemented(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) notFound(w http.ResponseWriter, r *http.Request) {
 	writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
-}
-
-// pattern renders a net/http route pattern below the base path.
-func (s *server) pattern(method, path string) string {
-	return method + " " + s.prefix(path)
 }
 
 func (s *server) prefix(path string) string {
