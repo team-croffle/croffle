@@ -1,0 +1,127 @@
+{
+  "name": "bootstrap-paging",
+  "protocol": 1,
+  "description": "A snapshot is state, not history: one row edited twice appears once, at its latest version. Pages are pinned to one instant and carry an opaque cursor, and a forged cursor is refused rather than half-trusted.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000001,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "first",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000001
+              }
+            },
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-2",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000002,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-2",
+                "title": "second",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000002
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1", "op-2"] } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-3",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000000005,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "edited",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000000005
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-3"], "serverSeq": 3 } }
+    },
+    {
+      "request": { "endpoint": "/sync/bootstrap", "as": "client-1", "body": { "limit": 1 } },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 3,
+          "hasMore": true,
+          "cursor": "$any",
+          "rows": [
+            { "table": "schedule", "rowId": "row-1", "version": 2, "row": { "title": "edited" } }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/bootstrap",
+        "as": "client-1",
+        "body": { "cursor": "not-a-cursor!!" }
+      },
+      "expect": { "status": 400, "body": { "code": "invalid_cursor" } }
+    },
+    {
+      "request": { "endpoint": "/sync/bootstrap", "as": "client-1", "body": {} },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 3,
+          "hasMore": false,
+          "cursor": "$absent",
+          "rows": [
+            { "rowId": "row-1", "version": 2 },
+            { "rowId": "row-2", "version": 1 }
+          ]
+        }
+      }
+    }
+  ]
+}

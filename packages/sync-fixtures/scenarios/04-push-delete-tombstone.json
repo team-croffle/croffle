@@ -1,0 +1,100 @@
+{
+  "name": "push-delete-tombstone",
+  "protocol": 1,
+  "description": "A delete keeps the row as a tombstone and pull hands the tombstone timestamp back unchanged. 'Deleted' and 'never received' have to stay distinguishable, and the server must not invent the timestamp from updatedAtMs.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1"] } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "delete",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000005000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": 1700000005000,
+                "version": 2,
+                "updatedAtMs": 1700000005000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-2"] } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 1 } },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": [
+            {
+              "serverSeq": 2,
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "delete",
+              "version": 2,
+              "row": { "deletedAt": 1700000005000, "version": 2 }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": { "endpoint": "/sync/bootstrap", "as": "client-1", "body": {} },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 2,
+          "hasMore": false,
+          "rows": [{ "rowId": "row-1", "op": "delete", "row": { "deletedAt": 1700000005000 } }]
+        }
+      }
+    }
+  ]
+}

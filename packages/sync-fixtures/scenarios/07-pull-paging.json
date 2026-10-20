@@ -1,0 +1,112 @@
+{
+  "name": "pull-paging",
+  "protocol": 1,
+  "description": "Paging advances the cursor to the last change actually returned, never to the newest in the log: a cursor moved past an unreturned commit would lose that change forever.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000001,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000001
+              }
+            },
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-2",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000002,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-2",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000002
+              }
+            },
+            {
+              "opId": "op-3",
+              "table": "schedule",
+              "rowId": "row-3",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000003,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-3",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000003
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1", "op-2", "op-3"], "serverSeq": 3 } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": { "lastServerSeq": 0, "limit": 2 }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 2,
+          "hasMore": true,
+          "changes": [
+            { "serverSeq": 1, "rowId": "row-1" },
+            { "serverSeq": 2, "rowId": "row-2" }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": { "lastServerSeq": 2, "limit": 2 }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 3,
+          "hasMore": false,
+          "changes": [{ "serverSeq": 3, "rowId": "row-3" }]
+        }
+      }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 3 } },
+      "expect": { "status": 200, "body": { "serverSeq": 3, "hasMore": false, "changes": [] } }
+    }
+  ]
+}

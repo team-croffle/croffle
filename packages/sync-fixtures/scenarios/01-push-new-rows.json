@@ -1,0 +1,103 @@
+{
+  "name": "push-new-rows",
+  "protocol": 1,
+  "description": "A push of two new rows is accepted and the sequence counts up from one.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "isAllDay": 0,
+                "startDate": 1700000000,
+                "version": 1,
+                "updatedAtMs": 1700000000000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null
+              }
+            },
+            {
+              "opId": "op-2",
+              "table": "tag",
+              "rowId": "tag-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "tag-1",
+                "name": "work",
+                "version": 1,
+                "updatedAtMs": 1700000000000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": { "accepted": ["op-1", "op-2"], "conflicts": [], "serverSeq": 2 }
+      }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 0 } },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 2,
+          "hasMore": false,
+          "changes": [
+            {
+              "serverSeq": 1,
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "isAllDay": 0,
+                "startDate": 1700000000,
+                "version": 1,
+                "updatedAtMs": 1700000000000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null
+              }
+            },
+            {
+              "serverSeq": 2,
+              "table": "tag",
+              "rowId": "tag-1",
+              "op": "upsert",
+              "row": { "name": "work" }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

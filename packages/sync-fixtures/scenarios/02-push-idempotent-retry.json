@@ -1,0 +1,75 @@
+{
+  "name": "push-idempotent-retry",
+  "protocol": 1,
+  "description": "Re-sending a batch after a lost response reports the same opIds as accepted and writes nothing new. Without this a dropped response duplicates every row in the batch.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1"], "serverSeq": 1 } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1"], "conflicts": [], "serverSeq": 1 } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 200, "body": { "serverSeq": 1, "changes": [{ "serverSeq": 1 }] } }
+    }
+  ]
+}

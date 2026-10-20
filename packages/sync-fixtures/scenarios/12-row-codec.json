@@ -1,0 +1,120 @@
+{
+  "name": "row-codec",
+  "protocol": 1,
+  "description": "Row encoding, read by the desktop runner only. The traps pinned here are the ones that cost the most to find later: date columns are seconds while deletedAt and the wire are milliseconds, the DTO field recurrenceRule is the column recurringRule, and booleans travel as 0/1.",
+  "accounts": [],
+  "devices": [],
+  "steps": [],
+  "rowCodec": {
+    "cases": [
+      {
+        "table": "schedule",
+        "comment": "startDate, endDate, createdAt and updatedAt are second-resolution columns; the wire carries milliseconds. deletedAt is already milliseconds on both sides.",
+        "row": {
+          "id": "row-1",
+          "title": "standup",
+          "description": null,
+          "location": null,
+          "startDate": 1700000000,
+          "endDate": 1700003600,
+          "isAllDay": false,
+          "recurrenceRule": null,
+          "colorLabel": "#E1E1E1",
+          "priority": "medium",
+          "useDefaultReminder": true,
+          "createdAt": 1699999000,
+          "updatedAt": 1700000000,
+          "updatedAtMs": 1700000000000,
+          "version": 1,
+          "deletedAt": null,
+          "lastWriterId": "device:client-1",
+          "ownerId": null
+        },
+        "wire": {
+          "id": "row-1",
+          "title": "standup",
+          "description": null,
+          "location": null,
+          "startDate": 1700000000000,
+          "endDate": 1700003600000,
+          "isAllDay": 0,
+          "recurringRule": null,
+          "colorLabel": "#E1E1E1",
+          "priority": "medium",
+          "useDefaultReminder": 1,
+          "createdAt": 1699999000000,
+          "updatedAt": 1700000000000,
+          "updatedAtMs": 1700000000000,
+          "version": 1,
+          "deletedAt": null,
+          "lastWriterId": "device:client-1",
+          "ownerId": null
+        }
+      },
+      {
+        "table": "schedule",
+        "comment": "A tombstoned row: deletedAt is milliseconds on both sides, so it must not be multiplied.",
+        "row": {
+          "id": "row-2",
+          "title": "cancelled",
+          "description": null,
+          "location": null,
+          "startDate": 1700000000,
+          "endDate": 1700003600,
+          "isAllDay": true,
+          "recurrenceRule": "FREQ=WEEKLY;BYDAY=MO",
+          "colorLabel": "#E1E1E1",
+          "priority": "high",
+          "useDefaultReminder": false,
+          "createdAt": 1699999000,
+          "updatedAt": 1700000005,
+          "updatedAtMs": 1700000005000,
+          "version": 2,
+          "deletedAt": 1700000005000,
+          "lastWriterId": "device:client-1",
+          "ownerId": "acct-1"
+        },
+        "wire": {
+          "id": "row-2",
+          "title": "cancelled",
+          "description": null,
+          "location": null,
+          "startDate": 1700000000000,
+          "endDate": 1700003600000,
+          "isAllDay": 1,
+          "recurringRule": "FREQ=WEEKLY;BYDAY=MO",
+          "colorLabel": "#E1E1E1",
+          "priority": "high",
+          "useDefaultReminder": 0,
+          "createdAt": 1699999000000,
+          "updatedAt": 1700000005000,
+          "updatedAtMs": 1700000005000,
+          "version": 2,
+          "deletedAt": 1700000005000,
+          "lastWriterId": "device:client-1",
+          "ownerId": "acct-1"
+        }
+      }
+    ],
+    "lww": [
+      {
+        "comment": "The newer wall clock wins.",
+        "a": { "updatedAtMs": 1700000002000, "lastWriterId": "device:a" },
+        "b": { "updatedAtMs": 1700000001000, "lastWriterId": "device:b" },
+        "winner": "a"
+      },
+      {
+        "comment": "On an equal clock the writer id breaks the tie, so both sides pick the same winner without talking.",
+        "a": { "updatedAtMs": 1700000002000, "lastWriterId": "device:a" },
+        "b": { "updatedAtMs": 1700000002000, "lastWriterId": "device:b" },
+        "winner": "b"
+      },
+      {
+        "comment": "A server write beats a device write at the same instant, because 'server' sorts after 'device:'.",
+        "a": { "updatedAtMs": 1700000002000, "lastWriterId": "device:a" },
+        "b": { "updatedAtMs": 1700000002000, "lastWriterId": "server" },
+        "winner": "b"
+      }
+    ]
+  }
+}

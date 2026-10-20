@@ -1,0 +1,60 @@
+{
+  "name": "pull-cursor-too-old",
+  "protocol": 1,
+  "description": "A cursor whose commits retention has removed answers 410 with cursor_too_old, and so does a cursor past everything the server ever issued. Retrying either would fail forever; bootstrap is the recovery, and after it a pull is immediately quiet.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "kept",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 200, "body": { "accepted": ["op-1"] } }
+    },
+    { "effect": "setPurgedThroughSeq", "value": 9 },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 3 } },
+      "expect": { "status": 410, "body": { "code": "cursor_too_old" } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 99 } },
+      "expect": { "status": 410, "body": { "code": "cursor_too_old" } }
+    },
+    {
+      "request": { "endpoint": "/sync/bootstrap", "as": "client-1", "body": {} },
+      "expect": {
+        "status": 200,
+        "body": { "serverSeq": 1, "hasMore": false, "rows": [{ "rowId": "row-1", "op": "upsert" }] }
+      }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 9 } },
+      "expect": { "status": 200, "body": { "changes": [] } }
+    }
+  ]
+}

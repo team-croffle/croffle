@@ -1,0 +1,82 @@
+{
+  "name": "push-rejects-invalid",
+  "protocol": 1,
+  "description": "Malformed commits are a client bug and answer 400 with invalid_commit. In particular a version that does not exceed baseVersion is refused: row versions have to increase or the conflict check stops meaning anything.",
+  "accounts": [{ "id": "acct-1", "username": "alice", "teams": ["team-default"] }],
+  "devices": [{ "id": "client-1", "accountId": "acct-1" }],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "secrets",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": { "id": "row-1" }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 400, "body": { "code": "invalid_commit" } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 5,
+              "version": 5,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": { "id": "row-1" }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 400, "body": { "code": "invalid_commit" } }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": { "id": "row-1" }
+            }
+          ]
+        }
+      },
+      "expect": { "status": 400, "body": { "code": "invalid_commit" } }
+    },
+    {
+      "request": { "endpoint": "/sync/pull", "as": "client-1", "body": { "lastServerSeq": 0 } },
+      "expect": { "status": 200, "body": { "changes": [], "serverSeq": 0 } }
+    }
+  ]
+}
