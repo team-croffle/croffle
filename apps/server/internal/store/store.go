@@ -275,6 +275,9 @@ type Info struct {
 	Commits       int64  `json:"commits"`
 	OldestSeq     int64  `json:"oldestSeq"`
 	NewestSeq     int64  `json:"newestSeq"`
+	// PurgedThroughSeq is how far retention has deleted; a client cursor below
+	// it can no longer be served and has to bootstrap.
+	PurgedThroughSeq int64 `json:"purgedThroughSeq"`
 }
 
 // Admin is the operator-facing surface, used by the CLI and never by a request
@@ -301,6 +304,9 @@ type Admin interface {
 	AddTeamMember(ctx context.Context, teamID, accountID, role string) error
 
 	Info(ctx context.Context) (Info, error)
+	// Vacuum reclaims the space a sweep freed. It is never run automatically:
+	// it locks the database for the length of a full copy.
+	Vacuum(ctx context.Context) error
 	// DumpCommitLog returns raw commit log entries regardless of ownership, for
 	// debugging a sync problem. It is the first tool to reach for when a client
 	// and the server disagree.

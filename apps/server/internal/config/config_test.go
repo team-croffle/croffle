@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 )
 
 // envMap builds a getenv func, so tests never touch the real environment.
@@ -133,6 +134,44 @@ func TestParseLogLevel(t *testing.T) {
 		}
 		if got != want {
 			t.Errorf("ParseLogLevel(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestRetentionDefaultsAndBounds(t *testing.T) {
+	cfg, err := Load(nil, envMap(nil))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.RetainCommits != DefaultRetainCommitsDays*24*time.Hour {
+		t.Errorf("retainCommits = %v", cfg.RetainCommits)
+	}
+	if cfg.RetainOps != DefaultRetainOpsDays*24*time.Hour {
+		t.Errorf("retainOps = %v", cfg.RetainOps)
+	}
+
+	cfg, err = Load(nil, envMap(map[string]string{
+		EnvRetainCommitsDays: "30",
+		EnvRetainOpsDays:     "14",
+	}))
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.RetainCommits != 30*24*time.Hour || cfg.RetainOps != 14*24*time.Hour {
+		t.Errorf("config = %+v", cfg)
+	}
+
+	// Too short is refused rather than accepted: a cursor would expire while a
+	// laptop is on holiday, and a late retry could be applied twice. The
+	// symptom would show up far from this setting.
+	for _, env := range []map[string]string{
+		{EnvRetainCommitsDays: "1"},
+		{EnvRetainOpsDays: "0"},
+		{EnvRetainCommitsDays: "-5"},
+		{EnvRetainOpsDays: "soon"},
+	} {
+		if _, err := Load(nil, envMap(env)); err == nil {
+			t.Errorf("Load(%v) succeeded, want a rejection", env)
 		}
 	}
 }

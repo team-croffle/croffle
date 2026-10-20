@@ -13,9 +13,12 @@ import (
 	"time"
 )
 
-// HealthFunc reports whether the storage layer is reachable. It is nil until
-// the store lands (work item #2); GET /health then reports "unconfigured".
+// HealthFunc reports whether the storage layer is reachable. Without one,
+// GET /health reports "unconfigured" rather than claiming a database is fine.
 type HealthFunc func(context.Context) error
+
+// RetentionFunc reports the retained range of the commit log.
+type RetentionFunc func(ctx context.Context) (oldestCommitSeq, purgedThroughSeq int64, err error)
 
 // Options configures NewHandler. Logger is required; the rest has defaults.
 type Options struct {
@@ -34,32 +37,37 @@ type Options struct {
 	Auth Authenticator
 	// Sync is the store behind the sync endpoints; nil means they answer 501.
 	Sync Syncer
+	// Retention reports (oldestCommitSeq, purgedThroughSeq) for GET /health.
+	// Optional: without it the health body simply omits the section.
+	Retention RetentionFunc
 	// Now is injectable so tests can assert on the health timestamp.
 	Now func() time.Time
 }
 
 type server struct {
-	version  string
-	commit   string
-	basePath string
-	logger   *slog.Logger
-	healthFn HealthFunc
-	auth     Authenticator
-	sync     Syncer
-	now      func() time.Time
+	version   string
+	commit    string
+	basePath  string
+	logger    *slog.Logger
+	healthFn  HealthFunc
+	auth      Authenticator
+	sync      Syncer
+	retention RetentionFunc
+	now       func() time.Time
 }
 
 // NewHandler builds the whole HTTP handler: middleware, routes and stubs.
 func NewHandler(o Options) http.Handler {
 	s := &server{
-		version:  valueOr(o.Version, "dev"),
-		commit:   o.Commit,
-		basePath: normaliseBase(o.BasePath),
-		logger:   o.Logger,
-		healthFn: o.Health,
-		auth:     o.Auth,
-		sync:     o.Sync,
-		now:      o.Now,
+		version:   valueOr(o.Version, "dev"),
+		commit:    o.Commit,
+		basePath:  normaliseBase(o.BasePath),
+		logger:    o.Logger,
+		healthFn:  o.Health,
+		auth:      o.Auth,
+		sync:      o.Sync,
+		retention: o.Retention,
+		now:       o.Now,
 	}
 	if s.logger == nil {
 		s.logger = slog.Default()

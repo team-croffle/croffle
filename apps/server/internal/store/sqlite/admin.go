@@ -176,6 +176,7 @@ func (db *DB) Info(ctx context.Context) (store.Info, error) {
 		{`SELECT COUNT(*) FROM commit_log`, &info.Commits},
 		{`SELECT COALESCE(MIN(serverSeq), 0) FROM commit_log`, &info.OldestSeq},
 		{`SELECT COALESCE(MAX(serverSeq), 0) FROM commit_log`, &info.NewestSeq},
+		{`SELECT COALESCE((SELECT value FROM sync_meta WHERE key = 'purgedThroughSeq'), 0)`, &info.PurgedThroughSeq},
 	}
 	for _, c := range counts {
 		if err := db.read.QueryRowContext(ctx, c.query).Scan(c.into); err != nil {
