@@ -24,6 +24,7 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
+	"github.com/team-croffle/croffle/apps/server/web"
 )
 
 const (
@@ -64,6 +65,11 @@ func startServer(t *testing.T) *liveServer {
 		t.Fatalf("add team member: %v", err)
 	}
 
+	assets, err := web.FS()
+	if err != nil {
+		t.Fatalf("embedded dashboard: %v", err)
+	}
+
 	handler := httpapi.NewHandler(httpapi.Options{
 		Version:  "test",
 		BasePath: "/",
@@ -71,6 +77,8 @@ func startServer(t *testing.T) *liveServer {
 		Health:   db.Ping,
 		Auth:     auth.NewService(db, time.Now),
 		Sync:     db,
+		Dash:     db,
+		Assets:   assets,
 	})
 
 	srv := httptest.NewServer(handler)
@@ -660,5 +668,149 @@ func TestLiveBootstrapRejectsAForgedCursor(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "invalid_cursor") {
 		t.Errorf("body = %s, want the invalid_cursor code", body)
+	}
+}
+
+// --- dashboard (work item #10) ---
+
+func (s *liveServer) dashLogin(t *testing.T) *http.Cookie {
+	t.Helper()
+	res, body := s.post(t, "/dash/login",
+		map[string]string{"username": testUsername, "password": testPassword}, "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("dashboard login = %d (%s)", res.StatusCode, body)
+	}
+
+	for _, cookie := range res.Cookies() {
+		if cookie.Name == "croffle_dash" {
+			return cookie
+		}
+	}
+	t.Fatal("dashboard login set no cookie")
+	return nil
+}
+
+func (s *liveServer) getWithCookie(t *testing.T, path string, cookie *http.Cookie) (*http.Response, []byte) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, s.url+path, nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET %s: %v", path, err)
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return res, data
+}
+
+// The point of a separate session: an XSS in the dashboard must not be
+// convertible into a push.
+func TestLiveDashboardSessionCannotSync(t *testing.T) {
+	srv := startServer(t)
+	cookie := srv.dashLogin(t)
+
+	res, _ := srv.post(t, "/sync/pull", protocol.PullRequest{LastServerSeq: 0}, cookie.Value)
+	if res.StatusCode != http.StatusUnauthorized {
+		t.Errorf("sync with the session value = %d, want 401", res.StatusCode)
+	}
+
+	// And the reverse: a sync token is not a dashboard session.
+	token := srv.login(t)
+	syncCookie := &http.Cookie{Name: "croffle_dash", Value: token}
+	if res, _ := srv.getWithCookie(t, "/dash/me", syncCookie); res.StatusCode != http.StatusUnauthorized {
+		t.Errorf("dashboard with a sync token = %d, want 401", res.StatusCode)
+	}
+}
+
+// A browser login must not leave a device row behind; the device list is for
+// real installations.
+func TestLiveDashboardLoginCreatesNoDevice(t *testing.T) {
+	srv := startServer(t)
+	srv.dashLogin(t)
+
+	var devices int
+	if err := queryRow(t, srv.path, "SELECT COUNT(*) FROM device").Scan(&devices); err != nil {
+		t.Fatalf("count devices: %v", err)
+	}
+	if devices != 0 {
+		t.Errorf("devices = %d, want none from a dashboard login", devices)
+	}
+}
+
+func TestLiveDashboardShowsOnlyYourOwnData(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+	livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1))
+
+	cookie := srv.dashLogin(t)
+
+	res, body := srv.getWithCookie(t, "/dash/rows", cookie)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("rows = %d (%s)", res.StatusCode, body)
+	}
+	if !strings.Contains(string(body), "row-1") {
+		t.Errorf("rows body = %s, want the pushed row", body)
+	}
+
+	// A second account sees nothing of the first one's rows.
+	ctx := context.Background()
+	hash, err := auth.HashPassword("other-secret")
+	if err != nil {
+		t.Fatalf("hash: %v", err)
+	}
+	if err := srv.db.CreateAccount(ctx, store.Account{
+		ID: "acct-2", Username: "bob", PasswordHash: hash, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("create bob: %v", err)
+	}
+
+	res, body = srv.post(t, "/dash/login", map[string]string{"username": "bob", "password": "other-secret"}, "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("bob's dashboard login = %d (%s)", res.StatusCode, body)
+	}
+	var bobCookie *http.Cookie
+	for _, c := range res.Cookies() {
+		if c.Name == "croffle_dash" {
+			bobCookie = c
+		}
+	}
+
+	_, body = srv.getWithCookie(t, "/dash/rows", bobCookie)
+	if strings.Contains(string(body), "row-1") {
+		t.Errorf("bob sees alice's rows: %s", body)
+	}
+}
+
+func TestLiveDashboardIndexIsServed(t *testing.T) {
+	srv := startServer(t)
+
+	res, body := srv.getWithCookie(t, "/", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("GET / = %d", res.StatusCode)
+	}
+	// Either the built dashboard or the "not built" page, but always HTML and
+	// never a JSON 404: the API-only case has its own message.
+	if ct := res.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("Content-Type = %q, want HTML", ct)
+	}
+	if !strings.Contains(string(body), "Croffle Server") {
+		t.Errorf("body = %s", body)
+	}
+
+	// A missing asset is a 404, not the app: a broken script tag should not
+	// turn into a blank page.
+	if res, _ := srv.getWithCookie(t, "/assets/nope.js", nil); res.StatusCode != http.StatusNotFound {
+		t.Errorf("missing asset = %d, want 404", res.StatusCode)
 	}
 }

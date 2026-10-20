@@ -54,6 +54,17 @@ func (db *DB) Sweep(ctx context.Context, cfg store.SweepConfig) (store.SweepResu
 	}
 	result.DeletedOps = deletedOps
 
+	// Expired dashboard sessions go too. They cannot authenticate anyway
+	// (FindSession checks the time), so this is only housekeeping.
+	deletedSessions, err := db.sweepTable(ctx,
+		`DELETE FROM dash_session WHERE tokenHash IN (
+			SELECT tokenHash FROM dash_session WHERE expiresAt < ? ORDER BY expiresAt LIMIT ?)`,
+		toMillis(cfg.Now()))
+	if err != nil {
+		return result, err
+	}
+	result.DeletedSessions = deletedSessions
+
 	if purgeThrough != nil {
 		if err := db.raisePurgedThrough(ctx, *purgeThrough); err != nil {
 			return result, err
@@ -65,7 +76,7 @@ func (db *DB) Sweep(ctx context.Context, cfg store.SweepConfig) (store.SweepResu
 		return result, fmt.Errorf("sqlite: read oldest sequence: %w", err)
 	}
 
-	if result.DeletedCommits+result.DeletedOps > 0 {
+	if result.DeletedCommits+result.DeletedOps+result.DeletedSessions > 0 {
 		// A large delete inflates the WAL; truncating it here keeps the file
 		// from growing after every sweep.
 		if _, err := db.write.ExecContext(ctx, `PRAGMA wal_checkpoint(TRUNCATE)`); err != nil {

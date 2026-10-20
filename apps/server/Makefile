@@ -14,12 +14,23 @@ LDFLAGS := -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 # (/var/lib/croffle/server.db) is meant for the container image.
 RUN_DB  ?= ./server.db
 
-.PHONY: all build run test vet fmt fmt-check check docker clean
+.PHONY: all build build-all web web-install run test vet fmt fmt-check check docker clean
 
 all: check build
 
+# Does not build the dashboard: a Go change should not need a Node toolchain.
+# The binary works either way and says so on / when the dashboard is missing.
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) $(PKG)
+
+# Dashboard included. This is what the release image builds.
+build-all: web build
+
+web-install:
+	cd web && pnpm install --frozen-lockfile
+
+web:
+	cd web && pnpm build
 
 run:
 	CROFFLE_DB_PATH=$(RUN_DB) go run -ldflags "$(LDFLAGS)" $(PKG)

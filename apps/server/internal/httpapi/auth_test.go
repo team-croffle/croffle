@@ -22,6 +22,10 @@ type fakeAuth struct {
 	authErr     error
 	gotLogin    auth.LoginRequest
 	gotToken    string
+
+	account  *store.Account
+	checkErr error
+	gotCheck [3]string
 }
 
 func (f *fakeAuth) Login(_ context.Context, req auth.LoginRequest) (auth.LoginResult, error) {
@@ -32,6 +36,17 @@ func (f *fakeAuth) Login(_ context.Context, req auth.LoginRequest) (auth.LoginRe
 func (f *fakeAuth) Authenticate(_ context.Context, token string) (auth.Identity, error) {
 	f.gotToken = token
 	return f.identity, f.authErr
+}
+
+func (f *fakeAuth) CheckPassword(_ context.Context, username, password, remoteIP string) (*store.Account, error) {
+	f.gotCheck = [3]string{username, password, remoteIP}
+	if f.checkErr != nil {
+		return nil, f.checkErr
+	}
+	if f.account != nil {
+		return f.account, nil
+	}
+	return &store.Account{ID: "acct-1", Username: username}, nil
 }
 
 func authHandler(t *testing.T, fake *fakeAuth) http.Handler {

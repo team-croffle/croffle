@@ -1,0 +1,5 @@
+This directory is the dashboard build output, embedded into the binary.
+
+Only this placeholder is tracked. It exists because //go:embed fails to compile
+on a missing or empty directory, and the server has to build without the
+dashboard having been built first.

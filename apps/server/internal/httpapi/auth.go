@@ -9,6 +9,7 @@ import (
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
+	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
 // retryAfterSeconds is what a rate-limited client is told to wait. It matches
@@ -19,6 +20,10 @@ const retryAfterSeconds = 30
 type Authenticator interface {
 	Login(ctx context.Context, req auth.LoginRequest) (auth.LoginResult, error)
 	Authenticate(ctx context.Context, token string) (auth.Identity, error)
+	// CheckPassword is the dashboard's door: it verifies a password without
+	// issuing a device token, so a browser login cannot become a sync
+	// credential.
+	CheckPassword(ctx context.Context, username, password, remoteIP string) (*store.Account, error)
 }
 
 // IdentityOf returns the caller resolved by requireAuth. The second result is

@@ -21,6 +21,7 @@ const (
 	ctxKeyRequestID ctxKey = iota
 	ctxKeyRemoteIP
 	ctxKeyIdentity
+	ctxKeySession
 )
 
 // RequestID returns the id assigned to r, or "" outside the middleware chain.

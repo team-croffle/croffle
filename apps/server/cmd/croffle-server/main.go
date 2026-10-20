@@ -28,6 +28,7 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/retention"
 	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
+	"github.com/team-croffle/croffle/apps/server/web"
 )
 
 // Injected via -ldflags; see the Makefile.
@@ -95,6 +96,13 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 
 	authService := auth.NewService(db, time.Now)
 
+	// A binary without a dashboard build still serves the API; only the HTML is
+	// missing, and the catch-all says so.
+	assets, err := web.FS()
+	if err != nil {
+		return fmt.Errorf("read embedded dashboard: %w", err)
+	}
+
 	handler := httpapi.NewHandler(httpapi.Options{
 		Version:    version,
 		Commit:     commit,
@@ -104,6 +112,8 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		Health:     db.Ping,
 		Auth:       authService,
 		Sync:       db,
+		Dash:       db,
+		Assets:     assets,
 		Retention: func(ctx context.Context) (int64, int64, error) {
 			oldest, err := db.OldestCommitSeq(ctx)
 			if err != nil {
@@ -158,6 +168,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		slog.Bool("trust_proxy", cfg.TrustProxy),
 		slog.Duration("retain_commits", cfg.RetainCommits),
 		slog.Duration("retain_ops", cfg.RetainOps),
+		slog.Bool("dashboard", web.Built()),
 		slog.Int("protocol_min", protocol.Min),
 		slog.Int("protocol_max", protocol.Max),
 	)

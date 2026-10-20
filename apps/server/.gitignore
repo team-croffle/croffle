@@ -2,3 +2,9 @@ bin/
 *.db
 *.db-wal
 *.db-shm
+
+# Dashboard: dependencies and build output. The placeholder inside embedded/ is
+# tracked on purpose - //go:embed needs at least one file to compile.
+web/node_modules/
+web/embedded/*
+!web/embedded/.gitkeep
