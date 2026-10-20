@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/cli"
 	"github.com/team-croffle/croffle/apps/server/internal/config"
 	"github.com/team-croffle/croffle/apps/server/internal/httpapi"
 	"github.com/team-croffle/croffle/apps/server/internal/logging"
@@ -52,6 +53,16 @@ func main() {
 }
 
 func run(args []string, getenv func(string) string, stdout, stderr io.Writer) error {
+	// Operator commands share the binary so the container image has one
+	// entrypoint: `docker exec … croffle-server user create …`.
+	if cli.IsSubcommand(args) {
+		return cli.Execute(context.Background(), args, getenv, os.Stdin, stdout, stderr)
+	}
+	// `serve` is the default, and also accepted explicitly.
+	if len(args) > 0 && args[0] == "serve" {
+		args = args[1:]
+	}
+
 	cfg, err := config.Load(args, getenv)
 	if errors.Is(err, config.ErrVersionRequested) {
 		fmt.Fprintf(stdout, "croffle-server %s (%s), sync protocol %d-%d\n", version, commit, protocol.Min, protocol.Max)
