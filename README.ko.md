@@ -78,6 +78,7 @@ GitHub 설치는 저장소 최상위에 `croffle-manifest.json`이 있어야 합
 
 ```text
 apps/desktop          Electron 앱 (main / preload / renderer)
+apps/server           croffle-server, 선택적 동기화 백엔드 (Go)
 packages/types        @croffledev/croffle-types (배포)
 packages/cli          @croffledev/croffle-cli (배포)
 ```
@@ -101,6 +102,7 @@ pnpm dev
 
 - 확장 스캐폴딩: [`@croffledev/croffle-cli`](./packages/cli/README.md)
 - 확장 타입: [`@croffledev/croffle-types`](./packages/types/README.md)
+- 선택적 동기화 백엔드: [`croffle-server`](./apps/server/README.ko.md) — 셀프호스트, 한 계정의 여러 기기를 동기화할 때 (0.1 beta; 없어도 Croffle은 완전히 동작합니다)
 - 기여 가이드: **[CONTRIBUTING.ko.md](./CONTRIBUTING.ko.md)** · [English](./CONTRIBUTING.md)
 
 ---
