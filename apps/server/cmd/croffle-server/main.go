@@ -24,6 +24,7 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/httpapi"
 	"github.com/team-croffle/croffle/apps/server/internal/logging"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
+	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
 )
 
 // Injected via -ldflags; see the Makefile.
@@ -64,13 +65,28 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 	// the same JSON stream at the configured level instead of stderr text.
 	slog.SetDefault(logger)
 
+	// Opening the store applies pending migrations, so a schema problem is a
+	// startup failure rather than a surprise on the first request.
+	db, err := sqlite.Open(context.Background(), cfg.DBPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("closing the database failed", slog.String("error", err.Error()))
+		}
+	}()
+	if db.AppliedMigrations > 0 {
+		logger.Info("schema migrated", slog.Int("applied", db.AppliedMigrations))
+	}
+
 	handler := httpapi.NewHandler(httpapi.Options{
 		Version:    version,
 		Commit:     commit,
 		BasePath:   cfg.BasePath,
 		TrustProxy: cfg.TrustProxy,
 		Logger:     logger,
-		// Health stays nil until the store lands (work item #2).
+		Health:     db.Ping,
 	})
 
 	// Listen before announcing: a bind failure should be the error the operator
