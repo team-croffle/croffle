@@ -30,6 +30,11 @@ var ErrNotImplemented = errors.New("store: not implemented")
 // so a caller cannot forget to check.
 var ErrNotFound = errors.New("store: not found")
 
+// ErrDuplicate means a uniquely named thing already exists. It exists so the
+// CLI can say "that username is taken" instead of printing a raw constraint
+// violation at an operator.
+var ErrDuplicate = errors.New("store: already exists")
+
 // Op is the kind of change a commit carries. A delete keeps the row and sets
 // its tombstone: "deleted" and "never received" have to stay distinguishable
 // for a client that is catching up.
@@ -157,16 +162,20 @@ type PullQuery struct {
 }
 
 // Change is one entry of the commit log as handed to a client.
+//
+// The JSON tags are not the wire contract — the handlers map to the protocol
+// package for that — but they keep `croffle-server log dump` output in the same
+// field names, so a commit can be diffed against what the client sent.
 type Change struct {
-	ServerSeq    int64
-	Table        string
-	RowID        string
-	Op           Op
-	Version      int64
-	UpdatedAtMs  int64
-	LastWriterID *string
-	TeamID       *string
-	Payload      json.RawMessage
+	ServerSeq    int64           `json:"serverSeq"`
+	Table        string          `json:"table"`
+	RowID        string          `json:"rowId"`
+	Op           Op              `json:"op"`
+	Version      int64           `json:"version"`
+	UpdatedAtMs  int64           `json:"updatedAtMs"`
+	LastWriterID *string         `json:"lastWriterId,omitempty"`
+	TeamID       *string         `json:"teamId,omitempty"`
+	Payload      json.RawMessage `json:"payload,omitempty"`
 }
 
 // PullResult carries the changes plus the cursor the client should store once
@@ -216,6 +225,58 @@ type SweepResult struct {
 	OldestCommitSeq int64
 }
 
+// Team is a sharing target. Server 0.1 has exactly one, seeded by the first
+// migration.
+type Team struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+// Info is what `croffle-server db info` reports.
+type Info struct {
+	SchemaVersion int64  `json:"schemaVersion"`
+	Path          string `json:"path"`
+	SizeBytes     int64  `json:"sizeBytes"`
+	Accounts      int64  `json:"accounts"`
+	Devices       int64  `json:"devices"`
+	Teams         int64  `json:"teams"`
+	Rows          int64  `json:"rows"`
+	Commits       int64  `json:"commits"`
+	OldestSeq     int64  `json:"oldestSeq"`
+	NewestSeq     int64  `json:"newestSeq"`
+}
+
+// Admin is the operator-facing surface, used by the CLI and never by a request
+// handler. It is a separate interface so the request path stays small and so it
+// is obvious which operations bypass authentication by design: whoever can run
+// the binary against the database file is already the operator.
+type Admin interface {
+	// CreateAccount inserts a login whose password is already hashed; the
+	// store never handles a plaintext password.
+	CreateAccount(ctx context.Context, account Account) error
+	ListAccounts(ctx context.Context) ([]Account, error)
+	SetAccountDisabled(ctx context.Context, accountID string, disabled bool) error
+	SetAccountPassword(ctx context.Context, accountID, passwordHash string) error
+
+	// ListDevices lists one account's devices, or every device when accountID
+	// is empty.
+	ListDevices(ctx context.Context, accountID string) ([]Device, error)
+	// RevokeDevice withdraws a device's token. The account can obtain a new one
+	// by logging in again; disabling the account is what stops it for good.
+	RevokeDevice(ctx context.Context, deviceID string) error
+
+	ListTeams(ctx context.Context) ([]Team, error)
+	// AddTeamMember grants an account access to a team's shared rows.
+	AddTeamMember(ctx context.Context, teamID, accountID, role string) error
+
+	Info(ctx context.Context) (Info, error)
+	// DumpCommitLog returns raw commit log entries regardless of ownership, for
+	// debugging a sync problem. It is the first tool to reach for when a client
+	// and the server disagree.
+	DumpCommitLog(ctx context.Context, sinceSeq int64, limit int) ([]Change, error)
+}
+
 // Store is the persistence contract.
 //
 // # serverSeq visibility contract
@@ -236,9 +297,6 @@ type Store interface {
 	Ping(ctx context.Context) error
 	Close() error
 
-	// CreateAccount inserts a login whose password is already hashed; the
-	// store never handles a plaintext password.
-	CreateAccount(ctx context.Context, account Account) error
 	// FindAccountByUsername returns ErrNotFound when there is no such account.
 	FindAccountByUsername(ctx context.Context, username string) (*Account, error)
 	// FindAccountByID is the lookup behind every authenticated request, since
@@ -259,8 +317,6 @@ type Store interface {
 	// TeamsOf lists the teams an account belongs to; it defines what the
 	// account can pull beyond its own rows.
 	TeamsOf(ctx context.Context, accountID string) ([]string, error)
-	// AddTeamMember grants an account access to a team's shared rows.
-	AddTeamMember(ctx context.Context, teamID, accountID, role string) error
 
 	// ApplyCommits applies one push batch in a single transaction.
 	ApplyCommits(ctx context.Context, req ApplyRequest) (ApplyResult, error)

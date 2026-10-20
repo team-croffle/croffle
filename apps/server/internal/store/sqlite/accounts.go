@@ -159,6 +159,19 @@ func (db *DB) CreateAccount(ctx context.Context, account store.Account) error {
 	}
 
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		// Checked rather than relying on the constraint error: there is one
+		// writer, so this is race-free, and the caller gets a sentinel instead
+		// of a driver-specific message.
+		var taken int
+		if err := tx.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM account WHERE username = ? OR id = ?`,
+			account.Username, account.ID).Scan(&taken); err != nil {
+			return fmt.Errorf("sqlite: check account uniqueness: %w", err)
+		}
+		if taken > 0 {
+			return fmt.Errorf("%w: account %q", store.ErrDuplicate, account.Username)
+		}
+
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO account (id, username, passwordHash, createdAt, disabledAt)
 			VALUES (?, ?, ?, ?, ?)`,
