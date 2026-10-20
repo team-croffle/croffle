@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -274,4 +275,50 @@ func ValidateCommit(c Commit) error {
 		return fmt.Errorf("%w: an upsert needs a row", ErrInvalidCommit)
 	}
 	return nil
+}
+
+// BootstrapCursor is the opaque cursor of a snapshot page. It travels as one
+// base64 string so a client never has to understand or assemble it; the only
+// contract is "send back what you were given".
+type BootstrapCursor struct {
+	// BaseSeq pins the instant. Every page of one snapshot carries the same
+	// value, which is what keeps the pages consistent with each other.
+	BaseSeq int64 `json:"s"`
+	// Table and RowID are the keyset position: the last row of the page.
+	Table string `json:"t,omitempty"`
+	RowID string `json:"r,omitempty"`
+}
+
+// ErrInvalidCursor marks a cursor this server did not produce.
+var ErrInvalidCursor = errors.New("invalid cursor")
+
+// EncodeBootstrapCursor renders a cursor for the next page.
+func EncodeBootstrapCursor(cursor BootstrapCursor) (string, error) {
+	data, err := json.Marshal(cursor)
+	if err != nil {
+		return "", fmt.Errorf("encode cursor: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(data), nil
+}
+
+// DecodeBootstrapCursor reads a cursor a client sent back. An empty string is
+// the first page.
+func DecodeBootstrapCursor(encoded string) (BootstrapCursor, error) {
+	if strings.TrimSpace(encoded) == "" {
+		return BootstrapCursor{}, nil
+	}
+
+	data, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil {
+		return BootstrapCursor{}, fmt.Errorf("%w: not base64", ErrInvalidCursor)
+	}
+
+	var cursor BootstrapCursor
+	if err := json.Unmarshal(data, &cursor); err != nil {
+		return BootstrapCursor{}, fmt.Errorf("%w: not a cursor", ErrInvalidCursor)
+	}
+	if cursor.BaseSeq < 0 {
+		return BootstrapCursor{}, fmt.Errorf("%w: negative base", ErrInvalidCursor)
+	}
+	return cursor, nil
 }

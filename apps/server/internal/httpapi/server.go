@@ -77,10 +77,7 @@ func NewHandler(o Options) http.Handler {
 	s.route(mux, http.MethodPost, "/sync/push", s.requireAuth(s.push))
 	s.route(mux, http.MethodPost, "/sync/pull", s.requireAuth(s.pull))
 
-	// Still to come in its own work item. The route exists and answers 501
-	// rather than 404, so "not built yet" stays distinguishable from "wrong
-	// URL" while the client is written against this server.
-	s.route(mux, http.MethodPost, "/sync/bootstrap", s.requireAuth(s.notImplemented))
+	s.route(mux, http.MethodPost, "/sync/bootstrap", s.requireAuth(s.bootstrap))
 
 	// Catch-all so unknown paths get the same JSON error shape as everything
 	// else instead of net/http's plain-text 404.

@@ -18,6 +18,7 @@ import (
 type Syncer interface {
 	ApplyCommits(ctx context.Context, req store.ApplyRequest) (store.ApplyResult, error)
 	PullSince(ctx context.Context, query store.PullQuery) (store.PullResult, error)
+	Snapshot(ctx context.Context, query store.SnapshotQuery) (store.SnapshotResult, error)
 }
 
 func (s *server) push(w http.ResponseWriter, r *http.Request) {
@@ -268,6 +269,111 @@ func toWireChange(change store.Change) (protocol.Change, error) {
 	}
 	if change.LastWriterID != nil {
 		out.LastWriterID = *change.LastWriterID
+	}
+	return out, nil
+}
+
+func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
+	if s.sync == nil {
+		s.notImplemented(w, r)
+		return
+	}
+	identity, ok := IdentityOf(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "authentication required")
+		return
+	}
+
+	var req protocol.BootstrapRequest
+	if !DecodeJSON(w, r, &req) {
+		return
+	}
+
+	cursor, err := protocol.DecodeBootstrapCursor(req.Cursor)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_cursor", err.Error())
+		return
+	}
+
+	result, err := s.sync.Snapshot(r.Context(), store.SnapshotQuery{
+		AccountID:  identity.AccountID,
+		TeamIDs:    identity.TeamIDs,
+		BaseSeq:    cursor.BaseSeq,
+		AfterTable: cursor.Table,
+		AfterRowID: cursor.RowID,
+		Limit:      req.Limit,
+	})
+	if err != nil {
+		s.writeSyncError(w, r, err)
+		return
+	}
+
+	rows := make([]protocol.Change, 0, len(result.Rows))
+	for _, row := range result.Rows {
+		mapped, err := toWireSnapshotRow(row)
+		if err != nil {
+			s.writeSyncError(w, r, err)
+			return
+		}
+		rows = append(rows, mapped)
+	}
+
+	response := protocol.BootstrapResponse{
+		Rows:      rows,
+		ServerSeq: result.ServerSeq,
+		HasMore:   result.HasMore,
+	}
+	if result.HasMore && len(result.Rows) > 0 {
+		last := result.Rows[len(result.Rows)-1]
+		// The next cursor carries the same instant, so the following page stays
+		// part of the same snapshot.
+		next, err := protocol.EncodeBootstrapCursor(protocol.BootstrapCursor{
+			BaseSeq: result.ServerSeq, Table: last.Table, RowID: last.RowID,
+		})
+		if err != nil {
+			s.writeSyncError(w, r, err)
+			return
+		}
+		response.Cursor = next
+	}
+
+	s.logger.DebugContext(r.Context(), "bootstrap served",
+		slog.String("account_id", identity.AccountID),
+		slog.Int("rows", len(rows)),
+		slog.Int64("base_seq", result.ServerSeq),
+		slog.Bool("has_more", result.HasMore),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+// toWireSnapshotRow renders a stored row as a change. The op reflects the
+// tombstone, so a client applies a deleted row as a delete rather than
+// resurrecting it.
+func toWireSnapshotRow(row store.Row) (protocol.Change, error) {
+	wireRow, err := protocol.MergeRow(row.Payload, row.Version, row.UpdatedAtMs,
+		row.LastWriterID, row.OwnerID, row.TeamID, row.DeletedAt)
+	if err != nil {
+		return protocol.Change{}, err
+	}
+
+	op := protocol.OpUpsert
+	if row.Deleted() {
+		op = protocol.OpDelete
+	}
+
+	out := protocol.Change{
+		ServerSeq:   row.ServerSeq,
+		Table:       row.Table,
+		RowID:       row.RowID,
+		Op:          op,
+		Row:         wireRow,
+		Version:     row.Version,
+		UpdatedAtMs: row.UpdatedAtMs,
+	}
+	if row.LastWriterID != nil {
+		out.LastWriterID = *row.LastWriterID
 	}
 	return out, nil
 }

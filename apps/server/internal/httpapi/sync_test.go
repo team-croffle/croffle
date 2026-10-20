@@ -21,6 +21,10 @@ type fakeSyncer struct {
 	pullResult store.PullResult
 	pullErr    error
 	gotPull    store.PullQuery
+
+	snapshotResult store.SnapshotResult
+	snapshotErr    error
+	gotSnapshot    store.SnapshotQuery
 }
 
 func (f *fakeSyncer) ApplyCommits(_ context.Context, req store.ApplyRequest) (store.ApplyResult, error) {
@@ -31,6 +35,11 @@ func (f *fakeSyncer) ApplyCommits(_ context.Context, req store.ApplyRequest) (st
 func (f *fakeSyncer) PullSince(_ context.Context, query store.PullQuery) (store.PullResult, error) {
 	f.gotPull = query
 	return f.pullResult, f.pullErr
+}
+
+func (f *fakeSyncer) Snapshot(_ context.Context, query store.SnapshotQuery) (store.SnapshotResult, error) {
+	f.gotSnapshot = query
+	return f.snapshotResult, f.snapshotErr
 }
 
 // syncHandler wires an authenticated caller that belongs to the default team.

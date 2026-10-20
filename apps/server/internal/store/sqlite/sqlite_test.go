@@ -304,11 +304,11 @@ func TestPendingOperationsReportNotImplemented(t *testing.T) {
 	db := open(t, tempPath(t))
 	ctx := context.Background()
 
-	_, err := db.Snapshot(ctx, store.SnapshotQuery{})
+	_, err := db.Sweep(ctx, store.SweepConfig{})
 	if !errors.Is(err, store.ErrNotImplemented) {
-		t.Errorf("Snapshot error = %v, want ErrNotImplemented", err)
+		t.Errorf("Sweep error = %v, want ErrNotImplemented", err)
 	}
-	if !strings.Contains(err.Error(), "server-0.1.0#7") {
+	if !strings.Contains(err.Error(), "server-0.1.0#8") {
 		t.Errorf("error = %v, want it to name the work item", err)
 	}
 }

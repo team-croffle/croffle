@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -233,4 +234,49 @@ func fmtValue(v any) string {
 		return "<unmarshalable>"
 	}
 	return string(data)
+}
+
+func TestBootstrapCursorRoundTrips(t *testing.T) {
+	original := BootstrapCursor{BaseSeq: 42, Table: "schedule", RowID: "row-1"}
+
+	encoded, err := EncodeBootstrapCursor(original)
+	if err != nil {
+		t.Fatalf("EncodeBootstrapCursor: %v", err)
+	}
+	// Opaque to the client: it only ever sends back what it was given.
+	if strings.Contains(encoded, "schedule") {
+		t.Errorf("cursor %q exposes its contents", encoded)
+	}
+
+	decoded, err := DecodeBootstrapCursor(encoded)
+	if err != nil {
+		t.Fatalf("DecodeBootstrapCursor: %v", err)
+	}
+	if decoded != original {
+		t.Errorf("decoded = %+v, want %+v", decoded, original)
+	}
+}
+
+func TestDecodeBootstrapCursorEmptyMeansFirstPage(t *testing.T) {
+	for _, input := range []string{"", "   "} {
+		cursor, err := DecodeBootstrapCursor(input)
+		if err != nil {
+			t.Errorf("DecodeBootstrapCursor(%q): %v", input, err)
+		}
+		if cursor != (BootstrapCursor{}) {
+			t.Errorf("cursor = %+v, want the zero value", cursor)
+		}
+	}
+}
+
+func TestDecodeBootstrapCursorRejectsGarbage(t *testing.T) {
+	for _, input := range []string{"!!!!", "YWJj", base64Of(`{"s":-1}`)} {
+		if _, err := DecodeBootstrapCursor(input); !errors.Is(err, ErrInvalidCursor) {
+			t.Errorf("DecodeBootstrapCursor(%q) error = %v, want ErrInvalidCursor", input, err)
+		}
+	}
+}
+
+func base64Of(s string) string {
+	return base64.RawURLEncoding.EncodeToString([]byte(s))
 }

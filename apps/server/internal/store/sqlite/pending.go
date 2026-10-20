@@ -15,10 +15,6 @@ import (
 // Each one is replaced in place by its work item; this file disappears when the
 // last of them lands.
 
-func (db *DB) Snapshot(_ context.Context, _ store.SnapshotQuery) (store.SnapshotResult, error) {
-	return store.SnapshotResult{}, fmt.Errorf("%w: Snapshot (work item server-0.1.0#7)", store.ErrNotImplemented)
-}
-
 func (db *DB) Sweep(_ context.Context, _ store.SweepConfig) (store.SweepResult, error) {
 	return store.SweepResult{}, fmt.Errorf("%w: Sweep (work item server-0.1.0#8)", store.ErrNotImplemented)
 }
