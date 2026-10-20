@@ -23,6 +23,8 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/cli"
 	"github.com/team-croffle/croffle/apps/server/internal/config"
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
+	"github.com/team-croffle/croffle/apps/server/internal/hooks/webhook"
 	"github.com/team-croffle/croffle/apps/server/internal/httpapi"
 	"github.com/team-croffle/croffle/apps/server/internal/logging"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
@@ -96,6 +98,26 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 
 	authService := auth.NewService(db, time.Now)
 
+	// Hooks: one optional webhook sink. Without a URL this is a no-op emitter
+	// and nothing is queued at all.
+	var emitter hooks.Emitter = hooks.Nop{}
+	sink, err := webhook.New(webhook.Config{
+		URL:    cfg.WebhookURL,
+		Secret: cfg.WebhookSecret,
+		Types:  cfg.WebhookEvents,
+	}, logger)
+	if err != nil {
+		return err
+	}
+	if sink != nil {
+		dispatcher := hooks.NewDispatcher(logger, sink)
+		// Closed after the HTTP server stops, so events emitted by the last
+		// requests still go out.
+		defer dispatcher.Close()
+		emitter = dispatcher
+		logger.Info("webhook configured", slog.Any("events", sink.Types()))
+	}
+
 	// A binary without a dashboard build still serves the API; only the HTML is
 	// missing, and the catch-all says so.
 	assets, err := web.FS()
@@ -114,6 +136,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		Sync:       db,
 		Dash:       db,
 		Assets:     assets,
+		Hooks:      emitter,
 		Retention: func(ctx context.Context) (int64, int64, error) {
 			oldest, err := db.OldestCommitSeq(ctx)
 			if err != nil {
@@ -148,7 +171,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 
 	// Sweeps once now and then daily; a server that restarts often still
 	// collects its garbage.
-	go retention.New(db, logger, cfg.RetainCommits, cfg.RetainOps).Run(ctx)
+	go retention.New(db, logger, emitter, cfg.RetainCommits, cfg.RetainOps).Run(ctx)
 
 	serveErr := make(chan error, 1)
 	go func() {

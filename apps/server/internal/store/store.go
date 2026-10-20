@@ -162,12 +162,29 @@ type ApplyRequest struct {
 	Now     time.Time
 }
 
+// AppliedChange says what one accepted commit actually did. It exists for
+// observers (hooks): "this row became visible to a team" is knowable only here,
+// because it depends on the row's previous state.
+type AppliedChange struct {
+	Table     string
+	RowID     string
+	Op        Op
+	Version   int64
+	ServerSeq int64
+	TeamID    *string
+	// BecameShared is true when this commit put a team on a row that had none.
+	BecameShared bool
+}
+
 // ApplyResult mirrors the push response: a batch may be partly accepted and
 // partly in conflict, which is normal rather than an error.
 type ApplyResult struct {
 	Accepted  []string
 	Conflicts []Conflict
 	ServerSeq int64
+	// Applied is for observers only; the wire response is built from Accepted
+	// and Conflicts.
+	Applied []AppliedChange
 }
 
 // Paging limits. They belong to the store because it is what pages; the

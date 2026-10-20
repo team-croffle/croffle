@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 )
 
 // HealthFunc reports whether the storage layer is reachable. Without one,
@@ -47,6 +49,8 @@ type Options struct {
 	// Assets is the built dashboard. Without it the catch-all answers the JSON
 	// 404 it always did, so an API-only build behaves the same as before.
 	Assets fs.FS
+	// Hooks observes what happened. Optional; hooks.Nop when absent.
+	Hooks hooks.Emitter
 	// Now is injectable so tests can assert on the health timestamp.
 	Now func() time.Time
 }
@@ -61,6 +65,7 @@ type server struct {
 	sync       Syncer
 	retention  RetentionFunc
 	dash       Dash
+	hooks      hooks.Emitter
 	trustProxy bool
 	now        func() time.Time
 }
@@ -77,6 +82,7 @@ func NewHandler(o Options) http.Handler {
 		sync:       o.Sync,
 		retention:  o.Retention,
 		dash:       o.Dash,
+		hooks:      o.Hooks,
 		trustProxy: o.TrustProxy,
 		now:        o.Now,
 	}
@@ -85,6 +91,9 @@ func NewHandler(o Options) http.Handler {
 	}
 	if s.now == nil {
 		s.now = time.Now
+	}
+	if s.hooks == nil {
+		s.hooks = hooks.Nop{}
 	}
 
 	mux := http.NewServeMux()

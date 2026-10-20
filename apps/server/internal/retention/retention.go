@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/team-croffle/croffle/apps/server/internal/hooks"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
@@ -27,18 +28,23 @@ type Sweeper interface {
 type Service struct {
 	store         Sweeper
 	logger        *slog.Logger
+	hooks         hooks.Emitter
 	retainCommits time.Duration
 	retainOps     time.Duration
 	now           func() time.Time
 }
 
-func New(st Sweeper, logger *slog.Logger, retainCommits, retainOps time.Duration) *Service {
+func New(st Sweeper, logger *slog.Logger, emitter hooks.Emitter, retainCommits, retainOps time.Duration) *Service {
 	if logger == nil {
 		logger = slog.Default()
+	}
+	if emitter == nil {
+		emitter = hooks.Nop{}
 	}
 	return &Service{
 		store:         st,
 		logger:        logger,
+		hooks:         emitter,
 		retainCommits: retainCommits,
 		retainOps:     retainOps,
 		now:           time.Now,
@@ -84,7 +90,7 @@ func (s *Service) SweepOnce(ctx context.Context) {
 		return
 	}
 
-	if result.DeletedCommits == 0 && result.DeletedOps == 0 {
+	if result.DeletedCommits == 0 && result.DeletedOps == 0 && result.DeletedSessions == 0 {
 		s.logger.DebugContext(ctx, "retention sweep found nothing to remove")
 		return
 	}
@@ -94,7 +100,15 @@ func (s *Service) SweepOnce(ctx context.Context) {
 	s.logger.InfoContext(ctx, "retention sweep",
 		slog.Int64("deleted_commits", result.DeletedCommits),
 		slog.Int64("deleted_ops", result.DeletedOps),
+		slog.Int64("deleted_sessions", result.DeletedSessions),
 		slog.Int64("oldest_commit_seq", result.OldestCommitSeq),
 		slog.Int64("duration_ms", time.Since(started).Milliseconds()),
 	)
+
+	s.hooks.Emit(ctx, hooks.Event{Type: hooks.TypeRetentionSwept, Data: hooks.RetentionSwept{
+		DeletedCommits:  result.DeletedCommits,
+		DeletedOps:      result.DeletedOps,
+		DeletedSessions: result.DeletedSessions,
+		OldestCommitSeq: result.OldestCommitSeq,
+	}})
 }
