@@ -20,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/config"
 	"github.com/team-croffle/croffle/apps/server/internal/httpapi"
 	"github.com/team-croffle/croffle/apps/server/internal/logging"
@@ -80,6 +81,8 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		logger.Info("schema migrated", slog.Int("applied", db.AppliedMigrations))
 	}
 
+	authService := auth.NewService(db, time.Now)
+
 	handler := httpapi.NewHandler(httpapi.Options{
 		Version:    version,
 		Commit:     commit,
@@ -87,6 +90,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		TrustProxy: cfg.TrustProxy,
 		Logger:     logger,
 		Health:     db.Ping,
+		Auth:       authService,
 	})
 
 	// Listen before announcing: a bind failure should be the error the operator

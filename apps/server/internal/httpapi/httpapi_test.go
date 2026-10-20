@@ -11,12 +11,35 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/team-croffle/croffle/apps/server/internal/auth"
 )
 
 var fixedNow = time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)
 
 func quietLogger() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError + 1}))
+}
+
+// newCapturingLogger writes every level into w so a test can assert on what
+// the server did and did not log.
+func newCapturingLogger(w io.Writer) *slog.Logger {
+	return slog.New(slog.NewJSONHandler(w, &slog.HandlerOptions{Level: slog.LevelDebug}))
+}
+
+// errBoom stands in for an unexpected internal failure.
+var errBoom = errors.New("boom")
+
+// allowAnyToken is an Authenticator that accepts anything, for tests that are
+// about routing rather than about credentials.
+type allowAnyToken struct{}
+
+func (allowAnyToken) Login(context.Context, auth.LoginRequest) (auth.LoginResult, error) {
+	return auth.LoginResult{}, auth.ErrInvalidCredentials
+}
+
+func (allowAnyToken) Authenticate(context.Context, string) (auth.Identity, error) {
+	return auth.Identity{AccountID: "acct-1", DeviceID: "client-1"}, nil
 }
 
 func testHandler(t *testing.T, mutate func(*Options)) http.Handler {
@@ -116,11 +139,16 @@ func TestHealthAnswersHead(t *testing.T) {
 	}
 }
 
-func TestPlannedEndpointsReturnNotImplemented(t *testing.T) {
-	h := testHandler(t, nil)
-	for _, path := range []string{"/auth/login", "/auth/whoami", "/sync/push", "/sync/pull", "/sync/bootstrap"} {
+// The sync handlers arrive in their own work items; until then the route must
+// exist and say "not built yet" rather than "wrong URL".
+func TestPlannedSyncEndpointsReturnNotImplemented(t *testing.T) {
+	h := testHandler(t, func(o *Options) { o.Auth = allowAnyToken{} })
+	for _, path := range []string{"/sync/push", "/sync/pull", "/sync/bootstrap"} {
 		t.Run(path, func(t *testing.T) {
-			rec := doRequest(t, h, http.MethodPost, path, strings.NewReader(`{}`))
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{}`))
+			req.Header.Set("Authorization", "Bearer any")
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
 			if rec.Code != http.StatusNotImplemented {
 				t.Fatalf("status = %d, want 501", rec.Code)
 			}
@@ -185,8 +213,10 @@ func TestBasePathMountsEverythingBelowIt(t *testing.T) {
 	if rec := doRequest(t, h, http.MethodGet, "/croffle/health", nil); rec.Code != http.StatusOK {
 		t.Errorf("GET /croffle/health = %d, want 200", rec.Code)
 	}
-	if rec := doRequest(t, h, http.MethodPost, "/croffle/sync/push", strings.NewReader(`{}`)); rec.Code != http.StatusNotImplemented {
-		t.Errorf("POST /croffle/sync/push = %d, want 501", rec.Code)
+	// Unauthenticated, so 401 — the point is that the route exists below the
+	// prefix at all.
+	if rec := doRequest(t, h, http.MethodPost, "/croffle/sync/push", strings.NewReader(`{}`)); rec.Code != http.StatusNotImplemented && rec.Code != http.StatusUnauthorized {
+		t.Errorf("POST /croffle/sync/push = %d, want 401 or 501", rec.Code)
 	}
 	// Without the prefix nothing is served, which is what makes a proxy that
 	// strips the prefix and one that does not two different configurations.

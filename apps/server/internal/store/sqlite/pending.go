@@ -15,22 +15,6 @@ import (
 // Each one is replaced in place by its work item; this file disappears when the
 // last of them lands.
 
-func (db *DB) FindAccountByUsername(_ context.Context, _ string) (*store.Account, error) {
-	return nil, fmt.Errorf("%w: FindAccountByUsername (work item server-0.1.0#3)", store.ErrNotImplemented)
-}
-
-func (db *DB) UpsertDevice(_ context.Context, _ store.Device) error {
-	return fmt.Errorf("%w: UpsertDevice (work item server-0.1.0#3)", store.ErrNotImplemented)
-}
-
-func (db *DB) FindDeviceByTokenHash(_ context.Context, _ []byte) (*store.Device, error) {
-	return nil, fmt.Errorf("%w: FindDeviceByTokenHash (work item server-0.1.0#3)", store.ErrNotImplemented)
-}
-
-func (db *DB) TeamsOf(_ context.Context, _ string) ([]string, error) {
-	return nil, fmt.Errorf("%w: TeamsOf (work item server-0.1.0#3)", store.ErrNotImplemented)
-}
-
 func (db *DB) ApplyCommits(_ context.Context, _ store.ApplyRequest) (store.ApplyResult, error) {
 	return store.ApplyResult{}, fmt.Errorf("%w: ApplyCommits (work item server-0.1.0#5)", store.ErrNotImplemented)
 }
