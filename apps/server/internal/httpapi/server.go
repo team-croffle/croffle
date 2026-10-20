@@ -32,6 +32,8 @@ type Options struct {
 	// Auth resolves credentials. When nil the auth and sync routes answer 501,
 	// which is what a build without it should say.
 	Auth Authenticator
+	// Sync is the store behind the sync endpoints; nil means they answer 501.
+	Sync Syncer
 	// Now is injectable so tests can assert on the health timestamp.
 	Now func() time.Time
 }
@@ -43,6 +45,7 @@ type server struct {
 	logger   *slog.Logger
 	healthFn HealthFunc
 	auth     Authenticator
+	sync     Syncer
 	now      func() time.Time
 }
 
@@ -55,6 +58,7 @@ func NewHandler(o Options) http.Handler {
 		logger:   o.Logger,
 		healthFn: o.Health,
 		auth:     o.Auth,
+		sync:     o.Sync,
 		now:      o.Now,
 	}
 	if s.logger == nil {
@@ -70,13 +74,12 @@ func NewHandler(o Options) http.Handler {
 	s.route(mux, http.MethodPost, "/auth/login", s.login)
 	s.route(mux, http.MethodPost, "/auth/whoami", s.requireAuth(s.whoami))
 
-	// Sync endpoints. The contract (paths, request and response bodies) is
-	// fixed by the desktop side; the handlers arrive in their own work items,
-	// so until then the route exists and answers 501 instead of 404 — "not
-	// built yet" stays distinguishable from "wrong URL" while the client is
-	// written against this server. Authentication is already in front of them,
-	// so an unauthenticated call gets the 401 it will always get.
-	for _, p := range []string{"/sync/push", "/sync/pull", "/sync/bootstrap"} {
+	s.route(mux, http.MethodPost, "/sync/push", s.requireAuth(s.push))
+
+	// Still to come in their own work items. The route exists and answers 501
+	// rather than 404, so "not built yet" stays distinguishable from "wrong
+	// URL" while the client is written against this server.
+	for _, p := range []string{"/sync/pull", "/sync/bootstrap"} {
 		s.route(mux, http.MethodPost, p, s.requireAuth(s.notImplemented))
 	}
 

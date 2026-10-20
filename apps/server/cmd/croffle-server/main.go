@@ -102,6 +102,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		Logger:     logger,
 		Health:     db.Ping,
 		Auth:       authService,
+		Sync:       db,
 	})
 
 	// Listen before announcing: a bind failure should be the error the operator

@@ -304,11 +304,11 @@ func TestPendingOperationsReportNotImplemented(t *testing.T) {
 	db := open(t, tempPath(t))
 	ctx := context.Background()
 
-	_, err := db.ApplyCommits(ctx, store.ApplyRequest{})
+	_, err := db.PullSince(ctx, store.PullQuery{})
 	if !errors.Is(err, store.ErrNotImplemented) {
-		t.Errorf("ApplyCommits error = %v, want ErrNotImplemented", err)
+		t.Errorf("PullSince error = %v, want ErrNotImplemented", err)
 	}
-	if !strings.Contains(err.Error(), "server-0.1.0#5") {
+	if !strings.Contains(err.Error(), "server-0.1.0#6") {
 		t.Errorf("error = %v, want it to name the work item", err)
 	}
 }
