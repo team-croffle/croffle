@@ -61,6 +61,23 @@ export function ack(sent: SentEntry[]): void {
   });
 }
 
+/**
+ * Gives an entry a fresh opId for a new push round. An opId may only ever carry one payload:
+ * if a round's request reached the server but its answer was lost, reusing the opId with a
+ * later edit would make the server replay the old result and drop the edit. With a fresh opId
+ * that case comes back as a conflict, which `settle` recognises as this device's own commit.
+ */
+export function rekey(opId: string): string {
+  const next = randomUUID();
+  databaseManager
+    .getDb()
+    .update(syncOutbox)
+    .set({ opId: next })
+    .where(eq(syncOutbox.opId, opId))
+    .run();
+  return next;
+}
+
 /** Records a failed attempt; the entry stays queued. */
 export function fail(opId: string, message: string): void {
   const db = databaseManager.getDb();

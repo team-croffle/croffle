@@ -23,9 +23,10 @@ export const SYNCED_TABLES: Record<SyncTableName, SyncedTable> = {
 };
 
 /**
- * Natural keys besides `id`. Two devices can create the same link offline under different ids;
- * the server keeps both, and every device applies them in the same order, so dropping the local
- * row that holds the key converges everywhere on the last one applied.
+ * Natural keys besides `id`. Two devices can create the same link offline under different ids
+ * and the server keeps both, but locally only one row may hold the key. Every device keeps the
+ * row with the smallest id, whatever order the rows arrive in (the log and a snapshot order them
+ * differently), so all devices converge on the same one.
  */
 const NATURAL_KEYS: Partial<Record<SyncTableName, SQLiteColumn[]>> = {
   schedule_tags: [scheduleTags.scheduleId, scheduleTags.tagId],
@@ -50,14 +51,15 @@ export function readLocalRow(
   return row as Record<string, unknown> | undefined;
 }
 
-function dropNaturalKeyHolder(
+/** Returns false when a row with a smaller id already holds the key: the incoming row loses. */
+function claimNaturalKey(
   tx: AppDatabase,
   table: SyncTableName,
   local: Record<string, unknown>,
-): void {
+): boolean {
   const keys = NATURAL_KEYS[table];
   if (!keys) {
-    return;
+    return true;
   }
   const target = SYNCED_TABLES[table];
   const conditions: SQL[] = keys.map((column) => eq(column, local[column.name as string]));
@@ -66,12 +68,17 @@ function dropNaturalKeyHolder(
     .from(target)
     .where(and(ne(target.id, local.id as string), ...conditions))
     .all() as { id: string }[];
+  const incomingId = local.id as string;
+  if (holders.some((holder) => holder.id < incomingId)) {
+    return false;
+  }
   for (const holder of holders) {
     tx.delete(target).where(eq(target.id, holder.id)).run();
     tx.delete(syncOutbox)
       .where(and(eq(syncOutbox.tableName, table), eq(syncOutbox.rowId, holder.id)))
       .run();
   }
+  return true;
 }
 
 /**
@@ -88,6 +95,7 @@ export function applyServerRows(rows: ServerRow[]): number {
   }
   const sqlite = databaseManager.getSqlite();
   const db = databaseManager.getDb();
+  let applied = 0;
   sqlite.pragma('foreign_keys = OFF');
   try {
     db.transaction((tx) => {
@@ -97,7 +105,9 @@ export function applyServerRows(rows: ServerRow[]): number {
           ...decodeRow(table, row),
           lastWriterId: SERVER_WRITER_ID,
         };
-        dropNaturalKeyHolder(tx, table, local);
+        if (!claimNaturalKey(tx, table, local)) {
+          continue;
+        }
         const { id: _id, ...rest } = local;
         tx.insert(target)
           .values(local as never)
@@ -106,10 +116,11 @@ export function applyServerRows(rows: ServerRow[]): number {
         tx.delete(syncOutbox)
           .where(and(eq(syncOutbox.tableName, table), eq(syncOutbox.rowId, local.id as string)))
           .run();
+        applied++;
       }
     });
   } finally {
     sqlite.pragma('foreign_keys = ON');
   }
-  return rows.length;
+  return applied;
 }

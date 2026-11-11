@@ -14,10 +14,12 @@ import { syncOutbox, type SyncOutboxRow } from '../database/schema';
 import { logger } from '../logger';
 import { applyServerRows, isSyncTable, readLocalRow, SYNCED_TABLES } from './apply';
 import { getClientId } from './client-id';
-import { ack, fail, peekBatch, remove } from './outbox';
+import { ack, fail, peekBatch, rekey, remove } from './outbox';
+import { assertBinding } from './sync-config';
 import { request, SyncError } from './transport';
 
-export type PushContext = { url: string; token: string };
+/** `generation` is the binding the round started under; nothing is written once it changed. */
+export type PushContext = { url: string; token: string; generation: number };
 export type PushResult = { accepted: number; conflicts: number; failed: number };
 
 type Prepared = { entry: SyncOutboxRow; commit: Commit };
@@ -41,10 +43,12 @@ function prepare(entries: SyncOutboxRow[]): Prepared[] {
       fail(entry.opId, `version ${version} is not above baseVersion ${entry.baseVersion}`);
       continue;
     }
+    // Retries inside this round (transport backoff) reuse it; the next round gets a new one.
+    const opId = rekey(entry.opId);
     prepared.push({
-      entry,
+      entry: { ...entry, opId, rowVersion: version },
       commit: {
-        opId: entry.opId,
+        opId,
         table: entry.tableName,
         rowId: entry.rowId,
         op: entry.op,
@@ -60,25 +64,46 @@ function prepare(entries: SyncOutboxRow[]): Prepared[] {
 }
 
 /**
- * Settles one conflict with the shared last-writer-wins rule. If the server's row wins it
+ * Settles one conflict with the shared last-writer-wins rule, against the row as it is now —
+ * it may have been edited again while the request was in flight. If the server's row wins it
  * replaces the local one; if the local row wins, it is lifted above the server's version and
- * pushed again (the server does not record conflicted opIds, so the same one can be reused).
+ * pushed again in a later round.
  */
 function settle(conflict: Conflict, item: Prepared): void {
   const { entry, commit } = item;
   const table = entry.tableName as keyof typeof SYNCED_TABLES;
+  const db = databaseManager.getDb();
+  const current = readLocalRow(db, table, entry.rowId);
+  if (!current) {
+    remove(table, entry.rowId);
+    return;
+  }
+
+  // This device's own earlier commit, whose answer was lost: the server holds exactly what was
+  // sent. Settle it like an acceptance (an edit made since then stays queued).
+  if (
+    conflict.serverVersion === commit.version &&
+    conflict.serverUpdatedAtMs === commit.updatedAtMs &&
+    (conflict.serverLastWriterId ?? '') === commit.lastWriterId
+  ) {
+    ack([{ opId: entry.opId, rowVersion: commit.version }]);
+    return;
+  }
+
   const serverKey = {
     updatedAtMs: conflict.serverUpdatedAtMs,
     lastWriterId: conflict.serverLastWriterId,
   };
-  const localKey = { updatedAtMs: commit.updatedAtMs, lastWriterId: commit.lastWriterId };
+  const localKey = {
+    updatedAtMs: current.updatedAtMs as number,
+    lastWriterId: current.lastWriterId as string | null,
+  };
 
   if (conflict.serverRow && wins(localKey, serverKey) === 'b') {
     applyServerRows([{ table, row: conflict.serverRow }]);
     return;
   }
 
-  const db = databaseManager.getDb();
   const target = SYNCED_TABLES[table];
   db.transaction((tx) => {
     // Raising the version fires the update trigger, which folds into this entry.
@@ -114,11 +139,12 @@ function isRejectedCommit(error: unknown): boolean {
 async function sendIsolating(ctx: PushContext, items: Prepared[], result: PushResult) {
   for (const item of items) {
     try {
-      handle(await send(ctx, [item]), [item], result);
+      handle(ctx, await send(ctx, [item]), [item], result);
     } catch (error) {
       if (!isRejectedCommit(error)) {
         throw error;
       }
+      assertBinding(ctx.generation);
       fail(item.entry.opId, (error as SyncError).code ?? 'rejected');
       result.failed++;
       logger.warn('Sync', `Rejected ${item.entry.tableName}/${item.entry.rowId}`);
@@ -126,7 +152,13 @@ async function sendIsolating(ctx: PushContext, items: Prepared[], result: PushRe
   }
 }
 
-function handle(response: PushResponse, items: Prepared[], result: PushResult): void {
+function handle(
+  ctx: PushContext,
+  response: PushResponse,
+  items: Prepared[],
+  result: PushResult,
+): void {
+  assertBinding(ctx.generation);
   const byOp = new Map(items.map((i) => [i.entry.opId, i]));
   const accepted = response.accepted
     .map((opId) => byOp.get(opId))
@@ -149,12 +181,13 @@ export async function push(ctx: PushContext): Promise<PushResult> {
   const result: PushResult = { accepted: 0, conflicts: 0, failed: 0 };
   // Bounded: a conflict re-queues its entry, and a row that keeps conflicting must not spin.
   for (let round = 0; round < 50; round++) {
+    assertBinding(ctx.generation);
     const items = prepare(peekBatch(PUSH_BATCH_SIZE));
     if (items.length === 0) {
       break;
     }
     try {
-      handle(await send(ctx, items), items, result);
+      handle(ctx, await send(ctx, items), items, result);
     } catch (error) {
       if (!isRejectedCommit(error)) {
         throw error;
