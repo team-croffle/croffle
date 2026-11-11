@@ -2,6 +2,7 @@ import {
   decodeRow,
   SERVER_WRITER_ID,
   wins,
+  type LwwKey,
   type SyncTableName,
   type WireRow,
 } from '@croffledev/common';
@@ -77,6 +78,7 @@ function claimNaturalKey(
   tx: AppDatabase,
   table: SyncTableName,
   incoming: Record<string, unknown>,
+  incomingKey: LwwKey,
 ): Claim {
   const keys = NATURAL_KEYS[table];
   if (!keys) {
@@ -109,10 +111,6 @@ function claimNaturalKey(
       updatedAtMs: holder.updatedAtMs as number,
       lastWriterId: holder.lastWriterId as string | null,
     };
-    const incomingKey = {
-      updatedAtMs: incoming.updatedAtMs as number,
-      lastWriterId: incoming.lastWriterId as string | null,
-    };
     if (pending.length > 0 && wins(holderKey, incomingKey) === 'a') {
       carry = holder;
     }
@@ -125,10 +123,10 @@ function claimNaturalKey(
 function localEditWins(
   tx: AppDatabase,
   table: SyncTableName,
-  incoming: Record<string, unknown>,
+  rowId: string,
+  incomingKey: LwwKey,
 ): boolean {
   const target = SYNCED_TABLES[table];
-  const rowId = incoming.id as string;
   const pending = tx
     .select({ seq: syncOutbox.seq })
     .from(syncOutbox)
@@ -148,10 +146,10 @@ function localEditWins(
     updatedAtMs: current.updatedAtMs as number,
     lastWriterId: current.lastWriterId as string | null,
   };
-  return wins(localKey, keyOf(incoming)) === 'a';
+  return wins(localKey, incomingKey) === 'a';
 }
 
-function keyOf(row: Record<string, unknown>) {
+function keyOf(row: Record<string, unknown>): LwwKey {
   return {
     updatedAtMs: row.updatedAtMs as number,
     lastWriterId: row.lastWriterId as string | null,
@@ -205,16 +203,16 @@ export function applyServerRows(rows: ServerRow[]): number {
     db.transaction((tx) => {
       for (const { table, row } of rows) {
         const target = SYNCED_TABLES[table];
-        const local: Record<string, unknown> = {
-          ...decodeRow(table, row),
-          lastWriterId: SERVER_WRITER_ID,
-        };
+        const decoded = decodeRow(table, row);
+        // LWW compares the writer the server reports; 'server' is only how the row is stored.
+        const incomingKey = keyOf(decoded);
+        const local: Record<string, unknown> = { ...decoded, lastWriterId: SERVER_WRITER_ID };
         // Judged here, row by row, against the row as it is now: an earlier row of the same
         // batch may have just changed it (a carried-over edit, for one).
-        if (localEditWins(tx, table, local)) {
+        if (localEditWins(tx, table, local.id as string, incomingKey)) {
           continue;
         }
-        const claim = claimNaturalKey(tx, table, local);
+        const claim = claimNaturalKey(tx, table, local, incomingKey);
         if (!claim.apply) {
           continue;
         }
