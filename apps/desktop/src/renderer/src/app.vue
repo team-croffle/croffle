@@ -36,6 +36,7 @@
   import { useAppSettingsStore } from './stores/app-settings-store.ts';
   import { useContextMenuStore } from './stores/context-menu-store.ts';
   import { useSettingsStore } from './stores/settings-store.ts';
+  import { useSyncStore } from './stores/sync-store.ts';
   import { useThemeStore } from './stores/theme-store.ts';
   import { useUiStore } from './stores/ui-store.ts';
   import { useUpdateStore } from './stores/update-store.ts';
@@ -49,6 +50,7 @@
   const themeStore = useThemeStore();
   const appSettingsStore = useAppSettingsStore();
   const updateStore = useUpdateStore();
+  const syncStore = useSyncStore();
   const { t } = useI18n();
   useGlobalShortcuts();
 
@@ -304,6 +306,7 @@
     registerDefaultContextMenu();
     await appSettingsStore.initialize();
     updateStore.init();
+    syncStore.init();
     await setPluginMenus();
     await extensionLoader.init();
   });
@@ -318,6 +321,7 @@
     window.removeEventListener('extension:unloaded', handlePluginUnloaded);
     appSettingsStore.dispose();
     updateStore.dispose();
+    syncStore.dispose();
   });
 </script>
 
