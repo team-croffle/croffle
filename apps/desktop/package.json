@@ -13,6 +13,7 @@
   "homepage": "https://github.com/team-croffle",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.node.json --composite false && vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "test": "node --test --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/**/*.test.ts",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",

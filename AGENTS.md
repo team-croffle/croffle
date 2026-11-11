@@ -29,7 +29,7 @@ Root, unless noted. The gates in `.agents/harness/gates.yaml` are the ones CI ru
 - dev: `pnpm dev` (desktop) · `pnpm --filter @croffledev/croffle-cli dev`
 - typecheck: `pnpm typecheck` (all packages) · `pnpm typecheck:desktop`
 - lint: `pnpm lint` (check) / `pnpm lint:fix` · format: `pnpm exec oxfmt --check` (check) / `pnpm format`
-- test: no Node test script yet (the desktop fixture reader is planned for 1.3.0) · server: `make -C apps/server check` (gofmt, vet, go test incl. protocol conformance)
+- test: `pnpm -r test` (desktop: `node --test` over `apps/desktop/test/**/*.test.ts` — the shared sync fixtures and the outbox triggers; no extra dependency) · server: `make -C apps/server check` (gofmt, vet, go test incl. protocol conformance)
 - build: `pnpm build` (desktop) · `pnpm build:unpack` / `build:win` / `build:mac` / `build:linux` · `pnpm --filter @croffledev/croffle-cli build` · `pnpm --dir apps/server/web build` (dashboard, before `make -C apps/server build`)
 - db: `pnpm --filter @croffledev/desktop db:generate` / `db:studio` (drizzle-kit)
 - release: `pnpm changeset` (types/cli); desktop and server through their GitHub Actions workflows (see CI/CD)
