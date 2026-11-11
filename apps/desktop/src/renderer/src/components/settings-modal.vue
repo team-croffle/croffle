@@ -16,6 +16,7 @@
 
   import ConfigSchemaForm from '@/components/settings/config-schema-form.vue';
   import SettingsExtensionPanel from '@/components/settings/settings-extension-panel.vue';
+  import SyncPanel from '@/components/settings/sync-panel.vue';
   import { Button } from '@/components/ui/button';
   import {
     Dialog,
@@ -104,6 +105,7 @@
     { id: 'calendar', label: t('settings.tabs.calendar'), icon: 'lucide:calendar-days' },
     { id: 'notifications', label: t('settings.tabs.notifications'), icon: 'lucide:bell' },
     { id: 'extensions', label: t('settings.tabs.extensions'), icon: 'lucide:puzzle' },
+    { id: 'sync', label: t('settings.tabs.sync'), icon: 'lucide:refresh-cw' },
   ]);
 
   const isBootEnabled = computed(() => settings.value?.general.startOnSystemBoot ?? false);
@@ -1050,6 +1052,8 @@
                   </p>
                 </div>
               </div>
+
+              <SyncPanel v-if="activeTab === 'sync'" />
 
               <!-- 플러그인 관리 -->
               <div v-if="activeTab === 'extensions'" class="space-y-6">
