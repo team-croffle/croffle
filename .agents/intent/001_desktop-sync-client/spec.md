@@ -79,7 +79,7 @@ summary_for_user: |
 - [x] W-4 (59c5f1e) 프로토콜 계약 `common/sync-protocol.ts` (타입 · encode/decode · wins) (000-5) — S-5
 - [x] W-5 (d3b5777) 테스트 러너 + 픽스처 리더 + 나머지 4개 테이블 codec 단위 테스트 + CI 테스트 단계 + `.agents/harness/gates.yaml`에 `test` 게이트(`pnpm -r test`) 추가 (000-15) — S-13. 의존: W-4. 게이트 추가는 하네스 손 수정이며 사용자가 이번 한 번만 허락함(intent `waivers:`)
 - [x] W-6 (8bb27f9) 전송 계층: 전용 session · 헤더 · 재시도/백오프 · TLS 호스트 한정 · `checkServer()`(프로토콜 범위 · 시계) (000-6) — S-8, S-12. 의존: W-3, W-4
-- [ ] W-7 인증: 로그인(+OTP) · 토큰 붙여넣기(whoami) · 로그아웃/서버 변경 초기화 (000-7) — S-9, S-7. 의존: W-3, W-6
+- [x] W-7 (2921ab9) 인증: 로그인(+OTP) · 토큰 붙여넣기(whoami) · 로그아웃/서버 변경 초기화 (000-7) — S-9, S-7. 의존: W-3, W-6
 - [ ] W-8 push 엔진 (000-8) — S-1, S-3. 의존: W-2, W-6
 - [ ] W-9 pull 엔진 + bootstrap + 410 복구 (000-9 + 질의서 1) — S-1, S-10. 의존: W-2, W-6
 - [ ] W-10 오케스트레이터 + backfill + 상태 브로드캐스트 (000-10 + 질의서 3) — S-3, S-11, S-2. 의존: W-7, W-8, W-9
