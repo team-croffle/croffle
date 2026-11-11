@@ -98,12 +98,12 @@ Prefer concise conventional-style subjects used in this repo, for example:
 
 UI copy for **main and renderer** lives in **one catalog per language**:
 
-| Path | Role |
-| ---- | ---- |
-| `apps/desktop/src/common/i18n/locales/{lang}.json` | Shared message catalogs (`en`, `ko`, …) |
-| `apps/desktop/src/common/i18n/index.ts` | Lightweight `t()` / `localeMessages` for main + shared code |
-| `apps/desktop/src/main/i18n.ts` | Main helper that reads `settings.general.language` |
-| `apps/desktop/src/renderer/src/i18n/index.ts` | vue-i18n wiring (imports `localeMessages` from `@croffledev/common`) |
+| Path                                               | Role                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| `apps/desktop/src/common/i18n/locales/{lang}.json` | Shared message catalogs (`en`, `ko`, …)                              |
+| `apps/desktop/src/common/i18n/index.ts`            | Lightweight `t()` / `localeMessages` for main + shared code          |
+| `apps/desktop/src/main/i18n.ts`                    | Main helper that reads `settings.general.language`                   |
+| `apps/desktop/src/renderer/src/i18n/index.ts`      | vue-i18n wiring (imports `localeMessages` from `@croffledev/common`) |
 
 Do **not** add a separate `renderer/.../locales` tree. Keep keys nested (e.g. `tray.openWindow`, `settings.general.language`) and use `{name}` placeholders consistently.
 
