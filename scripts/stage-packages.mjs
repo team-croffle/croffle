@@ -20,6 +20,8 @@ import { join } from 'node:path';
 const PACKAGES = ['packages/types', 'packages/cli'];
 const dryRun = process.env.DRY_RUN === '1';
 const summary = [];
+/** Tag problems: reported in full, but they do not fail the run. */
+const warnings = [];
 
 function run(cmd, args, options = {}) {
   return execFileSync(cmd, args, {
@@ -85,8 +87,19 @@ function ensureTag(tag, target) {
   if (dryRun) {
     return 'would create tag';
   }
-  run('git', ['tag', tag, target]);
-  run('git', ['push', 'origin', `refs/tags/${tag}`]);
+  // Tagging is a by-product: a refused tag must not hide whether staging worked. Report the
+  // git output in full — the reason a push was refused is not on its last line.
+  const created = tryRun('git', ['tag', tag, target]);
+  if (!created.ok) {
+    warnings.push({ tag, step: 'git tag', output: created.out });
+    return 'tag not created (see warnings)';
+  }
+  const pushed = tryRun('git', ['push', 'origin', `refs/tags/${tag}`]);
+  if (!pushed.ok) {
+    tryRun('git', ['tag', '-d', tag]);
+    warnings.push({ tag, step: 'git push', output: pushed.out });
+    return 'tag not pushed (see warnings)';
+  }
   return 'tag created';
 }
 
@@ -139,12 +152,8 @@ for (const dir of PACKAGES) {
     }
   } catch (error) {
     failed = true;
-    summary.push(
-      `- \`${tag}\`: failed — ${String(error.stderr ?? error.message)
-        .trim()
-        .split('\n')
-        .at(-1)}`,
-    );
+    summary.push(`- \`${tag}\`: failed — see below`);
+    warnings.push({ tag, step: 'stage', output: String(error.stderr ?? error.message) });
   }
 }
 
@@ -154,6 +163,7 @@ const report = [
   ...summary,
   '',
   'Approve staged versions on npmjs.com (Staged Packages) or with `npm stage approve <id>`.',
+  ...warnings.flatMap((w) => ['', `#### ${w.tag} — ${w.step}`, '', '```', w.output.trim(), '```']),
 ].join('\n');
 console.log(report);
 if (process.env.GITHUB_STEP_SUMMARY) {
