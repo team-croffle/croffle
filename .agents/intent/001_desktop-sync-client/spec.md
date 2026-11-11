@@ -55,7 +55,7 @@ summary_for_user: |
 - **push** `sync/push.ts`: outbox를 seq 순으로 100개씩 → Commit(`version = rowVersion`, `baseVersion`, `row = encodeRow(현재 행)`; 삭제는 tombstone 행). `accepted` → `DELETE WHERE opId = ? AND rowVersion = ?`(그 사이 다시 고친 행은 남음). `conflicts` → `wins(로컬, 서버)`: 서버가 이기면 서버 행을 `lastWriterId='server'`로 적용하고 outbox 행 삭제, 로컬이 이기면 `baseVersion = serverVersion`, `version = max(local, serverVersion) + 1`로 올려 다음 push에 새 opId로 보낸다. 400 `invalid_commit`은 그 항목만 `lastError`에 기록하고 건너뛴다.
 - **pull** `sync/pull.ts`: `lastPulledSeq`부터 `hasMore`가 false일 때까지. 각 change를 `decodeRow` 후 FK 순서(tag, schedule → schedule_tags · schedule_reminder · schedule_exception)로 upsert, `lastWriterId='server'`. 로컬에 미동기 변경이 있는 행은 `wins`로 판정해 로컬이 이기면 건너뛴다. 동명 태그는 애플리케이션 검증을 거치지 않고 행 그대로 upsert한다. FK가 아직 없는 자식 행은 다음 페이지 뒤 재시도.
 - **bootstrap**: `lastPulledSeq = 0`이고 bootstrap을 마친 적이 없을 때, 또는 pull이 410 `cursor_too_old`일 때. 페이지마다 커서를 `bootstrapCursor`에 저장(중단 후 재개), 마지막 페이지 뒤 `lastPulledSeq = serverSeq`. 적용 규칙은 pull과 같다.
-- **backfill**: bootstrap이 끝나고 `backfilledAt`이 없으면, 5개 테이블에서 `lastWriterId IS NOT 'server'`인 행 전체를 `INSERT … SELECT`로 outbox에 적재(`baseVersion = 0`, 이미 있으면 그대로), `backfilledAt` 기록. 서버 행과 id가 겹치면 push의 충돌 규칙으로 정리된다.
+- **backfill**: bootstrap이 끝나고 `backfilledAt`이 없으면, 5개 테이블에서 `lastWriterId IS NOT 'server'`인 살아 있는 행 전체를 `INSERT … SELECT`로 outbox에 적재(`baseVersion = 0`, 이미 있던 항목은 그대로), `backfilledAt` 기록. 서버 행과 id가 겹치면 push의 충돌 규칙으로 정리된다. (구현 중 확정) tombstone은 넣지 않는다 — 동기화 전에 지운 행은 다른 어디에도 없다. 1.2.3 이전 행은 `updatedAtMs = 0` · 작성자 없음이라 서버가 거부하므로, `updatedAt`(없으면 현재 시각)으로 날짜를 매기고 이 기기를 작성자로 둔 뒤 적재한다.
 - **오케스트레이터** `sync/sync-service.ts`: 순서 `checkServer → (bootstrap) → (backfill) → push → pull`. 앱 시작 · 로그인 · 주기(5분) · 로컬 변경 디바운스(5초) · 수동 "지금 동기화". 동시 실행 1개. 실패 시 백오프(최대 30분). 상태(`enabled`, `running`, `pending`, `lastSyncedAt`, `lastErrorKind`, `tokenVolatile`, `clockSkewMs`)를 renderer로 브로드캐스트. pull로 바뀐 행이 있으면 기존 일정 변경 이벤트로 캘린더를 갱신.
 
 ### 브리지 · UI
@@ -81,7 +81,7 @@ summary_for_user: |
 - [x] W-6 (8bb27f9) 전송 계층: 전용 session · 헤더 · 재시도/백오프 · TLS 호스트 한정 · `checkServer()`(프로토콜 범위 · 시계) (000-6) — S-8, S-12. 의존: W-3, W-4
 - [x] W-7 (2921ab9) 인증: 로그인(+OTP) · 토큰 붙여넣기(whoami) · 로그아웃/서버 변경 초기화 (000-7) — S-9, S-7. 의존: W-3, W-6
 - [x] W-8 (56af39b) push 엔진 (000-8) — S-1, S-3. 의존: W-2, W-6
-- [ ] W-9 pull 엔진 + bootstrap + 410 복구 (000-9 + 질의서 1) — S-1, S-10. 의존: W-2, W-6
+- [x] W-9 (5014fe0) pull 엔진 + bootstrap + 410 복구 (000-9 + 질의서 1) — S-1, S-10. 의존: W-2, W-6
 - [ ] W-10 오케스트레이터 + backfill + 상태 브로드캐스트 (000-10 + 질의서 3) — S-3, S-11, S-2. 의존: W-7, W-8, W-9
 - [ ] W-11 내부 `sync.*` 브리지: common API 타입 + `ipc/sync.handler.ts` + `preload/api/sync.ts` (000-4) — S-4. 의존: W-10
 - [ ] W-12 검증 하네스: 장애 주입 스텁 서버(TLS · OTP · 충돌 · FK 역순 · 410) + 서버 `0.1.0-rc.1` 컨테이너 대상 실행 스크립트 (000-11) — S-17. 의존: W-10
