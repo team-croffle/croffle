@@ -33,7 +33,8 @@
 
 <template>
   <Dialog :open="isConfirmModalOpen" @update:open="handleOpenChange">
-    <DialogContent class="sm:max-w-md">
+    <!-- Above any other dialog: a confirmation can be asked from inside one (settings). -->
+    <DialogContent class="z-[60] sm:max-w-md">
       <DialogHeader>
         <DialogTitle>{{ confirmTitle }}</DialogTitle>
         <DialogDescription>{{ confirmDescription }}</DialogDescription>

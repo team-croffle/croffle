@@ -90,6 +90,7 @@
         const confirmed = await uiStore.openConfirm({
           title: t('settings.sync.changeServerTitle'),
           description: t('settings.sync.changeServerConfirm'),
+          confirmLabel: t('settings.sync.changeServerAction'),
           confirmVariant: 'destructive',
         });
         if (!confirmed) {

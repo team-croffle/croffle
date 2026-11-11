@@ -128,6 +128,7 @@
       "serverSaved": "Server saved. Sign in to start syncing.",
       "changeServerTitle": "Change the sync server?",
       "changeServerConfirm": "You will be signed out of the current server. Changes not yet sent stay on this device and go to the new server.",
+      "changeServerAction": "Change server",
       "account": "Account",
       "authPassword": "Username and password",
       "authToken": "Token",
