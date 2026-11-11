@@ -70,6 +70,19 @@ Download the latest build from the [Releases](https://github.com/team-croffle/cr
 
 Install from GitHub expects `croffle-manifest.json` at the repository root. Use a local `.zip` for extensions that must be built first.
 
+### Sync (beta, optional)
+
+Croffle is complete on one device and never needs a server. To keep several devices of one account in step, run your own [`croffle-server`](./apps/server/README.md) and connect each device to it:
+
+1. Open **Settings → Sync** and enter the server URL (for example `https://croffle.example.com`).
+2. Sign in with the username and password the server operator created, or paste a device token. Enter the one-time code if the server asks for one.
+3. Turn **Sync** on. Your existing schedules, tags, reminders and per-occurrence changes are sent once, and later edits sync automatically every few minutes or with **Sync now**.
+
+- Changes made offline wait on the device and go out when the server is reachable again.
+- When two devices edit the same schedule, the later edit wins, so keep device clocks correct (the settings warn when a clock is far off).
+- Certificates are checked strictly. For a private server with a self-signed certificate, turn on **Allow unverified TLS certificates**; it applies to that server only.
+- Sync is in beta: sharing with a team and managing shared schedules come in later versions. The server's token is stored with the operating system's keyring; where there is none, you sign in again after a restart.
+
 ---
 
 ## For Developers
