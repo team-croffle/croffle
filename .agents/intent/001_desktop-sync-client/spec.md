@@ -2,6 +2,7 @@
 intent: "001"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-12", words: "spec의 테스트 경로 정정 승인", rev: "V-2 실행 경로만 정정 (audit 1.3.0 A-4)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 이번만이니까 게이트 추가까지 해서 승인할게", rev: "bf53558 (+ W-5 gate line added on these words)", kind: summary }
 summary_for_user: |
   데스크톱 1.3.0 동기화 클라이언트를 작업 단위 16개(W-1~W-16)로 나눴습니다: DB · 트리거 → 프로토콜 계약과 첫 테스트 러너 → 전송 · 인증 → push · pull(bootstrap · 410 복구) → 오케스트레이터(첫 동기화 backfill) → 내부 브리지 → 검증 하네스 → 설정 탭 · README → desktop-v 태그 → npm staging 발행.
@@ -104,7 +105,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
 
 - V-2 **데스크톱 프로토콜 컨포먼스 · 5개 테이블 코덱 · LWW 단위 테스트**
   - 검증 대상: S-5, S-13, W-4, W-5
-  - 실행 방법: `pnpm -r test` 및 `node --test apps/desktop/src/common/*.test.ts` 실행, `.github/workflows/ci.yml`에 데스크톱 테스트 스텝 존재 확인, `git status --porcelain packages/sync-fixtures apps/server` 실행
+  - 실행 방법: `pnpm -r test` 및 `node --test 'apps/desktop/test/**/*.test.ts'` 실행 (2026-11-12 정정: 테스트는 W-5에서 `apps/desktop/test/`에 둠), `.github/workflows/ci.yml`에 데스크톱 테스트 스텝 존재 확인, `git status --porcelain packages/sync-fixtures apps/server` 실행
   - 기대 결과: 러너가 `packages/sync-fixtures/scenarios/*.json` 12개를 모두 읽고(파일 수 · `protocol: 1` 확인) `rowCodec` 블록(`12-row-codec.json`의 codec 2건 · lww 3건)을 통과하며, 나머지 테이블을 덮는 단위 테스트까지 5개 테이블(`schedule`, `tag`, `schedule_tags`, `schedule_reminder`, `schedule_exception`)의 `encodeRow`/`decodeRow`(초↔ms 변환, `deletedAt` ms 유지, boolean↔0/1, `recurringRule`↔`recurrenceRule`) 및 `wins`(`updatedAtMs` 비교, 동률 시 `'server'` > `'device:…'` 사전식 비교) 테스트가 fail 0·skip 0으로 통과함. `packages/sync-fixtures`와 `apps/server`의 수정·추가 파일 0개
   - 실패 판정: 테스트 1건이라도 실패·누락·스킵되거나, CI 워크플로에 테스트 단계가 없거나, 픽스처·서버 파일이 변경됨
   - 증적 경로: `.loctx/reports/1.3.0/v02-conformance-test.log`
