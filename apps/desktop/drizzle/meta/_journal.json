@@ -50,6 +50,13 @@
       "when": 1790640000000,
       "tag": "0006_schedule_exception",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794378628887,
+      "tag": "0007_sync_tables",
+      "breakpoints": true
     }
   ]
 }
