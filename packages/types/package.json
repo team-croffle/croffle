@@ -34,7 +34,7 @@
     "url": "https://github.com/team-croffle"
   },
   "dependencies": {
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.6.6"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
