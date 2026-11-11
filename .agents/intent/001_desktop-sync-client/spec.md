@@ -88,7 +88,7 @@ summary_for_user: |
 - [x] W-13 (c890302) 설정 → 동기화 탭 + `sync-store` + i18n en/ko (000-12) — S-14. 의존: W-11
 - [x] W-14 (4d40f05) README / README.ko "동기화 (beta, 선택)" 절 (000-13) — S-14
 - [x] W-15 (658b192) 데스크톱 태그 `desktop-v*` + 업데이트 창 릴리스 노트 보완 + AGENTS.md · 노트 규약 갱신 (000-14) — S-15. 첫 rc 전에 병합
-- [ ] W-16 npm staging 발행: 발행 스크립트 + `publish-packages.yml` + AGENTS.md Changeset 규칙 (계획 6) — S-16
+- [x] W-16 (92e1cce) npm staging 발행: 발행 스크립트 + `publish-packages.yml` + AGENTS.md Changeset 규칙 (계획 6) — S-16
 
 옛 계획의 W-4(브리지)를 엔진 뒤(W-11)로 옮겼다. 브리지가 감싸는 함수(로그인, 동기화)가 먼저 있어야 브리지 단위가 한 번에 완성되고 따로 되돌릴 수 있기 때문이다.
 
@@ -291,6 +291,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
 - **electron-updater**: 접두어 태그로 업데이트 경로 자체는 유지된다(2026-10-20 분석: 버전은 `latest.yml`에서 읽음). 다만 실제 1.2.6 설치가 `desktop-v1.3.0-rc.1`을 보는지는 rc를 내야 확인된다. rc는 `/releases/latest`에 잡히지 않으므로 1.2.6 클라이언트는 stable `desktop-v1.3.0`부터 업데이트를 받는다.
 - **npm staging 첫 실행**: (구현 중 실측, npm 12.2) `npm stage publish <tarball>`은 tarball 경로를 그대로 받는다 — 압축 해제는 필요 없다. 스크립트 `DRY_RUN=1` 실행으로 판단 경로(공개됨 · stage됨 · 새로 stage)를 확인했다. npmjs.com의 trusted publishing 설정에서 stage를 허용하기 전에는 OIDC 토큰이 stage를 거부할 수 있다. 원격에 패키지 태그가 지금까지 하나도 없었으므로(changesets가 올리지 않았음), 첫 실행에서 현재 공개 버전의 태그가 처음 생긴다.
 - **macOS**: 실서버 검증을 하지 못한다. 릴리스 노트에 밝힌다.
+- **자연 키 중복**(리뷰 3번): 두 기기가 같은 연결 · 리마인더 · 예외를 다른 id로 만들면 서버에는 둘 다 남고, 각 기기는 id가 가장 작은 행만 둔다. 그 행이 나중에 서버에서 지워져도 진 행은 로컬에 되살아나지 않는다. 1.3.x에서 공유와 함께 다시 본다.
 
 ## 범위 밖
 - 일정 공유와 `schedule.teamId`(1.3.1), To-Do(1.3.2), 공유 권한 · 공유 취소(1.3.5)
