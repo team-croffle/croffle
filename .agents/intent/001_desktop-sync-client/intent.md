@@ -33,6 +33,8 @@ Croffle은 로컬 전용이라 기기를 여러 대 쓰면 일정이 기기마�
 4. **사용자 표면** — 설정 → 동기화 탭 + i18n(en/ko), 검증 하네스(서버 0.1 연동 + 장애 주입 스텁), README "동기화 (beta, 선택)" 절. ← 000-11 ~ 000-13
 5. **릴리스 준비** — 데스크톱 태그 스킴을 `desktop-vX.Y.Z`로 전환(release.yml, `tagNamePrefix`). 첫 rc 전에 병합합니다. ← 000-14
 
+6. **패키지 발행을 staging으로** — 지금 `publish-packages`는 Changeset 버전 PR이 병합되면 npm에 바로 공개합니다. 이를 npm staging에 올리고 사용자가 승인하면 공개되도록 바꿉니다. AGENTS.md의 "Publishing goes to npm staging" 문장은 지금 사실이 아니므로, 바뀐 동작에 맞춰 함께 고칩니다. 사용자 요청 (2026-11-11): "changeset으로 올라오는거 바로 publish네. 다음 버전에서 stage로 변경해줄래?"
+
 버전을 다 만든 뒤 merge → audit → rc(`desktop-v1.3.0-rc.1`) → 최종 조정 → stable(사용자 지시 시)입니다. 작업 묶음마다 rc를 내지 않습니다.
 
 ## 영향 범위
@@ -41,7 +43,8 @@ Croffle은 로컬 전용이라 기기를 여러 대 쓰면 일정이 기기마�
 - `packages/sync-fixtures`: 읽기만 (서버와 같은 시나리오)
 - `.github/workflows/release.yml`, `apps/desktop/electron-builder.yml`: 태그 스킴
 - `README.md` / `README.ko.md`, `docs/ROADMAP.md`(릴리스 단계)
-- 영향 없음: `packages/types`, `packages/cli`, `apps/server`(프로토콜이 어긋나면 서버를 고치지 않고 먼저 사용자에게 묻습니다)
+- `.github/workflows/publish-packages.yml`, 루트 `package.json`의 `release` 스크립트, `AGENTS.md`(Changeset 규칙): 패키지 발행을 staging으로
+- 영향 없음: `packages/types`, `packages/cli`의 코드(발행 방식만 바뀜), `apps/server`(프로토콜이 어긋나면 서버를 고치지 않고 먼저 사용자에게 묻습니다)
 
 ## 제약
 - 프로토콜의 단일 기준은 이미 병합된 서버 0.1과 `packages/sync-fixtures`입니다. 옛 계획의 엔드포인트 모양보다 이쪽이 우선합니다.
