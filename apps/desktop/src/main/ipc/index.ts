@@ -8,6 +8,7 @@ import { registerOsIpcHandlers } from './os.handler';
 import { registerScheduleIpcHandlers } from './schedule.handler';
 import { registerSearchIpcHandlers } from './search.handler';
 import { registerSettingsIpcHandlers } from './settings.handler';
+import { registerSyncIpcHandlers } from './sync.handler';
 import { registerTagIpcHandlers } from './tag.handler';
 import { registerWindowIpcHandlers } from './window.handler';
 
@@ -59,6 +60,8 @@ export function registerAllIpcHandlers() {
   logger.debug('IPC', 'Registering Plugin Session IPC Handlers');
   // Plugin Session IPC Handlers
   registerExtensionSessionIpcHandlers();
+
+  registerSyncIpcHandlers();
 
   logger.info('IPC', 'All IPC handlers registered successfully');
 }

@@ -1,4 +1,9 @@
-import { AppEventType } from '@croffledev/common';
+import {
+  AppEventType,
+  SYNC_STATUS_CHANNEL,
+  type SyncErrorKind,
+  type SyncStatus,
+} from '@croffledev/common';
 import { BrowserWindow } from 'electron';
 
 import { reminderScheduler } from '../calendar/reminder-scheduler';
@@ -15,34 +20,7 @@ import {
   updateServerState,
   setEnabled as storeEnabled,
 } from './sync-config';
-import { checkServer, configureTls, SyncError, type SyncErrorKind } from './transport';
-
-/** Internal channel to the app's own renderer; not on the extension event bus. */
-export const SYNC_STATUS_CHANNEL = 'croffle:sync:status';
-
-export type SyncStatus = {
-  /** A server URL is set. */
-  configured: boolean;
-  url: string | null;
-  allowInsecureTls: boolean;
-  signedIn: boolean;
-  accountId: string | null;
-  enabled: boolean;
-  running: boolean;
-  /** Queued local changes still being retried. */
-  pending: number;
-  /** Queued changes that stopped being retried until they are edited again. */
-  failed: number;
-  lastSyncedAt: number | null;
-  lastErrorKind: SyncErrorKind | null;
-  lastError: string | null;
-  /** The token lives in memory only (no OS keyring); it is gone after a restart. */
-  tokenVolatile: boolean;
-  /** Server clock minus local clock, when the difference is worth a warning. */
-  clockSkewMs: number | null;
-  /** Bumped whenever rows from the server changed local data, so views can reload. */
-  dataChangedAt: number | null;
-};
+import { checkServer, configureTls, SyncError } from './transport';
 
 const PERIOD_MS = 5 * 60_000;
 const DEBOUNCE_MS = 5_000;

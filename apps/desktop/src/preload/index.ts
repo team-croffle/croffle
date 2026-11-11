@@ -23,6 +23,7 @@ import { extensionStorageApi } from './api/extensions/storage';
 import { httpApi } from './api/http';
 import { osApi } from './api/os';
 import { settingsApi } from './api/settings';
+import { syncApi } from './api/sync';
 import { windowApi } from './api/window';
 
 /** Only the enum objects — never the rest of `@croffledev/common`. */
@@ -90,6 +91,7 @@ const internalApi = {
       importScheduleFromFile: scheduleApi.importScheduleFromFile,
     },
   },
+  sync: syncApi,
 } satisfies CroffleInternalAPI;
 
 /** Handed out once (see `CroffleInternalBridge`); the renderer host takes it at startup. */
