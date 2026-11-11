@@ -16,3 +16,4 @@ export {
 } from './sync-tables';
 export type { AssertEqual, AssertTrue, AssertSchema } from './type-utils';
 export { assertSchemaMatch } from './type-utils';
+export * from './sync-protocol';
