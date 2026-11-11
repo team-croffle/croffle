@@ -74,7 +74,7 @@ summary_for_user: |
 각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트를 통과한다. 재료가 된 옛 작업 번호를 괄호에 적었다.
 
 - [x] W-1 (96b2d9f) `sync_server` · `sync_outbox` 스키마 + 마이그레이션 0007 (000-1) — S-1, S-2
-- [ ] W-2 outbox 트리거 0008 + `ensureOutboxTriggers()` + `sync/outbox.ts`(peek · count · ack · fail) + `SERVER_WRITER_ID` (000-2) — S-6
+- [x] W-2 (d71adab) outbox 트리거 0008 + `ensureOutboxTriggers()` + `sync/outbox.ts`(peek · count · ack · fail) + `SERVER_WRITER_ID` (000-2) — S-6
 - [ ] W-3 `sync-config-service`: 서버 설정 CRUD + `safeStorage` 토큰 + TLS 플래그 (000-3) — S-7, S-8
 - [ ] W-4 프로토콜 계약 `common/sync-protocol.ts` (타입 · encode/decode · wins) (000-5) — S-5
 - [ ] W-5 테스트 러너 + 픽스처 리더 + 나머지 4개 테이블 codec 단위 테스트 + CI 테스트 단계 + `.agents/harness/gates.yaml`에 `test` 게이트(`pnpm -r test`) 추가 (000-15) — S-13. 의존: W-4. 게이트 추가는 하네스 손 수정이며 사용자가 이번 한 번만 허락함(intent `waivers:`)
