@@ -1,7 +1,7 @@
 # discovered by reins install — the loop reads only this file (design §5)
 # Edited by hand on 2026-11-11 with the user's permission: the gates CI runs.
-# There is no Node test script yet (the desktop fixture reader is work 000-15),
-# so `pnpm -r test` would run nothing and is not a gate.
+# test added by hand on 2026-11-11 in spec 001 W-5, once, with the user's permission
+# (intent 001 waivers): the desktop now has a `test` script (node --test).
 schema: reins/gates@1
 gates:
   typecheck:
@@ -13,6 +13,9 @@ gates:
   format:
     cmd: pnpm exec oxfmt --check
     from: .github/workflows/ci.yml#Format check (oxfmt)
+  test:
+    cmd: pnpm -r test
+    from: apps/desktop/package.json#scripts.test
   build:
     cmd: pnpm build
     from: package.json#scripts.build
@@ -29,6 +32,7 @@ order:
   - typecheck
   - lint
   - format
+  - test
   - build
   - build-cli
   - server-web

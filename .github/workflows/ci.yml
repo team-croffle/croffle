@@ -123,6 +123,11 @@ jobs:
       - name: Typecheck
         run: pnpm ${{ steps.scope.outputs.filters }} run typecheck
 
+      # Node's built-in runner (`node --test`), no extra dependency. Only packages that
+      # define a `test` script run; today that is the desktop (shared sync fixtures).
+      - name: Test
+        run: pnpm ${{ steps.scope.outputs.filters }} run --if-present test
+
   build-desktop:
     name: Build desktop
     needs: [changes, quality]
