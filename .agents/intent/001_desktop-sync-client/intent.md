@@ -5,7 +5,7 @@ version: "1.3.0"
 status: approved
 origin: user
 approvals:
-  - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 승인", rev: "057da73" }
+  - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 승인", rev: "057da73 (rebased onto master as 75860bc, intent.md unchanged)" }
 waivers: []
 supersedes: null
 ---
