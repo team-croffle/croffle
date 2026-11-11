@@ -53,6 +53,7 @@ export async function signInWithPassword(input: PasswordSignIn): Promise<SignInR
   const generation = bindingGeneration();
   const url = requireServerUrl();
   await checkServer(url);
+  assertBinding(generation);
   const response = await request<LoginResponse>(url, 'POST', '/auth/login', {
     retry: false,
     body: {
@@ -75,6 +76,7 @@ export async function signInWithToken(token: string): Promise<SignInResult> {
   const generation = bindingGeneration();
   const url = requireServerUrl();
   await checkServer(url);
+  assertBinding(generation);
   const response = await request<WhoAmIResponse>(url, 'POST', '/auth/whoami', {
     token: trimmed,
     retry: false,

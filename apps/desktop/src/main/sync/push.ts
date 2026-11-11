@@ -119,6 +119,7 @@ function settle(conflict: Conflict, item: Prepared): void {
 }
 
 async function send(ctx: PushContext, items: Prepared[]): Promise<PushResponse> {
+  assertBinding(ctx.generation);
   return request<PushResponse>(ctx.url, 'POST', '/sync/push', {
     token: ctx.token,
     body: { clientId: getClientId(), commits: items.map((i) => i.commit) },

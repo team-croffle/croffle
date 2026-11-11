@@ -94,6 +94,7 @@ export async function bootstrap(ctx: PullContext): Promise<number> {
   let applied = 0;
   let restarted = false;
   for (;;) {
+    assertBinding(ctx.generation);
     let page: BootstrapResponse;
     try {
       page = await request<BootstrapResponse>(ctx.url, 'POST', '/sync/bootstrap', {
@@ -132,6 +133,7 @@ export async function bootstrap(ctx: PullContext): Promise<number> {
 export async function pull(ctx: PullContext): Promise<number> {
   let applied = 0;
   for (;;) {
+    assertBinding(ctx.generation);
     const lastServerSeq = getServer()?.lastPulledSeq ?? 0;
     let page: PullResponse;
     try {
