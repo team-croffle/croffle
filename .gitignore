@@ -47,5 +47,5 @@ coverage
 dist
 *buildinfo
 
-# Personal AI Files
-.ai/*
+# reins local workspace
+.loctx/
