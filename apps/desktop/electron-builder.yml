@@ -78,3 +78,5 @@ publish:
   owner: team-croffle
   repo: croffle
   releaseType: release
+  # Tags are per product (desktop-v / server-v). Must match TAG in .github/workflows/release.yml.
+  tagNamePrefix: desktop-v

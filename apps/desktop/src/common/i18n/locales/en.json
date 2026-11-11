@@ -378,7 +378,8 @@
     "now": "Update now",
     "alreadyLatest": "You're already on the latest version.",
     "failed": "Update failed",
-    "errorFallback": "An error occurred during the update."
+    "errorFallback": "An error occurred during the update.",
+    "viewReleaseNotes": "View the release notes"
   },
   "extensions": {
     "loadFailed": "Failed to load extensions",
