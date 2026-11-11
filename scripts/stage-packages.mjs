@@ -58,7 +58,24 @@ function isStaged(name, version) {
   }
 }
 
-function ensureTag(tag) {
+/**
+ * The commit that set this version in the package's package.json (the merged version PR): the
+ * source that was packed and staged, not whatever master holds when approval is noticed.
+ */
+function versionCommit(dir, version) {
+  const sha = run('git', [
+    'log',
+    '-n1',
+    '--format=%H',
+    '-G',
+    `"version": "${version.replace(/[.]/g, '\\.')}"`,
+    '--',
+    join(dir, 'package.json'),
+  ]).trim();
+  return sha || 'HEAD';
+}
+
+function ensureTag(tag, target) {
   if (tryRun('git', ['rev-parse', '-q', '--verify', `refs/tags/${tag}`]).ok) {
     return 'tag exists';
   }
@@ -68,7 +85,7 @@ function ensureTag(tag) {
   if (dryRun) {
     return 'would create tag';
   }
-  run('git', ['tag', tag]);
+  run('git', ['tag', tag, target]);
   run('git', ['push', 'origin', `refs/tags/${tag}`]);
   return 'tag created';
 }
@@ -112,7 +129,7 @@ for (const dir of PACKAGES) {
   const tag = `${name}@${version}`;
   try {
     if (isLive(name, version)) {
-      summary.push(`- \`${tag}\`: live on npm, ${ensureTag(tag)}`);
+      summary.push(`- \`${tag}\`: live on npm, ${ensureTag(tag, versionCommit(dir, version))}`);
     } else if (isStaged(name, version)) {
       summary.push(`- \`${tag}\`: already staged, waiting for approval`);
     } else {
