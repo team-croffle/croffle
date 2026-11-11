@@ -26,5 +26,5 @@ export type {
   ExtensionInfoEntity,
   ExtensionStorageEntity,
 } from './entities';
-export type { SyncColumns } from './sync';
-export { LAST_WRITER_DEVICE_PREFIX } from './sync';
+export type { SyncColumns, SyncTableName } from './sync';
+export { LAST_WRITER_DEVICE_PREFIX, SERVER_WRITER_ID, SYNC_TABLES } from './sync';

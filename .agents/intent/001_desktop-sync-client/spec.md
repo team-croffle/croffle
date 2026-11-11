@@ -73,7 +73,7 @@ summary_for_user: |
 ## 작업 단위
 각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트를 통과한다. 재료가 된 옛 작업 번호를 괄호에 적었다.
 
-- [ ] W-1 `sync_server` · `sync_outbox` 스키마 + 마이그레이션 0007 (000-1) — S-1, S-2
+- [x] W-1 (96b2d9f) `sync_server` · `sync_outbox` 스키마 + 마이그레이션 0007 (000-1) — S-1, S-2
 - [ ] W-2 outbox 트리거 0008 + `ensureOutboxTriggers()` + `sync/outbox.ts`(peek · count · ack · fail) + `SERVER_WRITER_ID` (000-2) — S-6
 - [ ] W-3 `sync-config-service`: 서버 설정 CRUD + `safeStorage` 토큰 + TLS 플래그 (000-3) — S-7, S-8
 - [ ] W-4 프로토콜 계약 `common/sync-protocol.ts` (타입 · encode/decode · wins) (000-5) — S-5
