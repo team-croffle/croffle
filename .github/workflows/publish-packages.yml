@@ -41,10 +41,16 @@ jobs:
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
 
+      # `npm stage publish` (staged publishing) needs npm 11.15.0 or newer.
+      - name: Use an npm that can stage
+        run: npm install -g npm@^11.15.0
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create Release Pull Request or Publish
+      # After the version PR is merged, `release` stages the packages on npm
+      # (scripts/stage-packages.mjs); a maintainer approves them there (2FA).
+      - name: Create Release Pull Request or stage the packages
         uses: changesets/action@v1
         with:
           version: pnpm run version-packages
