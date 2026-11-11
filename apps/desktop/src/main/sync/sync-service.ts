@@ -149,7 +149,7 @@ class SyncService {
         await reminderScheduler.rebuild();
       }
     } catch (error) {
-      if (error instanceof BindingChangedError) {
+      if (error instanceof BindingChangedError || ctx.generation !== bindingGeneration()) {
         // The user changed the server or signed out mid-round; the new binding starts clean.
         logger.info('Sync', 'Binding changed during a sync round; its results were dropped');
         return;
