@@ -24,7 +24,7 @@
     "build:linux": "pnpm --filter @croffledev/desktop build:linux",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm --filter @croffledev/croffle-cli build && changeset publish"
+    "release": "pnpm --filter @croffledev/croffle-cli build && node scripts/stage-packages.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
