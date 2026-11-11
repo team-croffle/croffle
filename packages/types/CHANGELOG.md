@@ -1,5 +1,11 @@
 # @croffledev/croffle-types
 
+## 2.0.1
+
+### Patch Changes
+
+- d2ce1ae: Update dependencies within their semver ranges (`@types/node` for types; `fs-extra` for the CLI).
+
 ## 2.0.0
 
 ### Major Changes

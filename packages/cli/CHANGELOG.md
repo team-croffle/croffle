@@ -1,5 +1,11 @@
 # @croffledev/croffle-cli
 
+## 1.3.1
+
+### Patch Changes
+
+- d2ce1ae: Update dependencies within their semver ranges (`@types/node` for types; `fs-extra` for the CLI).
+
 ## 1.3.0
 
 ### Minor Changes
