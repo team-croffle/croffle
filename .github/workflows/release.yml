@@ -11,8 +11,9 @@
 #       patch on a pre-release (X.Y.Z-rc.N) finalizes it as X.Y.Z; minor/major bump from the core.
 #   - version: optional exact semver (no leading v). If empty, bump from apps/desktop.
 #   - version_suffix: optional prerelease id (e.g. rc.1, beta.2). Appended to the core version.
-#   - draft: keep GitHub Release as draft (default). Notes are written from .ai/release and
-#            the release is published with `gh release edit --draft=false` afterwards.
+#   - draft: keep GitHub Release as draft (default). Notes are written from .loctx/release
+#            (convention: .github/release-notes.md) and the release is published with
+#            `gh release edit --draft=false` afterwards.
 #   - dry_run: build only — no version commit/tag/publish
 
 name: Croffle Release
