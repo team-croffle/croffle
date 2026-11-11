@@ -62,6 +62,8 @@ jobs:
             desktop:
               - 'apps/desktop/**'
               - 'packages/types/**'
+              # The desktop tests read the shared protocol scenarios too.
+              - 'packages/sync-fixtures/**'
             types:
               - 'packages/types/**'
             cli:
