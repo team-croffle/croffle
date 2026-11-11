@@ -57,6 +57,13 @@
       "when": 1794378628887,
       "tag": "0007_sync_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794378812684,
+      "tag": "0008_sync_outbox_triggers",
+      "breakpoints": true
     }
   ]
 }

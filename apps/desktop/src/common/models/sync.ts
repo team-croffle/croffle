@@ -16,3 +16,5 @@ export type SyncColumns = {
 };
 
 export const LAST_WRITER_DEVICE_PREFIX = 'device:';
+
+export { SERVER_WRITER_ID, SYNC_TABLES, type SyncTableName } from '../sync-tables';

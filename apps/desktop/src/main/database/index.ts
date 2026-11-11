@@ -8,6 +8,7 @@ import { app } from 'electron';
 
 import type { PublicTypeIntegrity } from '../../common/assert-public-types';
 import { logger } from '../logger';
+import { ensureOutboxTriggers } from '../sync/outbox-triggers';
 import { applyLegacySchemaFixes } from './ensure-schema';
 import { runMigrations } from './migrations';
 import * as schema from './schema';
@@ -39,6 +40,7 @@ class DatabaseManager {
 
       this.db = drizzle(this.sqlite, { schema });
       runMigrations(this.sqlite, this.db);
+      ensureOutboxTriggers(this.sqlite);
 
       logger.info('DB', 'Database initialized successfully.');
     } catch (error) {
