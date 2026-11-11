@@ -22,6 +22,8 @@ const CHILD_FIRST = env.CHILD_FIRST === '1';
 const INVALID_ROW_ID = env.INVALID_ROW_ID ?? '';
 let fail503 = Number(env.FAIL_503_TIMES ?? 0);
 let dropPushResponses = 0;
+/** Bootstrap pages served before every further bootstrap request answers 503 (-1 = off). */
+let bootstrapPagesLeft = Number(env.FAIL_BOOTSTRAP_AFTER ?? -1);
 
 const USERNAME = env.STUB_USER ?? 'alice';
 const PASSWORD = env.STUB_PASSWORD ?? 'secret';
@@ -196,6 +198,12 @@ const handlers = {
   },
 
   'POST /sync/bootstrap': (_req, res, body) => {
+    if (bootstrapPagesLeft === 0) {
+      return error(res, 503, 'unavailable', 'bootstrap interrupted (FAIL_BOOTSTRAP_AFTER)');
+    }
+    if (bootstrapPagesLeft > 0) {
+      bootstrapPagesLeft--;
+    }
     let position = { s: maxSeq(), i: 0 };
     if (body.cursor) {
       try {
@@ -250,6 +258,12 @@ const handlers = {
   'POST /__stub/fail503': (_req, res, body) => {
     fail503 = Number(body.times ?? 0);
     return send(res, 200, { fail503 });
+  },
+
+  /** Bootstrap pages to serve before failing with 503: `{ pages }`, -1 turns it off. */
+  'POST /__stub/failBootstrapAfter': (_req, res, body) => {
+    bootstrapPagesLeft = Number(body.pages ?? -1);
+    return send(res, 200, { bootstrapPagesLeft });
   },
 
   /** The next N pushes are applied but their answers are dropped. */

@@ -29,6 +29,7 @@ The stub prints one JSON line per request: the route, the status, the `X-Croffle
 | `FORCE_OTP=1`, `OTP_CODE`                  | login answers `otp_required` until the code (123456) is sent    | V-10       |
 | `CHILD_FIRST=1`                            | child rows come before their parents in each page               | V-12       |
 | `INVALID_ROW_ID`                           | a push containing this row id is rejected with `invalid_commit` | V-11       |
+| `FAIL_BOOTSTRAP_AFTER`                     | serve N bootstrap pages, then answer 503 (interrupted snapshot) | V-13       |
 | `STUB_USER`, `STUB_PASSWORD`, `STUB_TOKEN` | credentials; `STUB_TOKEN` is accepted as a pasted token         | V-10       |
 | `TLS_CERT`, `TLS_KEY`                      | serve https with these files                                    | V-9        |
 
