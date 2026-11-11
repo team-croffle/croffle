@@ -11,5 +11,6 @@
   "sortPackageJson": false,
   "sortImports": true,
   "vueIndentScriptAndStyle": true,
-  "useTabs": false
+  "useTabs": false,
+  "ignorePatterns": [".agents/**", ".claude/skills/**", ".claude/settings.json", "AGENTS.md"]
 }
