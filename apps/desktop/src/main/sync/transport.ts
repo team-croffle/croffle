@@ -5,14 +5,12 @@ import {
   PROTOCOL_VERSION,
   type ErrorBody,
   type HealthResponse,
+  type SyncErrorKind,
 } from '@croffledev/common';
 import { session, type Session } from 'electron';
 
 import { logger } from '../logger';
 import { getClientId } from './client-id';
-
-/** Why a sync request failed, as the settings screen explains it. */
-export type SyncErrorKind = 'auth' | 'offline' | 'tls' | 'server' | 'protocol' | 'clock';
 
 export class SyncError extends Error {
   constructor(
