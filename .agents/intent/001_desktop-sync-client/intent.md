@@ -2,9 +2,10 @@
 id: "001"
 slug: desktop-sync-client
 version: "1.3.0"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 승인", rev: "057da73" }
 waivers: []
 supersedes: null
 ---
