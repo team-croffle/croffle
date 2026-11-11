@@ -85,7 +85,7 @@ summary_for_user: |
 - [x] W-10 (f585945) 오케스트레이터 + backfill + 상태 브로드캐스트 (000-10 + 질의서 3) — S-3, S-11, S-2. 의존: W-7, W-8, W-9
 - [x] W-11 (c546f57) 내부 `sync.*` 브리지: common API 타입 + `ipc/sync.handler.ts` + `preload/api/sync.ts` (000-4) — S-4. 의존: W-10
 - [x] W-12 (a0e7cb8) 검증 하네스: 장애 주입 스텁 서버(TLS · OTP · 충돌 · FK 역순 · 410) + 서버 `0.1.0-rc.1` 컨테이너 대상 실행 스크립트 (000-11) — S-17. 의존: W-10
-- [ ] W-13 설정 → 동기화 탭 + `sync-store` + i18n en/ko (000-12) — S-14. 의존: W-11
+- [x] W-13 (c890302) 설정 → 동기화 탭 + `sync-store` + i18n en/ko (000-12) — S-14. 의존: W-11
 - [ ] W-14 README / README.ko "동기화 (beta, 선택)" 절 (000-13) — S-14
 - [ ] W-15 데스크톱 태그 `desktop-v*` + 업데이트 창 릴리스 노트 보완 + AGENTS.md · 노트 규약 갱신 (000-14) — S-15. 첫 rc 전에 병합
 - [ ] W-16 npm staging 발행: 발행 스크립트 + `publish-packages.yml` + AGENTS.md Changeset 규칙 (계획 6) — S-16
