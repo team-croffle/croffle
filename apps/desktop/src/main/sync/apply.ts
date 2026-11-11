@@ -121,6 +121,43 @@ function claimNaturalKey(
   return { apply: true, carry };
 }
 
+/** True when this row has an unsent local edit that beats the incoming version by LWW. */
+function localEditWins(
+  tx: AppDatabase,
+  table: SyncTableName,
+  incoming: Record<string, unknown>,
+): boolean {
+  const target = SYNCED_TABLES[table];
+  const rowId = incoming.id as string;
+  const pending = tx
+    .select({ seq: syncOutbox.seq })
+    .from(syncOutbox)
+    .where(and(eq(syncOutbox.tableName, table), eq(syncOutbox.rowId, rowId)))
+    .all();
+  if (pending.length === 0) {
+    return false;
+  }
+  const [current] = tx.select().from(target).where(eq(target.id, rowId)).all() as Record<
+    string,
+    unknown
+  >[];
+  if (!current) {
+    return false;
+  }
+  const localKey = {
+    updatedAtMs: current.updatedAtMs as number,
+    lastWriterId: current.lastWriterId as string | null,
+  };
+  return wins(localKey, keyOf(incoming)) === 'a';
+}
+
+function keyOf(row: Record<string, unknown>) {
+  return {
+    updatedAtMs: row.updatedAtMs as number,
+    lastWriterId: row.lastWriterId as string | null,
+  };
+}
+
 /**
  * Re-applies a displaced row's unsent edit to the row that now holds the key, as a local write:
  * the update trigger queues it with the incoming version as its base, so it reaches the server.
@@ -150,7 +187,8 @@ function carryOver(
 /**
  * Writes rows received from the server. Each is stored as the server holds it, marked
  * `lastWriterId = 'server'` so the outbox triggers skip it, and any queued local entry for it is
- * dropped. Callers decide beforehand whether a local unsynced edit should win instead.
+ * dropped — unless that unsent local edit wins by LWW, in which case the row is left alone and
+ * the edit reaches the server on the next push.
  *
  * Foreign keys are off for the batch: a page can carry a child before its parent, and the parent
  * arrives later in the same log. Nothing here deletes a parent, so no cascade is missed.
@@ -171,6 +209,11 @@ export function applyServerRows(rows: ServerRow[]): number {
           ...decodeRow(table, row),
           lastWriterId: SERVER_WRITER_ID,
         };
+        // Judged here, row by row, against the row as it is now: an earlier row of the same
+        // batch may have just changed it (a carried-over edit, for one).
+        if (localEditWins(tx, table, local)) {
+          continue;
+        }
         const claim = claimNaturalKey(tx, table, local);
         if (!claim.apply) {
           continue;

@@ -2,7 +2,6 @@ import {
   decodeRow,
   encodeRow,
   ERROR_CODES,
-  wins,
   type BootstrapResponse,
   type Change,
   type PullResponse,
@@ -11,7 +10,6 @@ import {
 import { databaseManager } from '../database';
 import { logger } from '../logger';
 import { applyServerRows, isSyncTable, readLocalRow, type ServerRow } from './apply';
-import { entryFor } from './outbox';
 import { assertBinding, getServer, updateServerState } from './sync-config';
 import { request, SyncError } from './transport';
 
@@ -20,9 +18,8 @@ export type PullContext = { url: string; token: string; generation: number };
 const PAGE_LIMIT = 500;
 
 /**
- * Keeps only the changes that should overwrite local state. A row with an unsynced local edit
- * is overwritten only if the server's version wins by the shared rule; otherwise the local edit
- * stays queued and reaches the server on the next push.
+ * Turns a page into rows to apply, failing on anything this version cannot read. Whether an
+ * unsent local edit wins over a row is decided when it is applied (`applyServerRows`).
  */
 function selectApplicable(changes: Change[]): ServerRow[] {
   const db = databaseManager.getDb();
@@ -61,19 +58,6 @@ function selectApplicable(changes: Change[]): ServerRow[] {
         'protocol',
         `The server sent a ${change.table} row this version cannot read: ${String(error)}`,
       );
-    }
-    if (entryFor(change.table, change.rowId)) {
-      const local = readLocalRow(db, change.table, change.rowId);
-      if (local) {
-        const localKey = {
-          updatedAtMs: local.updatedAtMs as number,
-          lastWriterId: local.lastWriterId as string | null,
-        };
-        const serverKey = { updatedAtMs: change.updatedAtMs, lastWriterId: change.lastWriterId };
-        if (wins(localKey, serverKey) === 'a') {
-          continue;
-        }
-      }
     }
     rows.push({ table: change.table, row: wire });
   }
