@@ -3,7 +3,14 @@ import { hostname } from 'node:os';
 import { ERROR_CODES, type LoginResponse, type WhoAmIResponse } from '@croffledev/common';
 
 import { getClientId } from './client-id';
-import { getServer, resetBinding, saveToken, updateServerState } from './sync-config';
+import {
+  assertBinding,
+  bindingGeneration,
+  getServer,
+  resetBinding,
+  saveToken,
+  updateServerState,
+} from './sync-config';
 import { checkServer, configureTls, request, SyncError } from './transport';
 
 export type SignInResult = { accountId: string; teamId: string | null };
@@ -19,7 +26,14 @@ function requireServerUrl(): string {
   return server.url;
 }
 
-function bind(token: string, accountId: string, teamId: string | null | undefined): SignInResult {
+function bind(
+  generation: number,
+  token: string,
+  accountId: string,
+  teamId: string | null | undefined,
+): SignInResult {
+  // The server was changed while the sign-in was running: this token belongs to the old one.
+  assertBinding(generation);
   // Another account's cursors and snapshot do not apply to this one.
   const previous = getServer()?.accountId;
   if (previous && previous !== accountId) {
@@ -36,6 +50,7 @@ function bind(token: string, accountId: string, teamId: string | null | undefine
  * surfaces as that code so the settings screen can ask for the one-time code and retry.
  */
 export async function signInWithPassword(input: PasswordSignIn): Promise<SignInResult> {
+  const generation = bindingGeneration();
   const url = requireServerUrl();
   await checkServer(url);
   const response = await request<LoginResponse>(url, 'POST', '/auth/login', {
@@ -48,7 +63,7 @@ export async function signInWithPassword(input: PasswordSignIn): Promise<SignInR
       deviceName: hostname(),
     },
   });
-  return bind(response.token, response.accountId, response.teamId);
+  return bind(generation, response.token, response.accountId, response.teamId);
 }
 
 /** A pasted token is checked with `/auth/whoami` first, so a typo fails here, not silently later. */
@@ -57,13 +72,14 @@ export async function signInWithToken(token: string): Promise<SignInResult> {
   if (!trimmed) {
     throw new SyncError('auth', 'The token is empty', 0, ERROR_CODES.unauthorized);
   }
+  const generation = bindingGeneration();
   const url = requireServerUrl();
   await checkServer(url);
   const response = await request<WhoAmIResponse>(url, 'POST', '/auth/whoami', {
     token: trimmed,
     retry: false,
   });
-  return bind(trimmed, response.accountId, response.teamId);
+  return bind(generation, trimmed, response.accountId, response.teamId);
 }
 
 /** Forgets the token and the account binding. Queued local changes stay for the next sign-in. */

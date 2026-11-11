@@ -43,6 +43,31 @@ const UNBOUND_STATE = {
 
 export class InvalidServerUrlError extends Error {}
 
+/**
+ * Bumped whenever the binding changes (server, account, sign-out). A sync round or a sign-in
+ * started under an older generation must not write anything: its answers belong to a binding
+ * that no longer exists.
+ */
+let generation = 0;
+
+export class BindingChangedError extends Error {
+  constructor() {
+    super('The sync binding changed while a request was running');
+    this.name = 'BindingChangedError';
+  }
+}
+
+export function bindingGeneration(): number {
+  return generation;
+}
+
+/** Throws unless the binding is still the one `expected` was read from. */
+export function assertBinding(expected: number): void {
+  if (expected !== generation) {
+    throw new BindingChangedError();
+  }
+}
+
 /** `https://host[:port][/base]` without a trailing slash. Only http and https are accepted. */
 export function normalizeServerUrl(input: string): string {
   let url: URL;
@@ -81,6 +106,7 @@ export function setServer(input: string): SyncServerRow {
     return current;
   }
 
+  generation++;
   const db = databaseManager.getDb();
   if (current) {
     db.update(syncServer)
@@ -96,12 +122,14 @@ export function setServer(input: string): SyncServerRow {
 
 /** Forgets the server entirely (token and binding). */
 export function removeServer(): void {
+  generation++;
   databaseManager.getDb().delete(syncServer).where(eq(syncServer.id, SERVER_ROW_ID)).run();
   clearToken();
 }
 
 /** Signs out: the token and the account binding go, the server URL and TLS choice stay. */
 export function resetBinding(): void {
+  generation++;
   databaseManager
     .getDb()
     .update(syncServer)

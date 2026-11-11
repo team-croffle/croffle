@@ -14,6 +14,9 @@ import { countFailed, countPending } from './outbox';
 import { pull, bootstrap } from './pull';
 import { push } from './push';
 import {
+  assertBinding,
+  BindingChangedError,
+  bindingGeneration,
   getServer,
   isTokenVolatile,
   loadToken,
@@ -118,7 +121,7 @@ class SyncService {
     if (!server || !token) {
       return;
     }
-    const ctx = { url: server.url, token };
+    const ctx = { url: server.url, token, generation: bindingGeneration() };
     configureTls(server.url, server.allowInsecureTls);
 
     try {
@@ -129,6 +132,7 @@ class SyncService {
       if (!server.bootstrappedAt) {
         applied += await bootstrap(ctx);
       }
+      assertBinding(ctx.generation);
       if (!getServer()?.backfilledAt) {
         const queued = backfillOutbox();
         updateServerState({ backfilledAt: Date.now() });
@@ -137,6 +141,7 @@ class SyncService {
       await push(ctx);
       applied += await pull(ctx);
 
+      assertBinding(ctx.generation);
       updateServerState({ lastSyncedAt: Date.now(), lastErrorKind: null, lastError: null });
       this.backoffMs = 0;
       if (applied > 0) {
@@ -144,6 +149,11 @@ class SyncService {
         await reminderScheduler.rebuild();
       }
     } catch (error) {
+      if (error instanceof BindingChangedError) {
+        // The user changed the server or signed out mid-round; the new binding starts clean.
+        logger.info('Sync', 'Binding changed during a sync round; its results were dropped');
+        return;
+      }
       const kind: SyncErrorKind = error instanceof SyncError ? error.kind : 'server';
       const message = error instanceof Error ? error.message : String(error);
       updateServerState({ lastErrorKind: kind, lastError: message });
