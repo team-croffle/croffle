@@ -49,6 +49,14 @@ class DatabaseManager {
     }
   }
 
+  /** The raw connection, for pragmas that cannot run inside a drizzle transaction. */
+  public getSqlite(): Database.Database {
+    if (!this.sqlite) {
+      throw new Error('Database not initialized. Call initialize() first.');
+    }
+    return this.sqlite;
+  }
+
   public getDb(): AppDatabase {
     if (!this.db) {
       throw new Error('Database not initialized. Call initialize() first.');

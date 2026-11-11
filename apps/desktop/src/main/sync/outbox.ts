@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { SyncTableName } from '@croffledev/common';
-import { and, asc, count, eq, ne } from 'drizzle-orm';
+import { and, asc, count, eq, gte, lt, ne } from 'drizzle-orm';
 
 import { databaseManager } from '../database';
 import { syncOutbox, type SyncOutboxRow } from '../database/schema';
@@ -9,15 +9,30 @@ import { syncOutbox, type SyncOutboxRow } from '../database/schema';
 /** What a push sent for one entry: enough to tell whether the row moved on meanwhile. */
 export type SentEntry = Pick<SyncOutboxRow, 'opId' | 'rowVersion'>;
 
-/** The oldest queued changes, in the order they were first queued. */
+/** After this many failed attempts an entry waits until the row is edited again (resets to 0). */
+export const MAX_ATTEMPTS = 5;
+
+/** The oldest queued changes that are still worth sending, in the order they were first queued. */
 export function peekBatch(limit: number): SyncOutboxRow[] {
   return databaseManager
     .getDb()
     .select()
     .from(syncOutbox)
+    .where(lt(syncOutbox.attempts, MAX_ATTEMPTS))
     .orderBy(asc(syncOutbox.seq))
     .limit(limit)
     .all();
+}
+
+/** Entries that stopped being retried; the settings screen shows them as failed. */
+export function countFailed(): number {
+  const [row] = databaseManager
+    .getDb()
+    .select({ n: count() })
+    .from(syncOutbox)
+    .where(gte(syncOutbox.attempts, MAX_ATTEMPTS))
+    .all();
+  return row?.n ?? 0;
 }
 
 export function countPending(): number {
