@@ -45,7 +45,7 @@ summary_for_user: |
 - 픽스처의 row codec은 `schedule`만 있다. 나머지 4개 테이블은 데스크톱 단위 테스트로 덮는다. 픽스처는 읽기만 한다(intent 영향 범위).
 
 ### 전송 · 인증 (main)
-- `sync/transport.ts`: Electron `net` + 동기화 전용 `session`(`session.fromPartition('croffle-sync')`). 모든 요청에 `Authorization: Bearer`, `X-Croffle-Sync-Version: 1`, `X-Croffle-Client: <clientId>`. 타임아웃, 5xx · 네트워크 오류는 지수 백오프로 재시도, 4xx는 재시도하지 않음. 오류는 `kind`(auth | offline | tls | server | protocol | clock)로 분류하고 메시지에 토큰을 넣지 않는다. 요청마다 `[Sync] <METHOD> <path> <status>` 한 줄만 로그에 남긴다(헤더 · 본문 없음).
+- `sync/transport.ts`: Electron `net` + 동기화 전용 `session`(`session.fromPartition('croffle-sync')`). 모든 요청에 `Authorization: Bearer`, `X-Croffle-Sync-Version: 1`, `X-Croffle-Client: <clientId>`. 타임아웃, 5xx · 네트워크 오류는 지수 백오프로 재시도, 4xx는 재시도하지 않음. 오류는 `kind`(auth | offline | tls | server | protocol | clock)로 분류하고 메시지에 토큰을 넣지 않는다. 요청마다 `Sync: <METHOD> <path> <status>`(응답이 없으면 `… failed`) 한 줄만 로그에 남긴다(헤더 · 본문 없음).
 - TLS: 기본 strict. `allowInsecureTls`가 켜졌을 때만 전용 session의 `setCertificateVerifyProc`에서 **등록된 서버 호스트**에 한해 통과. 기본 session(확장 `http.*`)은 건드리지 않는다.
 - 연결 확인 `checkServer()`: `GET /health` → `protocol.min ≤ 1 ≤ max`가 아니면 `protocol` 오류(어느 쪽을 올려야 하는지 포함). `time`과 로컬 시계 차가 임계값(기본 5분)을 넘으면 `clock` 경고(동기화는 계속).
 - `sync/auth.ts`: ID/PW → `POST /auth/login`(`clientId`, `deviceName`), 401 `otp_required`면 OTP를 받아 재시도. 토큰 붙여넣기 → `POST /auth/whoami`로 확인한 뒤에만 저장. 로그아웃 · 서버 변경 → 토큰 삭제, `lastPulledSeq`/`bootstrapCursor`/`backfilledAt` 초기화. outbox는 지우지 않는다(로컬 변경을 잃지 않게).
@@ -77,7 +77,7 @@ summary_for_user: |
 - [x] W-2 (d71adab) outbox 트리거 0008 + `ensureOutboxTriggers()` + `sync/outbox.ts`(peek · count · ack · fail) + `SERVER_WRITER_ID` (000-2) — S-6
 - [x] W-3 (965a6d3) `sync-config-service`: 서버 설정 CRUD + `safeStorage` 토큰 + TLS 플래그 (000-3) — S-7, S-8
 - [x] W-4 (59c5f1e) 프로토콜 계약 `common/sync-protocol.ts` (타입 · encode/decode · wins) (000-5) — S-5
-- [ ] W-5 테스트 러너 + 픽스처 리더 + 나머지 4개 테이블 codec 단위 테스트 + CI 테스트 단계 + `.agents/harness/gates.yaml`에 `test` 게이트(`pnpm -r test`) 추가 (000-15) — S-13. 의존: W-4. 게이트 추가는 하네스 손 수정이며 사용자가 이번 한 번만 허락함(intent `waivers:`)
+- [x] W-5 (d3b5777) 테스트 러너 + 픽스처 리더 + 나머지 4개 테이블 codec 단위 테스트 + CI 테스트 단계 + `.agents/harness/gates.yaml`에 `test` 게이트(`pnpm -r test`) 추가 (000-15) — S-13. 의존: W-4. 게이트 추가는 하네스 손 수정이며 사용자가 이번 한 번만 허락함(intent `waivers:`)
 - [ ] W-6 전송 계층: 전용 session · 헤더 · 재시도/백오프 · TLS 호스트 한정 · `checkServer()`(프로토콜 범위 · 시계) (000-6) — S-8, S-12. 의존: W-3, W-4
 - [ ] W-7 인증: 로그인(+OTP) · 토큰 붙여넣기(whoami) · 로그아웃/서버 변경 초기화 (000-7) — S-9, S-7. 의존: W-3, W-6
 - [ ] W-8 push 엔진 (000-8) — S-1, S-3. 의존: W-2, W-6
@@ -141,7 +141,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
 - V-6 **서버 미등록 상태에서 네트워크 호출 0건 (음성 확인)**
   - 검증 대상: S-2, W-1, W-10
   - 실행 방법: `[수동 · Linux/Windows]` 서버를 등록하지 않은 상태에서 `pnpm dev`로 앱을 띄우고 일정·태그·리마인더를 생성·수정·삭제한 뒤 주기 타이머(5분) 이상인 6분 동안 대기 → `sqlite3 apps/desktop/dev/croffle.db "SELECT count(*) FROM sync_server; SELECT count(*) FROM sync_outbox;"` 및 `apps/desktop/dev/logs/main.log`, 전용 세션(`croffle-sync`) 요청 로그 확인
-  - 기대 결과: `sync_server`는 0건, `sync_outbox`는 로컬 변경 수만큼 적재되어 있으면서 전송 계층의 요청 로그(`[Sync] <METHOD> <path> <status>`)가 `main.log`에 0줄이고, `main.log`에 동기화 실패·재시도 로그가 0건이며 앱 동작은 1.2.6과 동일함
+  - 기대 결과: `sync_server`는 0건, `sync_outbox`는 로컬 변경 수만큼 적재되어 있으면서 전송 계층의 요청 로그(`Sync: <METHOD> <path>` 로 시작하는 줄)가 `main.log`에 0줄이고, `main.log`에 동기화 실패·재시도 로그가 0건이며 앱 동작은 1.2.6과 동일함
   - 실패 판정: 서버 미설정 상태에서 `/health`, `/auth/*`, `/sync/*` 등 네트워크 요청이 1회라도 시도되거나 오류 로그/알림이 발생함
   - 증적 경로: `.loctx/reports/1.3.0/v06-no-server-no-network.log`
 
