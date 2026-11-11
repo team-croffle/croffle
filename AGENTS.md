@@ -103,7 +103,8 @@ Workflows: `ci`, `secret-scan`, `labeler`, `publish-packages`, `release`, `serve
 - PRs are verified by GitHub Actions (`CI`, `Secret Scan`); merge with **Rebase and Merge** only, then delete the branch.
 - **rc = the preview of a finished version.** A version is cut as an rc only after it is implemented, reviewed, tested, merged and audited (Flow step 5); the rc exists to make the final adjustments before stable. Fixes after an rc are stabilisation work units, followed by the next rc. Work units are not released one by one.
 - Stable releases only on the maintainer's explicit instruction.
-- `packages/*` changes need a Changeset; the `Publish Packages` bot PR is merged to publish.
+- `packages/*` changes need a Changeset. The `chore: version packages` PR that the Changeset produces is part of the work that added it: verify it, then merge it without asking again. The bot PR runs no CI, so check it locally first — only `packages/*/package.json`, `CHANGELOG.md` and the consumed `.changeset/*.md` change, versions match the Changeset bumps, `pnpm install --frozen-lockfile`, typecheck of types and cli, the cli build, and `pnpm pack` of each package. Publishing goes to npm staging; ask the user to approve the staged release there.
+- After a merge, delete the branch on both sides: the remote one (merge with `--delete-branch`) and the local one.
 
 ## Red lines
 
