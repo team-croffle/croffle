@@ -6,7 +6,8 @@ status: approved
 origin: user
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 승인", rev: "057da73 (rebased onto master as 75860bc, intent.md unchanged)" }
-waivers: []
+waivers:
+  - { step: "harness hand-edit: add the test gate (pnpm -r test) to .agents/harness/gates.yaml in spec W-5", words: "그래. 이번만이니까 게이트 추가까지 해서 승인할게", at: "2026-11-11", scope: once }
 supersedes: null
 ---
 ## 문제

@@ -1,7 +1,8 @@
 ---
 intent: "001"
-status: draft
-approvals: []
+status: accepted
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 이번만이니까 게이트 추가까지 해서 승인할게", rev: "bf53558 (+ W-5 gate line added on these words)", kind: summary }
 summary_for_user: |
   데스크톱 1.3.0 동기화 클라이언트를 작업 단위 16개(W-1~W-16)로 나눴습니다: DB · 트리거 → 프로토콜 계약과 첫 테스트 러너 → 전송 · 인증 → push · pull(bootstrap · 410 복구) → 오케스트레이터(첫 동기화 backfill) → 내부 브리지 → 검증 하네스 → 설정 탭 · README → desktop-v 태그 → npm staging 발행.
   intent 계획과 다른 점은 하나입니다: 내부 브리지를 기반 단계에서 엔진 뒤(W-11)로 옮겼습니다. 감싸는 함수가 먼저 있어야 브리지를 한 번에 완성하고 따로 되돌릴 수 있습니다.
@@ -75,7 +76,7 @@ summary_for_user: |
 - [ ] W-2 outbox 트리거 0008 + `ensureOutboxTriggers()` + `sync/outbox.ts`(peek · count · ack · fail) + `SERVER_WRITER_ID` (000-2) — S-6
 - [ ] W-3 `sync-config-service`: 서버 설정 CRUD + `safeStorage` 토큰 + TLS 플래그 (000-3) — S-7, S-8
 - [ ] W-4 프로토콜 계약 `common/sync-protocol.ts` (타입 · encode/decode · wins) (000-5) — S-5
-- [ ] W-5 테스트 러너 + 픽스처 리더 + 나머지 4개 테이블 codec 단위 테스트 + CI 테스트 단계 (000-15) — S-13. 의존: W-4
+- [ ] W-5 테스트 러너 + 픽스처 리더 + 나머지 4개 테이블 codec 단위 테스트 + CI 테스트 단계 + `.agents/harness/gates.yaml`에 `test` 게이트(`pnpm -r test`) 추가 (000-15) — S-13. 의존: W-4. 게이트 추가는 하네스 손 수정이며 사용자가 이번 한 번만 허락함(intent `waivers:`)
 - [ ] W-6 전송 계층: 전용 session · 헤더 · 재시도/백오프 · TLS 호스트 한정 · `checkServer()`(프로토콜 범위 · 시계) (000-6) — S-8, S-12. 의존: W-3, W-4
 - [ ] W-7 인증: 로그인(+OTP) · 토큰 붙여넣기(whoami) · 로그아웃/서버 변경 초기화 (000-7) — S-9, S-7. 의존: W-3, W-6
 - [ ] W-8 push 엔진 (000-8) — S-1, S-3. 의존: W-2, W-6
