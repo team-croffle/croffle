@@ -3,7 +3,9 @@
 # Distribution is the ghcr image only. This workflow deliberately does NOT
 # create a GitHub Release: electron-updater resolves "the latest release" across
 # the whole repository, so a server release here would hijack the desktop app's
-# update check and every installed client would stop updating.
+# update check and every installed client would stop updating. Release notes
+# are committed instead, as docs/server/release/<version>.md (convention:
+# .github/release-notes.md).
 #
 # Trigger: Actions → "Croffle Server Release" → Run workflow
 #   - version: exact semver without a leading v (e.g. 0.1.0)
@@ -187,4 +189,5 @@ jobs:
             echo "No GitHub Release is created on purpose: the desktop updater"
             echo "resolves the repository's latest release, and a server release"
             echo "there would stop desktop clients from updating."
+            echo "Release notes: docs/server/release/<version>.md."
           } >> "$GITHUB_STEP_SUMMARY"
