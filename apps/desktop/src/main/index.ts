@@ -19,6 +19,7 @@ import {
 } from './setting/setting-applies';
 import { settingService } from './setting/setting-service';
 import { closeSplash, showSplash } from './splash';
+import { syncService } from './sync/sync-service';
 import { windowService } from './window/window-service';
 
 // Must be called before app is ready
@@ -150,6 +151,7 @@ if (!gotTheLock) {
       registerAllIpcHandlers();
 
       await reminderScheduler.start();
+      syncService.start();
 
       createWindow();
 
@@ -166,6 +168,7 @@ if (!gotTheLock) {
 
     app.on('before-quit', () => {
       reminderScheduler.stop();
+      syncService.stop();
     });
 
     app.on('activate', function () {
