@@ -37,3 +37,5 @@ export {
 } from './schedule-external-link';
 export { tags, type TagRow, type NewTag } from './tag';
 export { syncColumns } from './sync-columns';
+export { syncServer, type SyncServerRow, type NewSyncServer } from './sync-server';
+export { syncOutbox, type SyncOutboxRow, type NewSyncOutbox } from './sync-outbox';

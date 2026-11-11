@@ -31,10 +31,11 @@ summary_for_user: |
 ## 설계
 
 ### 데이터 (main)
-- **0007** `sync_server`(기기 로컬, sync 컬럼 없음, 한 행): `id`, `url`, `accountId`, `teamId`, `allowInsecureTls`(0/1), `enabled`(0/1), `lastPulledSeq`, `bootstrapCursor`(진행 중 스냅샷의 커서, 없으면 null), `backfilledAt`, `lastSyncedAt`, `lastError`, `lastErrorKind`. 토큰은 이 테이블에 두지 않는다.
+- **0007** `sync_server`(기기 로컬, sync 컬럼 없음, 한 행): `id`, `url`, `accountId`, `teamId`, `allowInsecureTls`(0/1), `enabled`(0/1), `lastPulledSeq`, `bootstrapCursor`(진행 중 스냅샷의 커서, 없으면 null), `bootstrappedAt`(첫 스냅샷 완료 시각 — 빈 서버면 `lastPulledSeq`가 0으로 남아 그것만으로는 완료를 알 수 없음), `backfilledAt`, `lastSyncedAt`, `lastError`, `lastErrorKind`. 토큰은 이 테이블에 두지 않는다.
 - **0007** `sync_outbox`: `seq`(PK autoinc), `opId`, `tableName`, `rowId`, `op`(upsert|delete), `baseVersion`, `rowVersion`, `updatedAtMs`, `enqueuedAt`, `attempts`, `lastError`, UNIQUE(`tableName`,`rowId`).
 - **0008** 트리거: 5개 테이블 × AFTER INSERT / AFTER UPDATE, `WHEN NEW.lastWriterId IS NOT 'server'`. 같은 행을 여러 번 고치면 `ON CONFLICT(tableName,rowId) DO UPDATE`로 합치되 `opId`와 `baseVersion`은 유지한다(서버 충돌 판정은 첫 미동기 변경 직전 버전 기준). drizzle-kit이 트리거를 만들지 않으므로 SQL은 손으로 쓰고 journal에 올린다. 부팅 때 `ensureOutboxTriggers()`가 `CREATE TRIGGER IF NOT EXISTS`로 보정한다.
 - 이미 커밋된 0000~0006은 건드리지 않는다.
+- drizzle snapshot이 0001까지만 있어서 `db:generate`가 0002~0006을 다시 만들어 내는 상태였다(구현 중 확인). 0007에서 현재 스키마 전체의 `0007_snapshot.json`을 두고, SQL은 새 테이블만 손으로 쓴다. 이후 `db:generate`는 변경이 없으면 아무것도 만들지 않는다.
 
 ### 프로토콜 계약 (common)
 - `src/common/sync-protocol.ts`: 서버 `protocol` 패키지와 같은 타입(Commit, PushRequest/Response, Conflict, Change, PullRequest/Response, BootstrapRequest/Response, LoginRequest/Response, WhoAmIResponse), `PROTOCOL_VERSION = 1`, 헤더 이름, `encodeRow(table, row)` / `decodeRow(table, wire)`, `wins(a, b)`.
@@ -124,7 +125,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
     1) `git diff master...HEAD -- apps/desktop/drizzle/0000* apps/desktop/drizzle/0001* apps/desktop/drizzle/0002* apps/desktop/drizzle/0003* apps/desktop/drizzle/0004* apps/desktop/drizzle/0005* apps/desktop/drizzle/0006*`
     2) `pnpm --filter @croffledev/desktop db:generate && git status --porcelain apps/desktop/drizzle/`
     3) `[수동 · Linux/Windows]` 1.2.6 DB 백업본을 `apps/desktop/dev/croffle.db`로 복사 후 `pnpm dev` 기동 → `sqlite3 apps/desktop/dev/croffle.db "PRAGMA table_info(sync_server); PRAGMA table_info(sync_outbox); SELECT count(*), group_concat(name) FROM sqlite_master WHERE type='trigger';"` 실행 → 트리거 1개를 `DROP TRIGGER`로 삭제한 뒤 앱 재기동 후 트리거 개수 재조회
-  - 기대 결과: 1) 0000~0006 diff 0줄, 2) `db:generate`가 추가 파일·변경을 만들지 않음, 3) 1.2.6의 기존 일정·태그 행 수가 100% 보존되고 `sync_server`(토큰 컬럼 없음)와 `sync_outbox`(`UNIQUE(tableName,rowId)`)가 생성되며, 5개 테이블×INSERT/UPDATE 트리거 총 10개가 존재하고 강제 삭제한 트리거가 재기동 시 `ensureOutboxTriggers()`로 복구되어 다시 10개가 됨
+  - 기대 결과: 1) 0000~0006 diff 0줄, 2) `db:generate`가 추가 파일·변경을 만들지 않음(0007에서 snapshot을 보강한 뒤 기준. 그 전 master는 snapshot이 0001까지라 깨끗하지 않았음), 3) 1.2.6의 기존 일정·태그 행 수가 100% 보존되고 `sync_server`(토큰 컬럼 없음)와 `sync_outbox`(`UNIQUE(tableName,rowId)`)가 생성되며, 5개 테이블×INSERT/UPDATE 트리거 총 10개가 존재하고 강제 삭제한 트리거가 재기동 시 `ensureOutboxTriggers()`로 복구되어 다시 10개가 됨
   - 실패 판정: 0000~0006이 수정되었거나, 스키마와 journal이 어긋나거나, `sync_server`에 토큰 저장 컬럼이 있거나, 트리거가 10개가 아니거나, 재기동 후 삭제된 트리거가 복구되지 않음
   - 증적 경로: `.loctx/reports/1.3.0/v04-db-migration-triggers.log`
 
