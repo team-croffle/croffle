@@ -21,6 +21,7 @@ const OTP_CODE = env.OTP_CODE ?? '123456';
 const CHILD_FIRST = env.CHILD_FIRST === '1';
 const INVALID_ROW_ID = env.INVALID_ROW_ID ?? '';
 let fail503 = Number(env.FAIL_503_TIMES ?? 0);
+let dropPushResponses = 0;
 
 const USERNAME = env.STUB_USER ?? 'alice';
 const PASSWORD = env.STUB_PASSWORD ?? 'secret';
@@ -171,6 +172,12 @@ const handlers = {
       result.accepted.push(commit.opId);
     }
     result.serverSeq ||= maxSeq();
+    if (dropPushResponses > 0) {
+      // Applied, but the answer never arrives: what a dropped connection looks like.
+      dropPushResponses--;
+      console.log(JSON.stringify({ route: 'POST /sync/push', status: 'dropped after apply' }));
+      return res.destroy();
+    }
     return send(res, 200, result);
   },
 
@@ -243,6 +250,12 @@ const handlers = {
   'POST /__stub/fail503': (_req, res, body) => {
     fail503 = Number(body.times ?? 0);
     return send(res, 200, { fail503 });
+  },
+
+  /** The next N pushes are applied but their answers are dropped. */
+  'POST /__stub/dropPush': (_req, res, body) => {
+    dropPushResponses = Number(body.times ?? 1);
+    return send(res, 200, { dropPushResponses });
   },
 
   /** Everything the stub holds, for comparing with the desktop database. */
