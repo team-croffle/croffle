@@ -32,22 +32,35 @@ const RETRY_DELAYS_MS = [500, 1_000, 2_000];
 /** Beyond this, a wall-clock difference is reported: LWW compares client clocks. */
 export const CLOCK_SKEW_WARNING_MS = 5 * 60_000;
 
-let syncSession: Session | null = null;
-let insecureHost: string | null = null;
+const sessions = new Map<string, Session>();
+let activeSession: Session | null = null;
 
 /**
- * Sync requests use their own session, so relaxing TLS for a self-hosted server never reaches
- * the default session that extensions' `http.*` uses.
+ * Sync requests use their own sessions, so relaxing TLS for a self-hosted server never reaches
+ * the default session that extensions' `http.*` uses. Chromium caches a certificate verdict per
+ * session — a later change of the verify proc is not consulted again — so each policy gets its
+ * own session and never changes: `croffle-sync` is strict, `croffle-sync-insecure-<host>` accepts
+ * an unverified certificate from that one host and keeps every other host strict.
  */
-function getSession(): Session {
-  if (!syncSession) {
-    syncSession = session.fromPartition(SESSION_PARTITION, { cache: false });
-    syncSession.setCertificateVerifyProc((request, callback) => {
+function sessionFor(insecureHost: string | null): Session {
+  const partition = insecureHost
+    ? `${SESSION_PARTITION}-insecure-${insecureHost}`
+    : SESSION_PARTITION;
+  let ses = sessions.get(partition);
+  if (!ses) {
+    ses = session.fromPartition(partition, { cache: false });
+    ses.setCertificateVerifyProc((request, callback) => {
       // 0 accepts the certificate, -3 keeps Chromium's own verdict.
       callback(insecureHost !== null && request.hostname === insecureHost ? 0 : -3);
     });
+    sessions.set(partition, ses);
   }
-  return syncSession;
+  return ses;
+}
+
+function getSession(): Session {
+  activeSession ??= sessionFor(null);
+  return activeSession;
 }
 
 /**
@@ -55,8 +68,7 @@ function getSession(): Session {
  * keeps the setting on. Any other host, and the default session, stay strict.
  */
 export function configureTls(serverUrl: string | null, allowInsecure: boolean): void {
-  insecureHost = serverUrl && allowInsecure ? new URL(serverUrl).hostname : null;
-  getSession();
+  activeSession = sessionFor(serverUrl && allowInsecure ? new URL(serverUrl).hostname : null);
 }
 
 export type RequestOptions = {
