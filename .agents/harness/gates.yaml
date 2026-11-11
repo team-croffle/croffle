@@ -1,10 +1,37 @@
 # discovered by reins install — the loop reads only this file (design §5)
+# Edited by hand on 2026-11-11 with the user's permission: the gates CI runs.
+# There is no Node test script yet (the desktop fixture reader is work 000-15),
+# so `pnpm -r test` would run nothing and is not a gate.
 schema: reins/gates@1
 gates:
+  typecheck:
+    cmd: pnpm typecheck
+    from: package.json#scripts.typecheck
+  lint:
+    cmd: pnpm lint
+    from: package.json#scripts.lint
+  format:
+    cmd: pnpm exec oxfmt --check
+    from: .github/workflows/ci.yml#Format check (oxfmt)
   build:
     cmd: pnpm build
     from: package.json#scripts.build
+  build-cli:
+    cmd: pnpm --filter @croffledev/croffle-cli build
+    from: .github/workflows/ci.yml#Build cli
+  server:
+    cmd: make -C apps/server check
+    from: apps/server/Makefile#check
+  server-web:
+    cmd: pnpm --dir apps/server/web build
+    from: .github/workflows/ci.yml#Server dashboard
 order:
+  - typecheck
+  - lint
+  - format
   - build
+  - build-cli
+  - server-web
+  - server
 mutating_forbidden: true
 evidence: raw
