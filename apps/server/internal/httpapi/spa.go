@@ -36,19 +36,26 @@ func (s *server) spaHandler(assets fs.FS) http.HandlerFunc {
 	fileServer := http.FileServer(http.FS(assets))
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		relative := s.stripBase(r.URL.Path)
+		looksLikeFile := path.Ext(relative) != ""
+
 		if indexErr != nil {
+			// Without a build there are no files at all, so the same rule as
+			// below applies: only routes get the page.
+			if looksLikeFile {
+				writeError(w, http.StatusNotFound, "not_found", "no such file")
+				return
+			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(notBuiltPage))
 			return
 		}
 
-		relative := s.stripBase(r.URL.Path)
-
 		// A request that looks like a file either exists or is a 404; only
 		// routes fall back to index.html. Serving the app for a missing asset
 		// would turn a broken script tag into a confusing blank page.
-		if ext := path.Ext(relative); ext != "" {
+		if looksLikeFile {
 			if _, err := fs.Stat(assets, strings.TrimPrefix(relative, "/")); err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					writeError(w, http.StatusNotFound, "not_found", "no such file")
