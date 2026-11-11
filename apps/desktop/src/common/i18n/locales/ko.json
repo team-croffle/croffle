@@ -378,7 +378,8 @@
     "now": "지금 업데이트",
     "alreadyLatest": "이미 최신 버전입니다.",
     "failed": "업데이트 실패",
-    "errorFallback": "업데이트 중 오류가 발생했습니다."
+    "errorFallback": "업데이트 중 오류가 발생했습니다.",
+    "viewReleaseNotes": "릴리스 노트 보기"
   },
   "extensions": {
     "loadFailed": "확장을 불러오지 못했습니다",

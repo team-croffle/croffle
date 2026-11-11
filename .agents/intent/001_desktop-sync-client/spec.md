@@ -66,7 +66,7 @@ summary_for_user: |
 - Node 24의 `node --test`가 `.ts`를 바로 실행한다(2026-11-11 실측). 새 의존성 없음. `apps/desktop`에 `test` 스크립트, 테스트는 `src/common/*.test.ts`. 픽스처 경로는 저장소 상대. 루트 `pnpm -r test`와 CI desktop 스코프에 테스트 단계 추가. `.ts` 확장자 import를 위해 tsconfig에 `allowImportingTsExtensions`(noEmit이라 가능)를 넣는다.
 
 ### 릴리스 · 발행
-- 데스크톱 태그: `release.yml`의 태그를 `desktop-v${version}`으로, `electron-builder.yml`의 `publish.tagNamePrefix: desktop-v`. 접두어 태그에서는 electron-updater가 릴리스 노트를 계산하지 못하므로(`semver.valid` 실패), 빌드 때 `releaseInfo.releaseNotes`를 `latest.yml`에 넣고 `update-modal.vue`는 노트가 없으면 릴리스 페이지 링크를 보여 준다. 릴리스 제목 관례는 유지한다.
+- 데스크톱 태그: `release.yml`의 태그를 `desktop-v${version}`으로, `electron-builder.yml`의 `publish.tagNamePrefix: desktop-v`. 릴리스 제목 관례는 유지한다. (구현 중 확인, electron-updater 6.8 소스) 기본 설정(`fullChangelog: false`)에서 노트는 feed의 본문을 그대로 쓰므로 접두어와 무관하게 보인다 — 2026-10-20 분석의 "노트가 빈다"는 `fullChangelog: true`에만 해당한다. 그래서 `releaseInfo` 주입은 하지 않고, `update-modal.vue`는 노트가 비었을 때(draft를 본문 없이 게시한 경우) 릴리스 페이지 링크만 보여 준다. 대신 다른 문제가 있다: rc 설치본은 `allowPrerelease`가 자동으로 켜지고 그 경로는 semver가 아닌 태그(`desktop-v…`)를 모두 건너뛰므로, `autoUpdater.allowPrerelease = false`로 고정해 rc 설치본도 다음 stable로 업데이트되게 한다.
 - npm staging: `publish-packages`의 `changeset publish`를 스크립트로 바꾼다. 패키지마다 npm에 없는 버전이면 `pnpm pack`(workspace 의존성 치환) → 풀어서 `npm stage publish --provenance`(npm CLI ≥ 11.15.0, OIDC). 출력된 stage id를 job summary에 남긴다. git 태그(`@croffledev/<pkg>@<version>`)는 stage 때 만들지 않고, 다음 실행에서 "npm에 공개되었는데 태그가 없는 버전"을 찾아 만든다. npmjs.com의 trusted publishing 설정을 "stage만 허용"으로 바꾸는 일은 사용자가 한다(2FA).
 - AGENTS.md: Versioning · CI/CD · Changeset 규칙 문장을 바뀐 동작에 맞춘다. 템플릿 `.github/release-notes.md`도.
 
@@ -86,7 +86,7 @@ summary_for_user: |
 - [x] W-11 (c546f57) 내부 `sync.*` 브리지: common API 타입 + `ipc/sync.handler.ts` + `preload/api/sync.ts` (000-4) — S-4. 의존: W-10
 - [x] W-12 (a0e7cb8) 검증 하네스: 장애 주입 스텁 서버(TLS · OTP · 충돌 · FK 역순 · 410) + 서버 `0.1.0-rc.1` 컨테이너 대상 실행 스크립트 (000-11) — S-17. 의존: W-10
 - [x] W-13 (c890302) 설정 → 동기화 탭 + `sync-store` + i18n en/ko (000-12) — S-14. 의존: W-11
-- [ ] W-14 README / README.ko "동기화 (beta, 선택)" 절 (000-13) — S-14
+- [x] W-14 (4d40f05) README / README.ko "동기화 (beta, 선택)" 절 (000-13) — S-14
 - [ ] W-15 데스크톱 태그 `desktop-v*` + 업데이트 창 릴리스 노트 보완 + AGENTS.md · 노트 규약 갱신 (000-14) — S-15. 첫 rc 전에 병합
 - [ ] W-16 npm staging 발행: 발행 스크립트 + `publish-packages.yml` + AGENTS.md Changeset 규칙 (계획 6) — S-16
 
@@ -265,7 +265,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
   - 검증 대상: S-15, W-15
   - 실행 방법:
     1) `.github/workflows/release.yml`의 태그(`desktop-v${version}`), `apps/desktop/electron-builder.yml`의 `publish.tagNamePrefix: desktop-v`, `AGENTS.md` 및 `.github/release-notes.md` 문구 확인, `git tag -l "v1.2.*"`로 기존 태그 무변경 확인
-    2) 패키징 산출물 `latest.yml` / `latest-linux.yml`에 `version`과 `releaseNotes`가 포함되는지 확인하고, `update-modal.vue`에서 `releaseNotes`가 있을 때 본문 렌더·없을 때 GitHub 릴리스 페이지 링크 폴백 동작 확인
+    2) `update-modal.vue`에서 `releaseNotes`가 있을 때 본문을 렌더하고, 없을 때 `desktop-v<version>` 릴리스 페이지 링크를 보여 주는지, `window-service.ts`가 `autoUpdater.allowPrerelease = false`로 고정하는지 확인 (설계의 W-15 항목: 노트는 feed 본문에서 오므로 `latest.yml` 주입은 하지 않음)
     3) `[수동 · Linux/Windows, stable 게시 직후]` `desktop-v1.3.0` 정식 릴리스 게시 후 기존 `1.2.6` 설치본을 실행해 업데이트 감지와 모달 표시 확인
   - 판정 시점: 1)~2)는 rc 전 테스트에서, 3)은 stable 게시 직후에 판정합니다(rc는 `/releases/latest`에 잡히지 않아 1.2.6이 보지 못함).
   - 기대 결과: 1) 새 태그는 `desktop-v1.3.0-rc.1` / `desktop-v1.3.0` 형식으로만 생성되고 `v1.2.6` 이하 태그는 그대로 유지됨. 2~3) `1.2.6` 클라이언트가 `desktop-v1.3.0` 정식 릴리스를 감지하여 업데이트 모달을 띄우고, 모달 안에 릴리스 노트(또는 릴리스 페이지 링크)가 정상 표시됨

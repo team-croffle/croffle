@@ -169,6 +169,9 @@ class WindowService {
 
     autoUpdater.autoDownload = false; // 체크 후 자동 다운로드 방지
     autoUpdater.autoInstallOnAppQuit = true; // 자동 업데이트 설치 허용
+    // An rc build would otherwise turn on allowPrerelease, whose path keeps only semver-valid tags
+    // and so skips every `desktop-v…` release. Stable only: an rc install moves to the next stable.
+    autoUpdater.allowPrerelease = false;
 
     autoUpdater.on('checking-for-update', () => logger.info('Updater', 'Checking...'));
     autoUpdater.on('update-available', (info) => {

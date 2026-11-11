@@ -32,6 +32,15 @@
         class="text-muted-foreground max-h-32 overflow-y-auto rounded-md border p-3 text-sm"
         v-html="updateInfo.releaseNotes"
       />
+      <a
+        v-else-if="updateInfo?.version"
+        :href="`https://github.com/team-croffle/croffle/releases/tag/desktop-v${updateInfo.version}`"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-sm underline underline-offset-2"
+      >
+        {{ $t('update.viewReleaseNotes') }}
+      </a>
 
       <div v-if="isDownloading">
         <p>{{ $t('update.downloading', { percent: Math.round(downloadProgress) }) }}</p>
