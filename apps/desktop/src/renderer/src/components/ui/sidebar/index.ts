@@ -48,6 +48,8 @@ export const sidebarMenuButtonVariants = cva(
         default: 'h-8 text-sm',
         sm: 'h-7 text-xs',
         lg: 'h-12 text-sm group-data-[collapsible=icon]:p-0!',
+        // Square 36px icon button for the sidebar rail (DESIGN.md), the same size expanded and collapsed.
+        rail: 'size-9 justify-center group-data-[collapsible=icon]:size-9!',
       },
     },
     defaultVariants: {

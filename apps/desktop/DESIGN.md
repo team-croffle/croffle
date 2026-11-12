@@ -53,6 +53,8 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
   ring from a screen. If a size is missing, add a variant to the part.
 - A trigger that shows a value and opens a picker (the date fields) is
   `Button variant="outline"` with `w-full justify-between font-normal`, so it reads as a field.
+- A toggle is `Button variant="outline"` with `aria-pressed`; the part styles the pressed state.
+- Sidebar rail buttons are `SidebarMenuButton size="rail"`.
 - Clickable badge-like things (tag suggestions) look like `Badge`, not like a small button.
 - Selectors that are not single-line controls (the priority picker, color swatches) are outside
   the height rule.
