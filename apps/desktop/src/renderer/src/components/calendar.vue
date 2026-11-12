@@ -492,7 +492,7 @@
   /* 이벤트 스타일 */
   :deep(.fc-event) {
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     box-shadow: none;
     padding: 1px 4px;
     margin-top: 1px !important;
@@ -513,7 +513,7 @@
   }
 
   :deep(.fc-event::after) {
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
   }
 
   :deep(.fc-event-main) {

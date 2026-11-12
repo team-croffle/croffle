@@ -19,7 +19,7 @@
 
 <template>
   <Dialog :open="isModalOpen">
-    <DialogContent>
+    <DialogContent class="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>{{ $t('update.available') }}</DialogTitle>
       </DialogHeader>

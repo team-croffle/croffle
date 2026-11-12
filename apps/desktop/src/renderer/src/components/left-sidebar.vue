@@ -104,7 +104,7 @@
               <SidebarMenuButton
                 as-child
                 size="lg"
-                class="hover:bg-croffle-hover rounded-lg bg-transparent ring-0 transition-all duration-200 outline-none"
+                class="hover:bg-croffle-hover bg-transparent ring-0 transition-all duration-200 outline-none"
                 :class="[
                   { 'bg-primary hover:bg-primary': item.active },
                   leftSidebarOpen ? 'mr-2 ml-0' : 'mx-0 justify-center',

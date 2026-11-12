@@ -140,7 +140,7 @@
     <p class="text-muted-foreground text-sm">{{ $t('settings.sync.intro') }}</p>
 
     <div
-      class="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      class="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
     >
       <Icon icon="lucide:flask-conical" class="mt-0.5 h-4 w-4 shrink-0" />
       <span>{{ $t('settings.sync.beta') }}</span>
