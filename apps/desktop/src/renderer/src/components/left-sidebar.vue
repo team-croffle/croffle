@@ -155,16 +155,16 @@
     <SidebarFooter class="bg-croffle-sidebar border-t p-3">
       <div class="flex items-center justify-around gap-2" :class="{ 'flex-col': !leftSidebarOpen }">
         <SidebarMenuButton
-          size="sm"
-          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center bg-transparent transition-colors group-data-[collapsible=icon]:size-9! [--sidebar-accent:transparent]"
+          size="rail"
+          class="hover:bg-croffle-hover bg-transparent [--sidebar-accent:transparent]"
           :tooltip="$t('sidebar.notifications')"
         >
           <Icon icon="lucide:bell" class="text-croffle-text size-5" />
         </SidebarMenuButton>
 
         <SidebarMenuButton
-          size="sm"
-          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center bg-transparent transition-colors group-data-[collapsible=icon]:size-9! [--sidebar-accent:transparent]"
+          size="rail"
+          class="hover:bg-croffle-hover bg-transparent [--sidebar-accent:transparent]"
           :tooltip="$t('sidebar.settings')"
           @click="emit('open-settings')"
         >
@@ -172,8 +172,8 @@
         </SidebarMenuButton>
 
         <SidebarMenuButton
-          size="sm"
-          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center bg-transparent transition-colors group-data-[collapsible=icon]:size-9! [--sidebar-accent:transparent]"
+          size="rail"
+          class="hover:bg-croffle-hover bg-transparent [--sidebar-accent:transparent]"
           :tooltip="$t('sidebar.help')"
           @click="isHelpModalOpen = true"
         >

@@ -1326,11 +1326,6 @@
                     variant="outline"
                     size="sm"
                     :aria-pressed="recurrence.byWeekday.includes(day)"
-                    :class="
-                      recurrence.byWeekday.includes(day)
-                        ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary dark:border-primary dark:bg-primary/15 dark:hover:bg-primary/20'
-                        : 'text-muted-foreground'
-                    "
                     :disabled="!weekdaysEditable"
                     @click="toggleWeekday(day)"
                   >
