@@ -57,6 +57,7 @@ Root, unless noted. The gates in `.agents/harness/gates.yaml` are the ones CI ru
 - Run the gates that cover what you touched before finishing. The pre-commit hook (husky) runs typecheck + lint-staged; don't bypass it.
 - Publishable package change (`packages/types`, `packages/cli`) → add a Changeset (`pnpm changeset`). Desktop is ignored by Changesets.
 - Keep changes package-scoped when practical. Renderer must not use Node APIs; go through preload/IPC.
+- Renderer UI follows `apps/desktop/DESIGN.md` (control heights, radius, button variants, input widths, tokens). Read it before adding or changing a screen; when a screen needs something it does not cover, extend that file in the same change.
 - i18n: one catalog per language in `apps/desktop/src/common/i18n/locales/{lang}.json`, shared by main and renderer. Nested keys (`settings.general.language`), `{name}` placeholders. Never add a separate renderer locale tree. Adding a language: see CONTRIBUTING.md → Internationalization.
 - DB schema changes: edit the Drizzle schema, run `db:generate`, commit the new migration under `apps/desktop/drizzle/`.
 - `package.json` and its lockfile change in the same commit (`.agents/knowledge/2026-10-25_frozen-lockfile.md`).
