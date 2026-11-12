@@ -13,6 +13,7 @@
   import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
 
+  import { Button } from '@/components/ui/button';
   import { Icon } from '@/components/ui/icon';
   import {
     Select,
@@ -337,7 +338,7 @@
       <h2 class="calendar-title">{{ viewTitle }}</h2>
       <div class="flex items-center gap-2">
         <Select :model-value="currentView" @update:model-value="changeView">
-          <SelectTrigger class="calendar-view-select" :aria-label="t('calendar.view')">
+          <SelectTrigger :aria-label="t('calendar.view')">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -346,25 +347,27 @@
             </SelectItem>
           </SelectContent>
         </Select>
-        <button
+        <Button
           type="button"
-          class="calendar-nav-btn"
+          variant="outline"
+          size="icon"
           :aria-label="t('calendar.prev')"
           @click="goPrev"
         >
-          <Icon icon="lucide:chevron-left" class="size-5" />
-        </button>
-        <button type="button" class="calendar-nav-btn px-3" @click="goToday">
+          <Icon icon="lucide:chevron-left" />
+        </Button>
+        <Button type="button" variant="outline" @click="goToday">
           {{ t('calendar.today') }}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          class="calendar-nav-btn"
+          variant="outline"
+          size="icon"
           :aria-label="t('calendar.next')"
           @click="goNext"
         >
-          <Icon icon="lucide:chevron-right" class="size-5" />
-        </button>
+          <Icon icon="lucide:chevron-right" />
+        </Button>
       </div>
     </div>
     <FullCalendar ref="fullCalendarRef" :options="calendarOptions" class="h-full w-full flex-1" />
@@ -421,35 +424,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .calendar-nav-btn,
-  :deep(.calendar-view-select) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: calc(var(--spacing) * 9);
-    min-width: calc(var(--spacing) * 9);
-    background-color: transparent;
-    border: 1px solid var(--croffle-border);
-    border-radius: var(--radius-lg);
-    color: var(--croffle-text);
-    font-size: var(--text-sm);
-    font-weight: 500;
-    box-shadow: none;
-    transition: all 0.2s ease;
-  }
-
-  .calendar-nav-btn:hover,
-  :deep(.calendar-view-select:hover),
-  :deep(.calendar-view-select[data-state='open']) {
-    background-color: var(--croffle-bg);
-    color: var(--croffle-primary);
-    border-color: var(--croffle-primary);
-  }
-
-  .calendar-nav-btn:active {
-    background-color: var(--croffle-hover);
   }
 
   /* 요일 헤더*/

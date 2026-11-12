@@ -33,13 +33,14 @@
       </DialogHeader>
       <p v-if="options.hint" class="text-muted-foreground text-xs">{{ options.hint }}</p>
       <DialogFooter class="gap-2">
-        <Button variant="outline" @click="choiceStore.resolveChoice(null)">
+        <Button variant="outline" class="min-w-20" @click="choiceStore.resolveChoice(null)">
           {{ options.cancelLabel || t('common.cancel') }}
         </Button>
         <Button
           v-for="choice in options.choices"
           :key="choice.value"
           :variant="choice.variant ?? 'default'"
+          class="min-w-20"
           :disabled="choice.disabled"
           @click="choiceStore.resolveChoice(choice.value)"
         >

@@ -2,6 +2,7 @@
   import { ref, computed } from 'vue';
   import { useI18n } from 'vue-i18n';
 
+  import { Button } from '@/components/ui/button';
   import {
     Dialog,
     DialogContent,
@@ -111,26 +112,17 @@
         </div>
 
         <div class="flex items-center justify-between pt-2">
-          <button
-            v-if="currentStep > 0"
-            class="text-croffle-text flex items-center gap-1 text-sm font-medium transition-colors hover:text-neutral-600"
-            @click="prevStep"
-          >
-            <Icon icon="lucide:chevron-left" class="h-4 w-4" />
-
+          <Button v-if="currentStep > 0" type="button" variant="ghost" @click="prevStep">
+            <Icon icon="lucide:chevron-left" />
             {{ $t('help.prev') }}
-          </button>
+          </Button>
 
           <div v-else></div>
 
-          <button
-            class="bg-primary hover:bg-opacity-90 hover:bg-croffle-hover flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all"
-            @click="nextStep"
-          >
+          <Button type="button" class="min-w-20" @click="nextStep">
             {{ currentStep === totalSteps - 1 ? $t('help.done') : $t('help.next') }}
-
-            <Icon v-if="currentStep < totalSteps - 1" icon="lucide:chevron-right" class="h-4 w-4" />
-          </button>
+            <Icon v-if="currentStep < totalSteps - 1" icon="lucide:chevron-right" />
+          </Button>
         </div>
       </div>
     </DialogContent>

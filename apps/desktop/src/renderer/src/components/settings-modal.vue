@@ -568,15 +568,16 @@
         <div class="border-border bg-muted/20 w-60 shrink-0 overflow-y-auto border-r p-4">
           <h2 class="text-foreground mb-6 px-2 text-xl font-bold">{{ $t('settings.title') }}</h2>
           <nav class="space-y-1">
-            <button
+            <Button
               v-for="tab in allTabs"
               :key="tab.id"
               type="button"
+              variant="ghost"
               :class="[
-                'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
+                'w-full justify-start',
                 activeTab === tab.id
-                  ? 'bg-croffle-sidebar-selected text-primary'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  ? 'bg-croffle-sidebar-selected text-primary hover:bg-croffle-sidebar-selected hover:text-primary'
+                  : 'text-muted-foreground',
               ]"
               @click="
                 'extensionTab' in tab && tab.extensionTab
@@ -584,10 +585,10 @@
                   : (activeTab = tab.id)
               "
             >
-              <Icon v-if="typeof tab.icon === 'string'" :icon="tab.icon" class="h-4 w-4" />
-              <component v-else :is="tab.icon" class="h-4 w-4" />
+              <Icon v-if="typeof tab.icon === 'string'" :icon="tab.icon" />
+              <component v-else :is="tab.icon" />
               {{ tab.label }}
-            </button>
+            </Button>
           </nav>
         </div>
 
@@ -931,16 +932,12 @@
                     <Button
                       type="button"
                       variant="outline"
-                      class="h-9 shrink-0 gap-2"
+                      class="shrink-0"
                       :disabled="isExporting"
                       @click="onExportSchedules"
                     >
-                      <Icon
-                        v-if="isExporting"
-                        icon="lucide:loader-2"
-                        class="h-4 w-4 animate-spin"
-                      />
-                      <Icon v-else icon="lucide:upload" class="h-4 w-4" />
+                      <Icon v-if="isExporting" icon="lucide:loader-2" class="animate-spin" />
+                      <Icon v-else icon="lucide:upload" />
                       {{ $t('settings.calendar.export') }}
                     </Button>
                   </div>
@@ -976,16 +973,11 @@
                         <Button
                           type="button"
                           variant="outline"
-                          class="h-9 gap-2"
                           :disabled="isImporting"
                           @click="onImportSchedules"
                         >
-                          <Icon
-                            v-if="isImporting"
-                            icon="lucide:loader-2"
-                            class="h-4 w-4 animate-spin"
-                          />
-                          <Icon v-else icon="lucide:download" class="h-4 w-4" />
+                          <Icon v-if="isImporting" icon="lucide:loader-2" class="animate-spin" />
+                          <Icon v-else icon="lucide:download" />
                           {{ $t('settings.calendar.import') }}
                         </Button>
                       </div>
@@ -1080,15 +1072,10 @@
                     <Button
                       type="button"
                       :disabled="!installUrl || isInstalling"
-                      class="h-9 gap-2"
                       @click="onInstallPlugin"
                     >
-                      <Icon
-                        v-if="isInstalling"
-                        icon="lucide:loader-2"
-                        class="h-4 w-4 animate-spin"
-                      />
-                      <Icon v-else icon="lucide:download" class="h-4 w-4" />
+                      <Icon v-if="isInstalling" icon="lucide:loader-2" class="animate-spin" />
+                      <Icon v-else icon="lucide:download" />
                       {{ $t('settings.extensions.install') }}
                     </Button>
                   </div>
@@ -1109,15 +1096,10 @@
                       type="button"
                       variant="outline"
                       :disabled="isInstalling"
-                      class="h-9 gap-2"
                       @click="onLocalZipSelect"
                     >
-                      <Icon
-                        v-if="isInstalling"
-                        icon="lucide:loader-2"
-                        class="h-4 w-4 animate-spin"
-                      />
-                      <Icon v-else icon="lucide:download" class="h-4 w-4" />
+                      <Icon v-if="isInstalling" icon="lucide:loader-2" class="animate-spin" />
+                      <Icon v-else icon="lucide:download" />
                       {{ $t('settings.extensions.selectAndInstall') }}
                     </Button>
                   </div>
@@ -1202,11 +1184,11 @@
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
-                          class="h-8 w-8 text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50"
+                          size="icon-sm"
+                          class="text-destructive hover:bg-destructive/10 hover:text-destructive"
                           @click="onUninstallExtension(plugin)"
                         >
-                          <Icon icon="lucide:trash-2" class="h-4 w-4" />
+                          <Icon icon="lucide:trash-2" />
                           <span class="sr-only">{{ $t('common.delete') }}</span>
                         </Button>
                       </div>
@@ -1244,17 +1226,12 @@
           </div>
 
           <div
-            class="bg-muted/10 mt-auto flex shrink-0 justify-end gap-3 border-t px-6 py-4 md:px-8"
+            class="bg-muted/10 mt-auto flex shrink-0 justify-end gap-2 border-t px-6 py-4 md:px-8"
           >
-            <Button
-              type="button"
-              variant="outline"
-              class="h-9 px-6 font-semibold"
-              @click="handleCancel"
-            >
+            <Button type="button" variant="outline" class="min-w-20" @click="handleCancel">
               {{ $t('common.cancel') }}
             </Button>
-            <Button type="button" class="h-9" @click="handleSave">
+            <Button type="button" class="min-w-20" @click="handleSave">
               {{ $t('common.save') }}
             </Button>
           </div>

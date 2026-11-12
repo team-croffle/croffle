@@ -72,10 +72,15 @@
       </DialogHeader>
       <p class="text-muted-foreground text-xs">{{ t('closeModal.hint') }}</p>
       <DialogFooter class="gap-2">
-        <Button variant="outline" :disabled="isSaving" @click="choose(AppCloseBehavior.QUIT)">
+        <Button
+          variant="outline"
+          class="min-w-20"
+          :disabled="isSaving"
+          @click="choose(AppCloseBehavior.QUIT)"
+        >
           {{ t('closeModal.quit') }}
         </Button>
-        <Button :disabled="isSaving" @click="choose(AppCloseBehavior.TRAY)">
+        <Button class="min-w-20" :disabled="isSaving" @click="choose(AppCloseBehavior.TRAY)">
           {{ t('closeModal.tray') }}
         </Button>
       </DialogFooter>

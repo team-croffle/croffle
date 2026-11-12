@@ -47,13 +47,15 @@
       </div>
 
       <DialogFooter class="gap-2">
-        <Button variant="ghost" :disabled="isDownloading" @click="skipUpdate">
+        <Button variant="ghost" class="min-w-20" :disabled="isDownloading" @click="skipUpdate">
           {{ $t('update.skip') }}
         </Button>
-        <Button variant="outline" :disabled="isDownloading" @click="downloadLater">
+        <Button variant="outline" class="min-w-20" :disabled="isDownloading" @click="downloadLater">
           {{ $t('update.later') }}
         </Button>
-        <Button :disabled="isDownloading" @click="downloadNow">{{ $t('update.now') }}</Button>
+        <Button class="min-w-20" :disabled="isDownloading" @click="downloadNow">{{
+          $t('update.now')
+        }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

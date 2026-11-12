@@ -42,10 +42,12 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 | Icon button in the title bar              | 28px   | `size="icon-xs"`                       |
 
 - Use `Button`, `Input`, `Textarea`, `Select`, `Switch`, `Badge` from `components/ui`. Do not write
-  a bare `<button>` or `<input>`. Exceptions: color swatches, the three window buttons, and
-  `<input type="color">`.
+  a bare `<button>` or `<input>`. Exceptions: color swatches, the options of the priority picker,
+  the small remove button inside a `Badge`, the three window buttons, and `<input type="color">`.
 - Do not override a part's height, horizontal padding, font weight, radius, border color or focus
   ring from a screen. If a size is missing, add a variant to the part.
+- A trigger that shows a value and opens a picker (the date fields) is
+  `Button variant="outline"` with `w-full justify-between font-normal`, so it reads as a field.
 - Clickable badge-like things (tag suggestions) look like `Badge`, not like a small button.
 - Selectors that are not single-line controls (the priority picker, color swatches) are outside
   the height rule.
