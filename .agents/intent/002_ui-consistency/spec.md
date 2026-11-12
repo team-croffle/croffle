@@ -2,6 +2,7 @@
 intent: "002"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-12", words: "동의. 감사에서 문제되지 않도록 잘 기록해라", rev: "fdb625b (PR #122 head) 에서 PM 이 제안한 정정 6건: V-3, V-4, S-4/V-7, S-7, S-11, S-13 — 아래 '정정 기록'", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-12", words: "진행", rev: "7132f50", kind: summary }
 summary_for_user: |
   작업 단위는 6개입니다: W-1 `apps/desktop/DESIGN.md` 와 AGENTS.md 연결 → W-2 토큰 연결(`--primary` · `--ring` · `--border` · `--input`)과 색 덮어쓰기 제거 → W-3 버튼 → W-4 입력 · 선택(설정 행 240px 포함) → W-5 다이얼로그 · 카드 · radius → W-6 글자 · 색 정리.
@@ -15,16 +16,16 @@ summary_for_user: |
 - S-1 규칙을 `apps/desktop/DESIGN.md` 한 파일에 적고 AGENTS.md 가 가리킨다. ← 바라는 결과 "규칙이 문서 하나에 적혀 있고, 이후 UI 작업이 그 문서를 따릅니다", 계획 1
 - S-2 `--primary` · `--ring` · `--border` · `--input` 이 croffle 토큰을 따른다. 강조색 설정을 바꾸면 주 버튼 · 스위치 · 체크박스 · 포커스 링이 함께 바뀐다. ← 바라는 결과 "강조색 설정을 바꾸면 …", 계획 2, 질의서 2 "응. 그게 훨씬 낫다."
 - S-3 버튼 · 입력 · 선택의 높이는 36px, 조밀한 칩 · 토글은 32px 이다. ← 규칙 표 "컨트롤 높이", 질의서 1 "통일해."
-- S-4 아이콘 버튼은 본문 32px · 사이드바 레일 36px · 제목 표시줄 28px 이다. ← 규칙 표 "아이콘 버튼"
+- S-4 아이콘 버튼은 혼자 놓이면 32px, 36px 컨트롤과 한 줄에 놓이거나 사이드바 레일이면 36px, 제목 표시줄은 28px 이다. ← 규칙 표 "아이콘 버튼" (정정 3)
 - S-5 주 버튼은 `Button` 기본 variant 이고 색 class 를 붙이지 않는다. 보조는 `outline`, 되돌릴 수 없는 확인은 `destructive`, 줄 안의 삭제는 `ghost` + `text-destructive` 이다. ← 규칙 표 "주 버튼", "보조 · 위험"
 - S-6 버튼 패딩 · 굵기는 size 가 정한다. 다이얼로그 푸터 버튼은 최소 80px, 간격 `gap-2`, 주 버튼이 맨 오른쪽이다. 설정 창 취소 / 저장의 패딩과 굵기가 같다. ← 바라는 결과 "설정 창 취소 / 저장 버튼의 너비와 굵기가 같습니다", 규칙 표 "버튼 너비"
-- S-7 버튼 안 아이콘은 16px 이고 간격은 `Button` 의 `gap-2` 만 쓴다. ← 규칙 표 "버튼 안 아이콘"
+- S-7 버튼 안 아이콘은 16px 이고 간격은 `Button` 의 size 가 정한다(기본 8px, `sm` 6px). 화면에서 `mr-*` 를 더하지 않는다. ← 규칙 표 "버튼 안 아이콘" (정정 4)
 - S-8 `<button>` · `<input>` 대신 `Button` · `Input` 을 쓴다. 예외는 색 견본, 창 버튼, `type="color"` 이다. ← 규칙 표 "부품", 계획 3 · 4
 - S-9 세로로 쌓인 폼의 입력은 `w-full`, 설정 행의 컨트롤은 행 오른쪽 240px(`w-60`), 숫자 입력은 `w-24` 이다. ← 규칙 표 "입력 너비", 질의서 3 "고정해"
 - S-10 테두리와 포커스 링은 토큰만 쓰고 화면에서 덮어쓰지 않는다. ← 규칙 표 "테두리 · 포커스"
-- S-11 radius 는 컨트롤 8px · 표면 14px · 원형이고, 달력 카드 24px 만 예외다. ← 규칙 표 "radius"
+- S-11 radius 는 컨트롤 8px · 표면(카드, 다이얼로그, 패널) 14px · 원형이고, 달력 카드 24px 만 예외다. 메뉴와 팝오버(선택 목록, 컨텍스트 메뉴, 날짜 선택)는 부품의 8px 를 그대로 쓴다. ← 규칙 표 "radius" (정정 5)
 - S-12 확인형 다이얼로그는 `sm:max-w-md`, 폼형은 `sm:max-w-lg`. 구분된 푸터는 `border-t bg-muted/20 px-6 py-4` 이다. ← 규칙 표 "다이얼로그 폭", "다이얼로그 푸터"
-- S-13 다이얼로그 제목 `text-lg font-semibold`, 소제목 `text-base font-bold`, 라벨 `text-sm font-medium` 이다. ← 규칙 표 "글자"
+- S-13 다이얼로그 제목 `text-lg font-semibold`, 소제목 `text-base font-bold`, 카드 · 사이드바 패널 안의 제목 `text-sm font-bold`, 라벨 `text-sm font-medium` 이다. ← 규칙 표 "글자" (정정 6)
 - S-14 화면에 `neutral-*` · hex 를 쓰지 않고 토큰을 쓴다(창 닫기 버튼 hover 의 빨강은 예외). 죽은 class 를 지우고 `config-schema-form.vue:47` 의 다크 모드 글자색을 고친다. ← 규칙 표 "색", 계획 6
 - S-15 기능 · 문구 · 레이아웃 구조는 그대로다. `--croffle-*` 토큰의 이름과 값은 바뀌지 않는다. ← 제약, 바라는 결과 "기능과 문구는 바뀌지 않습니다"
 - S-16 라이트 / 다크에서 주요 화면의 전후 스크린샷을 남긴다. ← 계획 7, 제약 "라이트 / 다크 모두 확인합니다"
@@ -128,15 +129,18 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
       echo "=== 2. TooltipContent.vue 전경/배경 토큰 확인 ==="
       grep -nE 'bg-foreground.*text-background|text-background.*bg-foreground' apps/desktop/src/renderer/src/components/ui/tooltip/TooltipContent.vue
       echo "=== 3. 화면 파일 금지 패턴 검사 (0건이어야 함) ==="
-      ! grep -rnE 'bg-croffle-primary|bg-croffle-hover|#A68A64|#8E7554|ring-croffle-primary|focus-within:ring-2|border-croffle-border|text-croffle-text-dark|hover:bg-opacity-90' \
+      ! grep -rnE 'bg-croffle-primary|#A68A64|#8E7554|ring-croffle-primary|focus-within:ring-2|border-croffle-border|text-croffle-text-dark|hover:bg-opacity-90' \
         apps/desktop/src/renderer/src --include='*.vue' --exclude-dir=ui && echo "forbidden_overrides=0"
+      # 정정 1: bg-croffle-hover 는 왼쪽 사이드바 메뉴의 hover 색으로만 허용
+      ! grep -rnE 'bg-croffle-hover' apps/desktop/src/renderer/src --include='*.vue' --exclude-dir=ui \
+        | grep -v 'components/left-sidebar.vue' && echo "croffle_hover_outside_left_sidebar=0"
       ! grep -rnE '\b(bg|text|border|ring|divide|placeholder|from|via|to)-neutral-[0-9]+' \
         apps/desktop/src/renderer/src --include='*.vue' --exclude-dir=ui && echo "neutral_classes=0"
       ! grep -rnE '(bg|text|border|ring)-\[#[0-9A-Fa-f]{3,8}\]' \
         apps/desktop/src/renderer/src --include='*.vue' --exclude-dir=ui && echo "arbitrary_hex_classes=0"
     } > .loctx/reports/1.3.0/rc2/v03-tokens-and-colors.log 2>&1
     ```
-  - 기대 결과: `index.css`의 `:root`와 `.dark` 두 블록 모두에 `--primary`, `--primary-foreground`, `--ring`, `--border`, `--input` 5개 토큰 매핑(총 10줄)이 존재하고, `TooltipContent.vue`에 `bg-foreground` 및 `text-background`가 적용되어 있으며, 화면 파일(`components/ui` 제외 `.vue`)에서 수동 강조색/고정 hex 덮어쓰기, 테두리·포커스 링 덮어쓰기, 죽은 클래스(`text-croffle-text-dark`, `hover:bg-opacity-90`), `neutral-*` 클래스, 임의 hex 색상 클래스가 각각 0건(`forbidden_overrides=0`, `neutral_classes=0`, `arbitrary_hex_classes=0`; `grep` 종료 코드 1 → `! grep` 통과)입니다(창 닫기 버튼 hover의 빨강은 예외로 허용).
+  - 기대 결과: `index.css`의 `:root`와 `.dark` 두 블록 모두에 `--primary`, `--primary-foreground`, `--ring`, `--border`, `--input` 5개 토큰 매핑(총 10줄)이 존재하고, `TooltipContent.vue`에 `bg-foreground` 및 `text-background`가 적용되어 있으며, 화면 파일(`components/ui` 제외 `.vue`)에서 수동 강조색/고정 hex 덮어쓰기, 테두리·포커스 링 덮어쓰기, 죽은 클래스(`text-croffle-text-dark`, `hover:bg-opacity-90`), `neutral-*` 클래스, 임의 hex 색상 클래스가 각각 0건(`forbidden_overrides=0`, `croffle_hover_outside_left_sidebar=0`, `neutral_classes=0`, `arbitrary_hex_classes=0`; `grep` 종료 코드 1 → `! grep` 통과)입니다(창 닫기 버튼 hover의 빨강은 예외로 허용).
   - 실패 판정: `index.css` 매핑 10줄 중 하나라도 누락되었거나, `TooltipContent.vue`가 변경되지 않았거나, 금지 패턴 중 어느 하나라도 1건 이상 매칭되거나, 결과가 모호한 경우 실패로 판정합니다.
   - 증적 경로: `.loctx/reports/1.3.0/rc2/v03-tokens-and-colors.log`
 
@@ -147,7 +151,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
     mkdir -p .loctx/reports/1.3.0/rc2 && {
       echo "=== 1. ui/button icon-xs 정의 확인 ==="
       grep -rnE 'icon-xs' apps/desktop/src/renderer/src/components/ui/button/
-      echo "=== 2. 원시 <button> 사용처 확인 (예외: app.vue 창 버튼 3개 및 색 견본만 허용) ==="
+      echo "=== 2. 원시 <button> 사용처 확인 (예외: app.vue 창 버튼 3개, 색 견본, 중요도 선택 옵션, 배지 안 삭제 버튼) ==="
       grep -rnE '<button\b' apps/desktop/src/renderer/src --include='*.vue' --exclude-dir=ui || true
       echo "=== 3. 원시 <input> 사용처 확인 (예외: type=\"color\"만 허용) ==="
       grep -rnE '<input\b' apps/desktop/src/renderer/src --include='*.vue' --exclude-dir=ui || true
@@ -162,10 +166,10 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
     ```
   - 기대 결과:
     1. `components/ui/button/`에 `icon-xs`(28px) size가 정의되어 있습니다.
-    2. 화면 파일의 `<button` 매칭은 `app.vue`의 창 제어 버튼 3개(최소화·최대화·닫기)와 색 견본(color swatch) 버튼뿐이며, `calendar.vue`, `help-modal.vue`, `schedule-modal.vue`(색 견본 제외), `settings-modal.vue`(색 견본 제외)의 일반·아이콘·칩 버튼에는 `<button`이 0건입니다.
+    2. 화면 파일의 `<button` 매칭은 `app.vue`의 창 제어 버튼 3개(최소화·최대화·닫기), 색 견본(color swatch) 버튼 2곳(`schedule-modal.vue`, `settings-modal.vue`), `schedule-modal.vue`의 중요도 선택 옵션(`role="radio"`) 1곳과 배지 안 삭제 버튼 1곳, 모두 7곳뿐이며(정정 2), `calendar.vue`, `help-modal.vue`, `schedule-modal.vue`(색 견본 제외), `settings-modal.vue`(색 견본 제외)의 일반·아이콘·칩 버튼에는 `<button`이 0건입니다.
     3. 화면 파일의 `<input` 매칭은 `type="color"` 예외뿐이며, `sync-panel.vue` 5곳과 `settings-modal.vue:1073` 확장 설치 URL 입력을 포함한 텍스트/비밀번호/숫자 `<input>`은 0건(`sync_panel_raw_input=0`)입니다.
     4. `schedule-modal.vue` · `time-field.vue` · `config-schema-form.vue`에서 `h-10` · `h-11`이 0건(`height_overrides_h10_h11=0`), `right-sidebar.vue` 일정 추가 버튼의 `h-11`이 0건(`sidebar_cta_h11=0`; 접힌 상태의 `group-data-[collapsible=icon]:h-10`은 대상 아님), `size="icon"` 위 `h-7 w-7` 덮어쓰기가 0건, `schedule-modal.vue` 버튼 내 아이콘 `mr-1.5`가 0건, `settings-modal.vue` 줄 안 삭제 버튼의 `hover:text-red-500` 덮어쓰기가 0건(`ghost` + `text-destructive`로 통일)입니다.
-  - 실패 판정: 허용된 예외(창 버튼 3개, 색 견본 버튼, `<input type="color">`) 외에 원시 `<button>` 또는 `<input>`이 1건이라도 남아 있거나, `icon-xs`가 없거나, 높이·간격·삭제 버튼 덮어쓰기가 1건이라도 검출되거나, 판정이 모호한 경우 실패로 판정합니다.
+  - 실패 판정: 허용된 예외(창 버튼 3개, 색 견본 버튼, 중요도 선택 옵션, 배지 안 삭제 버튼, `<input type="color">`) 외에 원시 `<button>` 또는 `<input>`이 1건이라도 남아 있거나, `icon-xs`가 없거나, 높이·간격·삭제 버튼 덮어쓰기가 1건이라도 검출되거나, 판정이 모호한 경우 실패로 판정합니다.
   - 증적 경로: `.loctx/reports/1.3.0/rc2/v04-component-usage.log`
 
 - V-5 **입력·선택 너비(`w-full` · `w-60` · `w-24`) 및 설정 행 레이아웃 정적 검사**
@@ -241,7 +245,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
     ```
     스크립트는 각 화면에서 보이는(visible) 요소에 대해 `getBoundingClientRect()`와 `getComputedStyle()`로 다음을 단언(assert)합니다(색 견본 버튼, `app.vue` 창 버튼 3개, `<input type="color">`는 제외):
     1. 일반 `Button`(`default`/`outline`/`destructive`/`ghost`), `Input`(`time-field` 포함), `SelectTrigger`의 `height === 36` (±0.5px); 요일 선택 토글 및 `size="sm"` 버튼의 `height === 32` (±0.5px). 중요도 선택(아이콘과 글자를 세로로 쌓은 3칸 선택기)과 태그 추천(배지 모양)은 측정 대상에서 제외.
-    2. 아이콘 버튼의 `width × height`가 제목 표시줄(`app.vue`, 창 제어 버튼 3개 제외) `28 × 28`px, 본문/모달 내 아이콘 버튼 `32 × 32`px, 좌측 사이드바 레일(`left-sidebar.vue`) `36 × 36`px이며, 버튼 안 `<svg>`의 `width === 16`, `height === 16`이고 텍스트와 함께 있는 버튼의 `columnGap === '8px'`.
+    2. 아이콘 버튼의 `width × height`가 제목 표시줄(`app.vue`, 창 제어 버튼 3개 제외) `28 × 28`px, 본문/모달 내 아이콘 버튼은 혼자 놓이면 `32 × 32`px, 36px 컨트롤과 한 줄에 놓이면(달력 이전 · 다음, 알림 추가) `36 × 36`px, 좌측 사이드바 레일(`left-sidebar.vue`)은 펼친 상태와 접힌 상태 모두 `36 × 36`px이며(정정 3), 버튼 안 `<svg>`의 `width === 16`, `height === 16`이고 텍스트와 아이콘이 함께 있는 기본 크기 버튼의 `columnGap === '8px'`(`sm` 은 `6px`, 정정 4).
     3. 모든 다이얼로그 푸터 버튼의 `width >= 80`px(`min-w-20`), 푸터 버튼 컨테이너의 `columnGap === '8px'`(`gap-2`), 주 버튼(`bg-primary`)이 푸터 내 버튼 중 가장 오른쪽(`rect.right` 최대)에 위치하며, 설정 모달 취소 버튼과 저장 버튼의 `paddingLeft === '16px'`, `paddingRight === '16px'`, `fontWeight === '500'`이 서로 정확히 일치함.
     4. 설정 모달의 행 오른쪽 `SelectTrigger` 8개 및 `config-schema-form` 행 컨트롤의 `width === 240` (±1px, `w-60`), 일정 모달 숫자 입력 3개의 `width === 96` (±1px, `w-24`), 동기화 로그인 폼 및 확장 설치 URL 입력의 폭이 부모 컨테이너 내부 폭(`w-full`, ±1px)과 일치함.
   - 기대 결과: 라이트·다크 양쪽 테마와 7개 대상 화면 전체에서 측정된 모든 대상 컨트롤이 위 수치 기준을 100% 만족하여 `violations: 0` 및 종료 코드 `0`을 출력합니다.
@@ -306,6 +310,22 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
   - 기대 결과: `before/`와 `after/` 디렉터리에 라이트·다크의 모든 필수 화면 PNG 파일이 동일한 파일명 구성으로 생성되고(`diff -u` 종료 코드 `0`, 각 디렉터리 최소 20장 이상, 0바이트 파일 0개), 캡처 중 렌더러 `pageerror` 및 `console.error`가 0건이며, 레이아웃 구조·문구 깨짐이나 다크 모드 글자 묻힘(`config-schema-form.vue` 소제목 포함)이 없습니다.
   - 실패 판정: `before/` 또는 `after/` 중 어느 한쪽이라도 필수 화면(달력, 일정 보기·편집, 설정 전 탭 및 확장 설정, 확인·도움말·업데이트 모달 × 라이트·다크) 스크린샷이 1장이라도 누락되었거나, 0바이트 이미지가 있거나, 런타임 콘솔 에러가 발생했거나, 증적 경로에 파일이 없는 경우 실패로 판정합니다.
   - 증적 경로: `.loctx/reports/1.3.0/rc2/v10-screenshots/` (및 `.loctx/reports/1.3.0/rc2/v10-screenshots.log`)
+
+## 정정 기록
+승인된 spec 을 구현 · 테스트한 뒤에 고친 곳입니다. 사용자 승인: 2026-11-12 "동의. 감사에서 문제되지 않도록 잘 기록해라" (`approvals:` 의 `kind: change`).
+
+**경위.** 테스트(`fdb625b`)에서 V-3 · V-4 · V-7 이 적힌 대로는 통과하지 못했습니다. 코드 결함이 아니라 검사 문구가 이 spec 의 설계 절보다 넓게 적힌 탓이었습니다. 2차 리뷰(gpt-6.1-sol, 지적 C)는 `DESIGN.md` 가 S-7 · S-11 · S-13 문구와 다르다고 짚었습니다. PM 은 검사를 고쳐 통과시키지 않고, 실패로 보고한 뒤(`.loctx/reports/1.3.0/rc2/test-report.md`, PR #122 본문) 사용자에게 여섯 건의 정정을 제안했고 사용자가 동의했습니다. 정정 전 실행 로그는 `.loctx/reports/1.3.0/rc2/before-correction/` 에, 정정 뒤 재실행 로그는 각 검사의 증적 경로에 있습니다.
+
+| # | 대상 | 승인 당시 문구 | 정정 | 이유 |
+|---|---|---|---|---|
+| 1 | V-3 | 화면 전체에서 `bg-croffle-hover` 0건 | `left-sidebar.vue` 밖에서 0건 | 설계 절은 "주 버튼의 `bg-croffle-hover` 덮어쓰기를 지운다"였습니다. 남은 4건은 왼쪽 사이드바 메뉴의 hover 색으로, 조사 항목에 없던 토큰 사용입니다 |
+| 2 | V-4 | `<button>` 허용: 창 버튼 3개, 색 견본 | 중요도 선택 옵션, 배지 안 삭제 버튼을 더함 | 설계 절의 "손대지 않는 것"에 중요도 선택기가 있는데 검사 허용 목록에서 빠졌습니다. 배지 안 16px 삭제 버튼은 `Button` 으로 바꾸면 크기를 다시 덮어써야 합니다 |
+| 3 | S-4, V-7 | 본문 아이콘 버튼 32px | 혼자 놓이면 32px, 36px 컨트롤 옆은 36px. 레일은 접힌 상태도 36px | 32px 로 두면 같은 줄의 36px 컨트롤과 4px 어긋납니다 |
+| 4 | S-7, V-7 | 간격은 `gap-2` 만 | size 가 정함 (기본 8px, `sm` 6px) | `sm` 의 6px 는 부품 기본값입니다. 금지하려던 것은 화면에서 더한 `mr-*` 입니다 |
+| 5 | S-11 | 컨트롤 8 · 표면 14 | 메뉴 · 팝오버는 부품의 8px 를 명시 | 선택 목록 · 컨텍스트 메뉴 · 날짜 선택은 모두 8px 로 서로 같습니다 |
+| 6 | S-13 | 소제목 `text-base font-bold` | 카드 · 패널 안 제목 `text-sm font-bold` 를 더함 | 카드 안 제목은 탭의 소제목보다 한 단계 아래입니다 |
+
+작업 단위(W-n)는 바뀌지 않았습니다. 코드는 이 정정 때문에 바뀌지 않았습니다(정정은 `fdb625b` 의 코드를 그대로 기술합니다).
 
 ## 우려
 - **강조색 위 흰 글자 대비가 낮습니다(약 2:1).** 지금도 같은 상태이고 이번에 스위치 · 체크박스 · 확인 모달 버튼으로 넓어집니다. 색 체계 문제라 고치지 않고 로컬 로드맵에 적습니다.
