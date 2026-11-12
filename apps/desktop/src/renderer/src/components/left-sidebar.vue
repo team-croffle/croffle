@@ -104,7 +104,7 @@
               <SidebarMenuButton
                 as-child
                 size="lg"
-                class="hover:bg-croffle-hover bg-transparent ring-0 transition-all duration-200 outline-none"
+                class="hover:bg-croffle-hover bg-transparent transition-all duration-200"
                 :class="[
                   { 'bg-primary hover:bg-primary': item.active },
                   leftSidebarOpen ? 'mr-2 ml-0' : 'mx-0 justify-center',
@@ -156,7 +156,7 @@
       <div class="flex items-center justify-around gap-2" :class="{ 'flex-col': !leftSidebarOpen }">
         <SidebarMenuButton
           size="sm"
-          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
+          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center bg-transparent transition-colors group-data-[collapsible=icon]:size-9! [--sidebar-accent:transparent]"
           :tooltip="$t('sidebar.notifications')"
         >
           <Icon icon="lucide:bell" class="text-croffle-text size-5" />
@@ -164,7 +164,7 @@
 
         <SidebarMenuButton
           size="sm"
-          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
+          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center bg-transparent transition-colors group-data-[collapsible=icon]:size-9! [--sidebar-accent:transparent]"
           :tooltip="$t('sidebar.settings')"
           @click="emit('open-settings')"
         >
@@ -173,7 +173,7 @@
 
         <SidebarMenuButton
           size="sm"
-          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
+          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center bg-transparent transition-colors group-data-[collapsible=icon]:size-9! [--sidebar-accent:transparent]"
           :tooltip="$t('sidebar.help')"
           @click="isHelpModalOpen = true"
         >

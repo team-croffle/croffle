@@ -636,7 +636,7 @@
                       </Label>
                     </div>
                     <Select v-model="settings.general.language">
-                      <SelectTrigger id="settings-language" class="w-60">
+                      <SelectTrigger id="settings-language" class="w-60 shrink-0">
                         <SelectValue :placeholder="$t('settings.general.languagePlaceholder')" />
                       </SelectTrigger>
                       <SelectContent>
@@ -661,7 +661,7 @@
                       :model-value="settings.general.theme"
                       @update:model-value="onThemeChange"
                     >
-                      <SelectTrigger id="settings-theme" class="w-60">
+                      <SelectTrigger id="settings-theme" class="w-60 shrink-0">
                         <SelectValue :placeholder="$t('settings.general.themePlaceholder')" />
                       </SelectTrigger>
                       <SelectContent>
@@ -815,7 +815,7 @@
                       :model-value="settings.general.closeBehavior"
                       @update:model-value="onCloseBehaviorChange"
                     >
-                      <SelectTrigger id="settings-close-behavior" class="w-60">
+                      <SelectTrigger id="settings-close-behavior" class="w-60 shrink-0">
                         <SelectValue
                           :placeholder="$t('settings.general.closeBehaviorPlaceholder')"
                         />
@@ -845,7 +845,7 @@
                     </Label>
                   </div>
                   <Select v-model="settings.calendar.defaultView">
-                    <SelectTrigger id="settings-default-view" class="w-60">
+                    <SelectTrigger id="settings-default-view" class="w-60 shrink-0">
                       <SelectValue :placeholder="$t('settings.calendar.defaultViewPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -867,7 +867,7 @@
                     </Label>
                   </div>
                   <Select v-model="settings.calendar.weekStartDay">
-                    <SelectTrigger id="settings-week-start" class="w-60">
+                    <SelectTrigger id="settings-week-start" class="w-60 shrink-0">
                       <SelectValue :placeholder="$t('settings.calendar.weekStartPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -889,7 +889,7 @@
                     </Label>
                   </div>
                   <Select v-model="settings.calendar.timeFormat">
-                    <SelectTrigger id="settings-time-format" class="w-60">
+                    <SelectTrigger id="settings-time-format" class="w-60 shrink-0">
                       <SelectValue :placeholder="$t('settings.calendar.timeFormatPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -971,7 +971,7 @@
                       </div>
                       <div class="flex shrink-0 items-center gap-2">
                         <Select :model-value="importMode" @update:model-value="onImportModeChange">
-                          <SelectTrigger id="settings-import-mode" class="w-60">
+                          <SelectTrigger id="settings-import-mode" class="w-60 shrink-0">
                             <SelectValue :placeholder="$t('settings.calendar.importMode')" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1043,7 +1043,7 @@
                     :model-value="String(settings.notifications.defaultReminderMinutes)"
                     @update:model-value="onReminderMinutesChange"
                   >
-                    <SelectTrigger id="settings-reminder-minutes" class="w-60">
+                    <SelectTrigger id="settings-reminder-minutes" class="w-60 shrink-0">
                       <SelectValue
                         :placeholder="$t('settings.notifications.defaultTimePlaceholder')"
                       />
