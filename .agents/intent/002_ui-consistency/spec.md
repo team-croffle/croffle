@@ -56,12 +56,14 @@ summary_for_user: |
 ## 작업 단위
 순서대로 합니다. W-3 ~ W-6 은 W-2 의 토큰에 기대므로 W-2 를 되돌리면 함께 되돌립니다. 그 밖에는 단위마다 따로 되돌릴 수 있습니다.
 
-- [ ] W-1 `apps/desktop/DESIGN.md` (영어) 작성 + AGENTS.md Conventions 에 한 줄 — S-1
-- [ ] W-2 토큰 연결(`index.css`) + 툴팁 색 + 화면의 색 덮어쓰기 제거: `bg-croffle-primary … text-white`, `#A68A64` · `#8E7554`, 컨트롤의 `border-croffle-border` · `border-neutral-*`, `ring-croffle-primary/30` · `focus-within:ring-2` — S-2, S-5, S-10. 조사 A-1, A-2, B-3, B-4, F-2, F-5
-- [ ] W-3 버튼: 높이 · 패딩 · 굵기 덮어쓰기 제거, `icon-xs` 추가와 아이콘 버튼 크기 정리, `<button>` → `Button`, 푸터 `min-w-20` · `gap-2`, 아이콘 `mr-*` 제거, 삭제 버튼 표현 통일, 태그 추천을 배지 모양으로 — S-3 ~ S-8. 조사 A-3 ~ A-9, C-1(버튼). 의존: W-2
-- [ ] W-4 입력 · 선택: `<input>` → `Input`, `h-10` 제거(`time-field.vue` 포함), 숫자 입력 `w-24`, 설정 행 `w-60` — S-3, S-8, S-9. 조사 B-1, B-2, B-5, B-6, C-1(입력). 의존: W-2
-- [ ] W-5 다이얼로그 · 카드 · radius: `DialogContent` `rounded-xl`, 업데이트 모달 `sm:max-w-md`, 푸터 배경 · 그림자 통일, 손으로 쓴 카드를 토큰 class 로, 배지 덮어쓰기 제거와 확장 버전 표시를 `Badge` 로, 달력 툴바 · 이벤트 radius — S-11, S-12. 조사 C-2 ~ C-5, D-1 ~ D-5. 의존: W-2
-- [ ] W-6 글자 · 색 정리: 라벨 `font-medium`, 도움말 제목, `neutral-*` → 토큰, 죽은 class 제거, `config-schema-form.vue:47`, 아이콘 `h-4 w-4` → `size-4`(버튼 안에서는 제거), 달력의 rem 숫자 → 토큰 — S-13, S-14. 조사 E-1 ~ E-5, F-1, F-3, F-4. 의존: W-2
+- [x] W-1 (11e6c2c) `apps/desktop/DESIGN.md` (영어) 작성 + AGENTS.md Conventions 에 한 줄 — S-1
+- [x] W-2 (8b3cc09) 토큰 연결(`index.css`) + 툴팁 색 + 화면의 색 덮어쓰기 제거: `bg-croffle-primary … text-white`, `#A68A64` · `#8E7554`, 컨트롤의 `border-croffle-border` · `border-neutral-*`, `ring-croffle-primary/30` · `focus-within:ring-2` — S-2, S-5, S-10. 조사 A-1, A-2, B-3, B-4, F-2, F-5
+- [x] W-3 (6624f69) 버튼: 높이 · 패딩 · 굵기 덮어쓰기 제거, `icon-xs` 추가와 아이콘 버튼 크기 정리, `<button>` → `Button`, 푸터 `min-w-20` · `gap-2`, 아이콘 `mr-*` 제거, 삭제 버튼 표현 통일, 태그 추천을 배지 모양으로 — S-3 ~ S-8. 조사 A-3 ~ A-9, C-1(버튼). 의존: W-2
+- [x] W-4 (83b5cca) 입력 · 선택: `<input>` → `Input`, `h-10` 제거(`time-field.vue` 포함), 숫자 입력 `w-24`, 설정 행 `w-60` — S-3, S-8, S-9. 조사 B-1, B-2, B-5, B-6, C-1(입력). 의존: W-2
+- [x] W-5 (3f845c8) 다이얼로그 · 카드 · radius: `DialogContent` `rounded-xl`, 업데이트 모달 `sm:max-w-md`, 푸터 배경 · 그림자 통일, 손으로 쓴 카드를 토큰 class 로, 배지 덮어쓰기 제거와 확장 버전 표시를 `Badge` 로, 달력 툴바 · 이벤트 radius — S-11, S-12. 조사 C-2 ~ C-5, D-1 ~ D-5. 의존: W-2
+- [x] W-6 (289eb75) 글자 · 색 정리: 라벨 `font-medium`, 도움말 제목, `neutral-*` → 토큰, 죽은 class 제거, `config-schema-form.vue:47`, 아이콘 `h-4 w-4` → `size-4`(버튼 안에서는 제거), 달력의 rem 숫자 → 토큰 — S-13, S-14. 조사 E-1 ~ E-5, F-1, F-3, F-4. 의존: W-2
+
+측정에서 나온 보완(W-3 · W-4 · W-6 범위)은 `da272f6` 입니다.
 
 스크린샷(S-16)은 작업 단위가 아니라 검증입니다: W-2 전에 "전", W-6 뒤에 "후"를 찍습니다.
 
