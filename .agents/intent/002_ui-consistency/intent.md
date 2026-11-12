@@ -2,9 +2,10 @@
 id: "002"
 slug: ui-consistency
 version: "1.3.0"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-12", words: "승인", rev: "69273a2" }
 waivers: []
 supersedes: null
 ---
