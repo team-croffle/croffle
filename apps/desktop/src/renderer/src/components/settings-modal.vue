@@ -1010,9 +1010,9 @@
                   {{ $t('settings.notifications.intro') }}
                 </p>
 
-                <div class="flex items-center justify-between border-b border-neutral-100 py-2">
+                <div class="flex items-center justify-between border-b py-2">
                   <div class="min-w-0 space-y-0.5">
-                    <Label class="text-sm font-semibold">
+                    <Label class="text-foreground text-sm font-medium">
                       {{ $t('settings.notifications.enabled') }}
                     </Label>
                     <p class="text-muted-foreground wrap-break-words text-xs">
@@ -1069,10 +1069,8 @@
 
                 <!-- 설치 폼 -->
                 <div class="bg-card rounded-xl border p-5 shadow-sm">
-                  <h4
-                    class="mb-3 text-sm font-bold text-foreground dark:text-neutral-100 flex items-center gap-2"
-                  >
-                    <Icon icon="lucide:github" class="h-4 w-4" />
+                  <h4 class="mb-3 text-sm font-bold text-foreground flex items-center gap-2">
+                    <Icon icon="lucide:github" class="size-4" />
                     {{ $t('settings.extensions.installFromGithub') }}
                   </h4>
                   <div class="flex items-center gap-3">
@@ -1099,10 +1097,8 @@
 
                   <Separator class="my-5" />
 
-                  <h4
-                    class="mb-3 text-sm font-bold text-foreground dark:text-neutral-100 flex items-center gap-2"
-                  >
-                    <Icon icon="lucide:download" class="h-4 w-4" />
+                  <h4 class="mb-3 text-sm font-bold text-foreground flex items-center gap-2">
+                    <Icon icon="lucide:download" class="size-4" />
                     {{ $t('settings.extensions.installFromZip') }}
                   </h4>
                   <div class="flex items-center gap-3">
@@ -1121,7 +1117,7 @@
 
                 <!-- 확장 목록 -->
                 <div class="space-y-4">
-                  <h4 class="text-base font-bold text-foreground dark:text-neutral-100">
+                  <h4 class="text-base font-bold text-foreground">
                     {{ $t('settings.extensions.installed') }}
                   </h4>
 
@@ -1129,13 +1125,13 @@
                     v-if="installedPlugins.length === 0"
                     class="bg-muted/30 flex flex-col items-center justify-center rounded-xl border border-dashed py-12 text-center"
                   >
-                    <div class="mb-4 rounded-full bg-neutral-200/50 p-3 dark:bg-neutral-800/50">
-                      <Icon icon="lucide:puzzle" class="h-6 w-6 text-neutral-500" />
+                    <div class="mb-4 rounded-full bg-muted p-3">
+                      <Icon icon="lucide:puzzle" class="size-6 text-muted-foreground" />
                     </div>
-                    <p class="text-sm font-medium text-foreground dark:text-neutral-100">
+                    <p class="text-sm font-medium text-foreground">
                       {{ $t('settings.extensions.emptyTitle') }}
                     </p>
-                    <p class="mt-1 text-xs text-neutral-500">
+                    <p class="mt-1 text-xs text-muted-foreground">
                       {{ $t('settings.extensions.emptyHint') }}
                     </p>
                   </div>
@@ -1149,17 +1145,14 @@
                       <div class="flex items-start justify-between p-4">
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-2">
-                            <h5
-                              class="truncate font-semibold text-foreground dark:text-neutral-100"
-                              :title="plugin.name"
-                            >
+                            <h5 class="truncate font-semibold text-foreground" :title="plugin.name">
                               {{ plugin.name }}
                             </h5>
                             <Badge variant="secondary">v{{ plugin.version }}</Badge>
                           </div>
-                          <p class="mt-1 text-xs text-neutral-500">by {{ plugin.author }}</p>
+                          <p class="mt-1 text-xs text-muted-foreground">by {{ plugin.author }}</p>
                           <p
-                            class="mt-2 line-clamp-2 text-sm text-neutral-600 dark:text-neutral-300"
+                            class="mt-2 line-clamp-2 text-sm text-muted-foreground"
                             :title="plugin.description"
                           >
                             {{ plugin.description }}

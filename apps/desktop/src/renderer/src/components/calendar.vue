@@ -480,7 +480,7 @@
 
   /* 일반 날짜 숫자 스타일 */
   :deep(.fc-daygrid-day-number) {
-    font-size: 0.8rem;
+    font-size: var(--text-xs);
     font-weight: normal;
     color: var(--muted-foreground);
     text-decoration: none;
@@ -533,7 +533,7 @@
   /* 더보기 링크 (+2 more) 디자인 */
   :deep(.fc-more-link) {
     color: var(--croffle-muted);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     font-weight: 600;
     text-decoration: none;
     display: block;
@@ -565,7 +565,7 @@
     width: auto;
     min-width: 1.25rem;
     padding: 2px 5px;
-    font-size: 0.65rem;
+    font-size: var(--text-2xs);
     font-weight: 600;
     line-height: 1.2;
     color: var(--muted-foreground);

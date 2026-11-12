@@ -142,13 +142,13 @@
     <div
       class="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
     >
-      <Icon icon="lucide:flask-conical" class="mt-0.5 h-4 w-4 shrink-0" />
+      <Icon icon="lucide:flask-conical" class="mt-0.5 size-4 shrink-0" />
       <span>{{ $t('settings.sync.beta') }}</span>
     </div>
 
     <!-- 서버 -->
     <div class="space-y-2">
-      <Label for="settings-sync-server" class="text-sm font-semibold">
+      <Label for="settings-sync-server" class="text-foreground text-sm font-medium">
         {{ $t('settings.sync.serverUrl') }}
       </Label>
       <div class="flex items-center gap-3">
@@ -171,7 +171,7 @@
 
     <!-- 인증 -->
     <div v-if="status.configured" class="space-y-3">
-      <Label class="text-sm font-semibold">{{ $t('settings.sync.account') }}</Label>
+      <Label class="text-foreground text-sm font-medium">{{ $t('settings.sync.account') }}</Label>
 
       <div v-if="status.signedIn" class="flex items-center justify-between gap-3">
         <p class="text-sm">
@@ -249,12 +249,9 @@
     </div>
 
     <!-- 사용 -->
-    <div
-      v-if="status.configured"
-      class="flex items-center justify-between border-b border-neutral-100 py-2"
-    >
+    <div v-if="status.configured" class="flex items-center justify-between border-b py-2">
       <div class="min-w-0 space-y-0.5">
-        <Label class="text-sm font-semibold">{{ $t('settings.sync.enable') }}</Label>
+        <Label class="text-foreground text-sm font-medium">{{ $t('settings.sync.enable') }}</Label>
         <p class="text-muted-foreground text-xs">
           {{ status.signedIn ? $t('settings.sync.enableHint') : $t('settings.sync.signInFirst') }}
         </p>
@@ -269,19 +266,19 @@
 
     <!-- 상태 -->
     <div v-if="status.configured" class="space-y-2">
-      <Label class="text-sm font-semibold">{{ $t('settings.sync.status') }}</Label>
+      <Label class="text-foreground text-sm font-medium">{{ $t('settings.sync.status') }}</Label>
       <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-muted-foreground">{{ $t('settings.sync.lastSyncedAt') }}</dt>
         <dd>{{ lastSynced }}</dd>
         <dt class="text-muted-foreground">{{ $t('settings.sync.pending') }}</dt>
         <dd>
           {{ $t('settings.sync.pendingCount', { count: status.pending }) }}
-          <span v-if="status.failed" class="text-red-600 dark:text-red-400">
+          <span v-if="status.failed" class="text-destructive-foreground">
             · {{ $t('settings.sync.failedCount', { count: status.failed }) }}
           </span>
         </dd>
       </dl>
-      <p v-if="errorText" class="text-xs text-red-600 dark:text-red-400" role="alert">
+      <p v-if="errorText" class="text-xs text-destructive-foreground" role="alert">
         {{ errorText }}
       </p>
       <p v-if="clockSkewMinutes" class="text-xs text-amber-700 dark:text-amber-300">
@@ -303,7 +300,9 @@
       <Separator />
       <div class="flex items-center justify-between py-2">
         <div class="min-w-0 space-y-0.5">
-          <Label class="text-sm font-semibold">{{ $t('settings.sync.allowInsecureTls') }}</Label>
+          <Label class="text-foreground text-sm font-medium">{{
+            $t('settings.sync.allowInsecureTls')
+          }}</Label>
           <p class="text-xs text-amber-700 dark:text-amber-300">
             {{ $t('settings.sync.allowInsecureTlsWarning') }}
           </p>

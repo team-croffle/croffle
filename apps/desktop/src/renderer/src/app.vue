@@ -326,7 +326,7 @@
 </script>
 
 <template>
-  <div class="bg-croffle-bg flex h-screen flex-col overflow-hidden font-sans text-neutral-800">
+  <div class="bg-croffle-bg flex h-screen flex-col overflow-hidden font-sans text-foreground">
     <!-- 커스텀 타이틀 바 -->
     <div class="drag-region bg-croffle-bg z-50 flex h-8 shrink-0 justify-between border-b">
       <div class="flex h-full items-center">
@@ -334,7 +334,7 @@
           <Button
             variant="ghost"
             size="icon-xs"
-            class="no-drag text-neutral-500"
+            class="no-drag text-muted-foreground"
             :aria-label="$t('titleBar.toggleLeftSidebar')"
             :title="`${$t('titleBar.toggleLeftSidebar')} (${SHORTCUT_LEFT_SIDEBAR})`"
             @click="uiStore.toggleLeftSidebar()"
@@ -342,10 +342,10 @@
             <Icon icon="lucide:panel-left" />
           </Button>
 
-          <div class="absolute right-0 h-4 w-px bg-neutral-300"></div>
+          <div class="absolute right-0 h-4 w-px bg-border"></div>
         </div>
 
-        <span class="font-logo ml-4 text-xs font-bold text-neutral-600">Croffle</span>
+        <span class="font-logo ml-4 text-xs font-bold text-muted-foreground">Croffle</span>
       </div>
 
       <div class="no-drag flex h-full items-center">
@@ -354,7 +354,7 @@
             <Button
               variant="ghost"
               size="icon-xs"
-              class="text-neutral-500"
+              class="text-muted-foreground"
               :aria-label="$t('titleBar.toggleTheme')"
               :title="$t('titleBar.themeMenuHint')"
               @click="themeStore.changeTheme"
@@ -373,35 +373,35 @@
                 :key="option.value"
                 :value="option.value"
               >
-                <Icon :icon="option.icon" class="mr-2 h-4 w-4" />
+                <Icon :icon="option.icon" class="mr-2 size-4" />
                 {{ option.label }}
               </ContextMenuRadioItem>
             </ContextMenuRadioGroup>
           </ContextMenuContent>
         </ContextMenu>
-        <Separator orientation="vertical" class="mr-6 ml-4 bg-neutral-300 dark:bg-neutral-700" />
+        <Separator orientation="vertical" class="mr-6 ml-4 bg-border" />
         <button
-          class="flex h-full w-12 items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"
+          class="flex h-full w-12 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           aria-label="Minimize window"
           @click="minimizeWindow"
         >
-          <Icon icon="lucide:minus" class="h-4 w-4" />
+          <Icon icon="lucide:minus" class="size-4" />
         </button>
 
         <button
-          class="flex h-full w-12 items-center justify-center text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"
+          class="flex h-full w-12 items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           aria-label="Maximize window"
           @click="maximizeWindow"
         >
-          <Icon icon="lucide:square" class="h-3 w-3" />
+          <Icon icon="lucide:square" class="size-3" />
         </button>
 
         <button
-          class="flex h-full w-12 items-center justify-center text-neutral-500 transition-colors hover:bg-red-600 hover:text-red-100 dark:hover:bg-red-700"
+          class="flex h-full w-12 items-center justify-center text-muted-foreground transition-colors hover:bg-red-600 hover:text-red-100 dark:hover:bg-red-700"
           aria-label="Close window"
           @click="closeWindow"
         >
-          <Icon icon="lucide:x" class="h-4 w-4" />
+          <Icon icon="lucide:x" class="size-4" />
         </button>
       </div>
     </div>

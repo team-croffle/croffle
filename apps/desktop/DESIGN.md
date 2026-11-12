@@ -29,7 +29,10 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
   Settings. Anything painted with `primary` changes with that setting; a hex value does not.
 - `--croffle-*` variables are visible to extensions. Do not rename them or change their values.
 - Light and dark come from the tokens. A screen should not need a `dark:` color class.
-- Allowed exception: the window close button's red hover in the title bar.
+- Error text is `text-destructive-foreground` (readable in dark); `text-destructive` is for
+  destructive actions.
+- Allowed exceptions: the window close button's red hover in the title bar, and warning notices,
+  which use Tailwind's `amber-*` with a `dark:` pair until there is a warning token.
 
 ## Controls
 

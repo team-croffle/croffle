@@ -107,7 +107,7 @@
         <div
           class="space-y-1 overflow-hidden text-left transition-all duration-300 group-data-[collapsible=icon]:hidden"
         >
-          <h2 class="text-croffle-text-dark text-lg font-bold whitespace-nowrap">
+          <h2 class="text-lg font-bold whitespace-nowrap">
             {{ $t('rightSidebar.title') }}
           </h2>
           <p class="text-croffle-text text-xs whitespace-nowrap">
@@ -145,8 +145,8 @@
       >
         <Card class="bg-croffle-sidebar-content gap-0 overflow-hidden">
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
-            <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
-              <Icon icon="lucide:calendar" class="h-4 w-4" />
+            <CardTitle class="flex items-center gap-2 text-sm font-bold">
+              <Icon icon="lucide:calendar" class="size-4" />
               <span>{{ selectedDateLabel }}</span>
               <Badge variant="secondary" class="ml-auto">
                 {{ selectedSchedules.length }}
@@ -162,10 +162,10 @@
               <div
                 v-for="occurrence in selectedSchedules"
                 :key="`${occurrence.schedule.id}-${occurrence.start.getTime()}`"
-                class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-800"
+                class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-accent"
                 @click="handleEditTodo(occurrence)"
               >
-                <Icon icon="lucide:square-check" class="text-muted-foreground h-4 w-4 shrink-0" />
+                <Icon icon="lucide:square-check" class="text-muted-foreground size-4 shrink-0" />
 
                 <span class="text-foreground flex-1 truncate text-sm">
                   {{ occurrence.schedule.title }}
@@ -189,8 +189,8 @@
 
         <Card class="bg-croffle-sidebar-content overflow-hidden">
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
-            <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
-              <Icon icon="lucide:clock" class="h-4 w-4" />
+            <CardTitle class="flex items-center gap-2 text-sm font-bold">
+              <Icon icon="lucide:clock" class="size-4" />
               <span>{{ $t('rightSidebar.upcoming') }}</span>
             </CardTitle>
           </CardHeader>
@@ -207,10 +207,10 @@
       >
         <Icon
           icon="lucide:home"
-          class="text-primary mb-1 h-6 w-6 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5"
+          class="text-primary mb-1 size-6 group-data-[collapsible=icon]:size-5"
         />
         <div class="text-center group-data-[collapsible=icon]:hidden">
-          <h4 class="text-croffle-text-dark text-xs font-bold tracking-wider">CROFFLE</h4>
+          <h4 class="text-xs font-bold tracking-wider">CROFFLE</h4>
           <span class="text-croffle-text text-xs">{{ packageVersion }}</span>
         </div>
       </div>
