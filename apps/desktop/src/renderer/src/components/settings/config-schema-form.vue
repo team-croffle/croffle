@@ -44,7 +44,7 @@
 <template>
   <section class="space-y-4">
     <div v-if="sectionTitle || sectionDescription" class="space-y-1">
-      <h4 v-if="sectionTitle" class="text-base font-bold text-neutral-900">
+      <h4 v-if="sectionTitle" class="text-base font-bold text-foreground">
         {{ sectionTitle }}
       </h4>
       <p v-if="sectionDescription" class="text-muted-foreground text-sm">
@@ -55,7 +55,7 @@
     <div v-for="(schema, key) in items" :key="key" class="space-y-2">
       <div v-if="schema.type === 'boolean'" class="flex items-center justify-between gap-4">
         <div class="min-w-0 space-y-0.5">
-          <Label class="text-sm font-semibold">{{ schema.label }}</Label>
+          <Label class="text-foreground text-sm font-medium">{{ schema.label }}</Label>
           <p v-if="schema.description" class="text-muted-foreground text-xs">
             {{ schema.description }}
           </p>

@@ -76,7 +76,7 @@
             :src="logoImg"
             alt="Croffle Logo"
             class="object-contain transition-all duration-200"
-            :class="leftSidebarOpen ? 'h-12 w-12' : 'h-8 w-8'"
+            :class="leftSidebarOpen ? 'size-12' : 'size-8'"
           />
         </div>
 
@@ -119,27 +119,27 @@
                   <Icon
                     v-if="typeof item.icon === 'string'"
                     :icon="item.icon"
-                    class="text-croffle-text h-5 w-5 shrink-0"
-                    :class="{ 'text-white': item.active }"
+                    class="text-croffle-text size-5 shrink-0"
+                    :class="{ 'text-primary-foreground': item.active }"
                   />
                   <component
                     v-else
                     :is="item.icon"
-                    class="text-croffle-text h-5 w-5 shrink-0"
-                    :class="{ 'text-white': item.active }"
+                    class="text-croffle-text size-5 shrink-0"
+                    :class="{ 'text-primary-foreground': item.active }"
                   />
 
                   <div v-if="leftSidebarOpen" class="flex flex-col gap-0.5">
                     <span
                       class="text-croffle-text text-sm leading-tight font-medium"
-                      :class="{ 'text-white': item.active }"
+                      :class="{ 'text-primary-foreground': item.active }"
                     >
                       {{ translateOrRaw(item.title) }}
                     </span>
 
                     <span
                       class="text-croffle-text text-xs leading-none"
-                      :class="{ 'text-white/80': item.active }"
+                      :class="{ 'text-primary-foreground/80': item.active }"
                     >
                       {{ translateOrRaw(item.subtitle) }}
                     </span>
@@ -156,28 +156,28 @@
       <div class="flex items-center justify-around gap-2" :class="{ 'flex-col': !leftSidebarOpen }">
         <SidebarMenuButton
           size="sm"
-          class="hover:bg-croffle-hover flex aspect-square h-9 w-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
+          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
           :tooltip="$t('sidebar.notifications')"
         >
-          <Icon icon="lucide:bell" class="text-croffle-text h-5 w-5" />
+          <Icon icon="lucide:bell" class="text-croffle-text size-5" />
         </SidebarMenuButton>
 
         <SidebarMenuButton
           size="sm"
-          class="hover:bg-croffle-hover flex aspect-square h-9 w-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
+          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
           :tooltip="$t('sidebar.settings')"
           @click="emit('open-settings')"
         >
-          <Icon icon="lucide:settings" class="text-croffle-text h-5 w-5" />
+          <Icon icon="lucide:settings" class="text-croffle-text size-5" />
         </SidebarMenuButton>
 
         <SidebarMenuButton
           size="sm"
-          class="hover:bg-croffle-hover flex aspect-square h-9 w-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
+          class="hover:bg-croffle-hover flex aspect-square size-9 items-center justify-center border-none bg-transparent shadow-none ring-0 ring-offset-0 transition-colors outline-none [--sidebar-accent:transparent] focus:ring-0 focus-visible:ring-0"
           :tooltip="$t('sidebar.help')"
           @click="isHelpModalOpen = true"
         >
-          <Icon icon="lucide:circle-help" class="text-croffle-text h-5 w-5" />
+          <Icon icon="lucide:circle-help" class="text-croffle-text size-5" />
         </SidebarMenuButton>
       </div>
     </SidebarFooter>

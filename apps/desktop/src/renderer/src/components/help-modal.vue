@@ -78,7 +78,7 @@
 <template>
   <Dialog :open="open" @update:open="handleClose">
     <DialogContent v-if="currentStepData" class="overflow-hidden p-0 sm:max-w-md">
-      <div class="h-1.5 w-full overflow-hidden bg-neutral-100 dark:bg-neutral-500">
+      <div class="h-1.5 w-full overflow-hidden bg-muted">
         <div
           class="bg-primary h-full transition-all duration-500 ease-in-out"
           :style="{ width: `${((currentStep + 1) / totalSteps) * 100}%` }"
@@ -88,12 +88,12 @@
       <div class="p-6">
         <DialogHeader class="flex flex-col items-center text-center">
           <div
-            class="bg-primary/10 text-primary mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+            class="bg-primary/10 text-primary mb-4 flex size-16 items-center justify-center rounded-full"
           >
-            <Icon :icon="currentStepData.icon" class="h-8 w-8" />
+            <Icon :icon="currentStepData.icon" class="size-8" />
           </div>
 
-          <DialogTitle class="text-primary text-xl font-bold">
+          <DialogTitle class="text-primary">
             {{ currentStepData.title }}
           </DialogTitle>
 
@@ -103,7 +103,7 @@
         </DialogHeader>
 
         <div
-          class="my-6 flex min-h-20 items-center justify-center text-center text-sm leading-relaxed whitespace-pre-line text-neutral-400"
+          class="my-6 flex min-h-20 items-center justify-center text-center text-sm leading-relaxed whitespace-pre-line text-muted-foreground"
         >
           {{ currentStepData.content }}
         </div>
