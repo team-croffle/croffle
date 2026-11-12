@@ -750,13 +750,11 @@
       }
     "
   >
-    <DialogContent
-      class="border-croffle-border bg-background gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-lg"
-    >
+    <DialogContent class="bg-background gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-lg">
       <DialogHeader class="space-y-3 border-b px-6 pt-6 pb-5 text-left">
         <div class="flex items-start gap-3 pr-6">
           <div
-            class="bg-croffle-primary/10 text-croffle-primary flex size-10 shrink-0 items-center justify-center rounded-xl"
+            class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl"
           >
             <Icon :icon="headerIcon" class="size-5" />
           </div>
@@ -865,7 +863,7 @@
             </div>
           </dl>
 
-          <div v-if="viewedSchedule.description" class="border-croffle-border border-t pt-4">
+          <div v-if="viewedSchedule.description" class="border-t pt-4">
             <p class="text-muted-foreground mb-1.5 text-xs tracking-wide uppercase">
               {{ $t('schedule.description') }}
             </p>
@@ -900,7 +898,7 @@
                   id="schedule-title"
                   v-model="form.title"
                   :placeholder="$t('schedule.titlePlaceholder')"
-                  class="border-croffle-border focus-visible:ring-croffle-primary/30 h-10"
+                  class="h-10"
                 />
               </Field>
 
@@ -911,7 +909,7 @@
                   v-model="form.description"
                   :placeholder="$t('schedule.descriptionPlaceholder')"
                   rows="3"
-                  class="border-croffle-border focus-visible:ring-croffle-primary/30 min-h-20 resize-none"
+                  class="min-h-20 resize-none"
                 />
               </Field>
 
@@ -926,7 +924,7 @@
                     id="schedule-location"
                     v-model="form.location"
                     :placeholder="$t('schedule.locationPlaceholder')"
-                    class="border-croffle-border focus-visible:ring-croffle-primary/30 h-10 pl-9"
+                    class="h-10 pl-9"
                   />
                 </div>
               </Field>
@@ -944,7 +942,7 @@
 
               <Field
                 orientation="horizontal"
-                class="border-croffle-border bg-muted/30 items-center justify-between rounded-xl border px-3.5 py-3"
+                class="bg-muted/30 items-center justify-between rounded-xl border px-3.5 py-3"
               >
                 <div class="space-y-0.5">
                   <FieldLabel for="schedule-all-day" class="text-sm font-medium">
@@ -974,7 +972,7 @@
                         variant="outline"
                         :class="
                           cn(
-                            'border-croffle-border hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal',
+                            'hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal',
                             !startDate && 'text-muted-foreground',
                           )
                         "
@@ -992,7 +990,7 @@
                         />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent class="border-croffle-border z-50 w-auto p-0">
+                    <PopoverContent class="z-50 w-auto p-0">
                       <Calendar
                         v-model="startDate"
                         mode="single"
@@ -1014,7 +1012,7 @@
                         variant="outline"
                         :class="
                           cn(
-                            'border-croffle-border hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal',
+                            'hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal',
                             !endDate && 'text-muted-foreground',
                           )
                         "
@@ -1032,7 +1030,7 @@
                         />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent class="border-croffle-border z-50 w-auto p-0">
+                    <PopoverContent class="z-50 w-auto p-0">
                       <Calendar
                         v-model="endDate"
                         mode="single"
@@ -1076,7 +1074,7 @@
               <Field>
                 <FieldLabel>{{ $t('schedule.priority') }}</FieldLabel>
                 <div
-                  class="border-croffle-border bg-muted/20 grid grid-cols-3 gap-1 rounded-xl border p-1"
+                  class="bg-muted/20 grid grid-cols-3 gap-1 rounded-xl border p-1"
                   role="radiogroup"
                   :aria-label="$t('schedule.priority')"
                 >
@@ -1117,7 +1115,7 @@
                     @click="form.colorLabel = color"
                   />
                   <label
-                    class="border-croffle-border hover:bg-muted/50 relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed"
+                    class="hover:bg-muted/50 relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed"
                     :title="$t('schedule.customColor')"
                   >
                     <Icon icon="lucide:palette" class="text-muted-foreground size-3.5" />
@@ -1137,7 +1135,7 @@
                   :key="tagsInputKey"
                   :model-value="tagNames"
                   :disabled="isAddingTag"
-                  class="border-croffle-border focus-within:ring-croffle-primary/30 min-h-10 focus-within:ring-2"
+                  class="min-h-10"
                   @add-tag="onTagAdded"
                   @remove-tag="removeTagByName"
                 >
@@ -1165,7 +1163,7 @@
                     v-for="tag in tagSuggestions"
                     :key="tag.id"
                     type="button"
-                    class="border-croffle-border hover:bg-muted/50 rounded-md border px-2 py-0.5 text-xs"
+                    class="hover:bg-muted/50 rounded-md border px-2 py-0.5 text-xs"
                     :style="{ borderColor: tag.color }"
                     @click="addTagByName(tag.name)"
                   >
@@ -1183,7 +1181,7 @@
               <Field>
                 <FieldLabel>{{ $t('schedule.reminder') }}</FieldLabel>
                 <div
-                  class="border-croffle-border bg-muted/30 flex items-center justify-between rounded-xl border px-3.5 py-3"
+                  class="bg-muted/30 flex items-center justify-between rounded-xl border px-3.5 py-3"
                 >
                   <div class="space-y-0.5">
                     <FieldLabel for="schedule-reminder-default" class="text-sm font-medium">
@@ -1246,7 +1244,7 @@
                     >
                       <SelectTrigger
                         id="schedule-reminder-preset"
-                        class="border-croffle-border h-10 flex-1"
+                        class="h-10 flex-1"
                         :aria-label="$t('schedule.reminderAdd')"
                       >
                         <SelectValue :placeholder="$t('schedule.reminderAdd')" />
@@ -1271,13 +1269,13 @@
                       inputmode="numeric"
                       :placeholder="$t('schedule.reminderCustomPlaceholder')"
                       :disabled="reminderEditingDisabled"
-                      class="border-croffle-border focus-visible:ring-croffle-primary/30 h-10 w-28"
+                      class="h-10 w-28"
                       @keydown.enter.prevent="addCustomReminder"
                     />
                     <Button
                       type="button"
                       variant="outline"
-                      class="border-croffle-border h-10 px-3"
+                      class="h-10 px-3"
                       :disabled="reminderEditingDisabled"
                       :aria-label="$t('schedule.reminderAdd')"
                       @click="addCustomReminder"
@@ -1300,7 +1298,7 @@
                   :model-value="recurrence.preset"
                   @update:model-value="onRecurrencePresetChange"
                 >
-                  <SelectTrigger id="schedule-recurrence" class="border-croffle-border h-10 w-full">
+                  <SelectTrigger id="schedule-recurrence" class="h-10 w-full">
                     <SelectValue :placeholder="$t('schedule.recurrencePlaceholder')" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1328,7 +1326,7 @@
                     v-model.number="recurrence.interval"
                     type="number"
                     min="1"
-                    class="border-croffle-border h-10 w-24"
+                    class="h-10 w-24"
                   />
                   <span class="text-muted-foreground text-sm">
                     {{
@@ -1350,8 +1348,8 @@
                     class="h-8 min-w-8 rounded-md border px-2 text-xs font-medium transition-colors"
                     :class="
                       recurrence.byWeekday.includes(day)
-                        ? 'border-croffle-primary bg-croffle-primary/10 text-croffle-primary'
-                        : 'border-croffle-border text-muted-foreground hover:bg-muted/50'
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted/50'
                     "
                     :disabled="!weekdaysEditable"
                     @click="toggleWeekday(day)"
@@ -1370,10 +1368,7 @@
                     :model-value="recurrence.endMode"
                     @update:model-value="onRecurrenceEndModeChange"
                   >
-                    <SelectTrigger
-                      id="schedule-recurrence-end"
-                      class="border-croffle-border h-10 w-full"
-                    >
+                    <SelectTrigger id="schedule-recurrence-end" class="h-10 w-full">
                       <SelectValue :placeholder="$t('schedule.endConditionPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1391,7 +1386,7 @@
                       <Button
                         type="button"
                         variant="outline"
-                        class="border-croffle-border hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal"
+                        class="hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal"
                       >
                         <span class="flex min-w-0 items-center gap-2">
                           <Icon
@@ -1406,7 +1401,7 @@
                         />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent class="border-croffle-border z-50 w-auto p-0">
+                    <PopoverContent class="z-50 w-auto p-0">
                       <Calendar
                         v-model="untilDate"
                         mode="single"
@@ -1432,7 +1427,7 @@
                       v-model.number="recurrence.count"
                       type="number"
                       min="1"
-                      class="border-croffle-border h-10 w-24"
+                      class="h-10 w-24"
                     />
                     <span class="text-muted-foreground text-sm">
                       {{ $t('schedule.countSuffix') }}
@@ -1449,7 +1444,7 @@
                   id="schedule-recurrence-raw"
                   v-model="recurrence.rawRule"
                   placeholder="FREQ=WEEKLY;BYDAY=FR"
-                  class="border-croffle-border focus-visible:ring-croffle-primary/30 h-10 font-mono text-xs"
+                  class="h-10 font-mono text-xs"
                 />
               </Field>
             </FieldSet>
@@ -1458,7 +1453,7 @@
       </div>
 
       <DialogFooter
-        class="border-croffle-border bg-muted/20 flex-row items-center gap-2 border-t px-6 py-4 sm:justify-between"
+        class="bg-muted/20 flex-row items-center gap-2 border-t px-6 py-4 sm:justify-between"
       >
         <div class="min-w-0">
           <Button
@@ -1474,36 +1469,22 @@
         </div>
 
         <div v-if="isViewMode" class="flex shrink-0 gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            class="border-croffle-border h-9"
-            @click="uiStore.closeScheduleModal()"
-          >
+          <Button type="button" variant="outline" class="h-9" @click="uiStore.closeScheduleModal()">
             {{ $t('common.close') }}
           </Button>
-          <Button
-            type="button"
-            class="bg-croffle-primary hover:bg-croffle-hover h-9 text-white"
-            @click="startEditing"
-          >
+          <Button type="button" class="h-9" @click="startEditing">
             <Icon icon="lucide:pencil" class="mr-1.5 size-4" />
             {{ $t('common.edit') }}
           </Button>
         </div>
         <div v-else class="flex shrink-0 gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            class="border-croffle-border h-9"
-            @click="uiStore.closeScheduleModal()"
-          >
+          <Button type="button" variant="outline" class="h-9" @click="uiStore.closeScheduleModal()">
             {{ $t('common.cancel') }}
           </Button>
           <Button
             type="button"
             :disabled="!form.title.trim() || !startDate || !endDate"
-            class="bg-croffle-primary hover:bg-croffle-hover h-9 text-white"
+            class="h-9"
             @click="handleSave"
           >
             <Icon

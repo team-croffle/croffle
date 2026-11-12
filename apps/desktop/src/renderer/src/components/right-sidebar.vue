@@ -97,7 +97,7 @@
     side="right"
     collapsible="icon"
     :open="rightSidebarOpen"
-    class="border-croffle-border bg-croffle-sidebar relative flex h-screen flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
+    class="bg-croffle-sidebar relative flex h-screen flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
   >
     <SidebarHeader class="bg-croffle-sidebar shrink-0 px-4 pb-0">
       <div
@@ -133,7 +133,7 @@
     <SidebarContent class="bg-croffle-sidebar no-scrollbar min-h-0 flex-1 overflow-y-auto p-4 pt-0">
       <div class="mt-2 flex justify-center">
         <Button
-          class="bg-croffle-primary hover:bg-croffle-hover h-11 w-full rounded-lg border-none font-medium text-white shadow-sm transition-all duration-300 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
+          class="h-11 w-full rounded-lg font-medium shadow-sm transition-all duration-300 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
           @click="uiStore.openScheduleModal('add')"
         >
           <Icon
@@ -147,9 +147,7 @@
       <div
         class="animate-in fade-in flex flex-col gap-4 duration-300 group-data-[collapsible=icon]:hidden"
       >
-        <Card
-          class="border-croffle-border bg-croffle-sidebar-content gap-0 overflow-hidden rounded-xl border shadow-sm"
-        >
+        <Card class="bg-croffle-sidebar-content gap-0 overflow-hidden rounded-xl border shadow-sm">
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
             <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
               <Icon icon="lucide:calendar" class="h-4 w-4" />
@@ -195,9 +193,7 @@
           </CardContent>
         </Card>
 
-        <Card
-          class="border-croffle-border bg-croffle-sidebar-content overflow-hidden rounded-xl border shadow-sm"
-        >
+        <Card class="bg-croffle-sidebar-content overflow-hidden rounded-xl border shadow-sm">
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
             <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
               <Icon icon="lucide:clock" class="h-4 w-4" />
@@ -213,11 +209,11 @@
 
     <SidebarFooter class="bg-croffle-sidebar shrink-0 flex-col items-center justify-center pb-4">
       <div
-        class="border-croffle-border bg-croffle-sidebar-content-disabled mb-4 flex w-full flex-col items-center justify-center rounded-xl border p-4 shadow-sm group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
+        class="bg-croffle-sidebar-content-disabled mb-4 flex w-full flex-col items-center justify-center rounded-xl border p-4 shadow-sm group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
       >
         <Icon
           icon="lucide:home"
-          class="text-croffle-primary mb-1 h-6 w-6 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5"
+          class="text-primary mb-1 h-6 w-6 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5"
         />
         <div class="text-center group-data-[collapsible=icon]:hidden">
           <h4 class="text-croffle-text-dark text-xs font-bold tracking-wider">CROFFLE</h4>

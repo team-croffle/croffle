@@ -328,9 +328,7 @@
 <template>
   <div class="bg-croffle-bg flex h-screen flex-col overflow-hidden font-sans text-neutral-800">
     <!-- 커스텀 타이틀 바 -->
-    <div
-      class="drag-region border-croffle-border bg-croffle-bg z-50 flex h-8 shrink-0 justify-between border-b"
-    >
+    <div class="drag-region bg-croffle-bg z-50 flex h-8 shrink-0 justify-between border-b">
       <div class="flex h-full items-center">
         <div class="relative flex h-full w-12 items-center justify-center">
           <Button

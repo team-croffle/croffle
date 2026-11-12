@@ -103,7 +103,7 @@
           :id="`ext-setting-${key}`"
           :model-value="String(values[key] ?? '')"
           :type="schema.type === 'number' ? 'number' : 'text'"
-          class="h-10 border-neutral-200"
+          class="h-10"
           @update:model-value="(v) => updateValue(key, schema.type === 'number' ? Number(v) : v)"
         />
         <p v-if="schema.description" class="text-muted-foreground text-xs">
