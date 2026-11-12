@@ -898,7 +898,6 @@
                   id="schedule-title"
                   v-model="form.title"
                   :placeholder="$t('schedule.titlePlaceholder')"
-                  class="h-10"
                 />
               </Field>
 
@@ -924,7 +923,7 @@
                     id="schedule-location"
                     v-model="form.location"
                     :placeholder="$t('schedule.locationPlaceholder')"
-                    class="h-10 pl-9"
+                    class="pl-9"
                   />
                 </div>
               </Field>
@@ -1135,7 +1134,6 @@
                   :key="tagsInputKey"
                   :model-value="tagNames"
                   :disabled="isAddingTag"
-                  class="min-h-10"
                   @add-tag="onTagAdded"
                   @remove-tag="removeTagByName"
                 >
@@ -1246,7 +1244,7 @@
                     >
                       <SelectTrigger
                         id="schedule-reminder-preset"
-                        class="h-10 flex-1"
+                        class="flex-1"
                         :aria-label="$t('schedule.reminderAdd')"
                       >
                         <SelectValue :placeholder="$t('schedule.reminderAdd')" />
@@ -1271,7 +1269,7 @@
                       inputmode="numeric"
                       :placeholder="$t('schedule.reminderCustomPlaceholder')"
                       :disabled="reminderEditingDisabled"
-                      class="h-10 w-28"
+                      class="w-24"
                       @keydown.enter.prevent="addCustomReminder"
                     />
                     <Button
@@ -1300,7 +1298,7 @@
                   :model-value="recurrence.preset"
                   @update:model-value="onRecurrencePresetChange"
                 >
-                  <SelectTrigger id="schedule-recurrence" class="h-10 w-full">
+                  <SelectTrigger id="schedule-recurrence" class="w-full">
                     <SelectValue :placeholder="$t('schedule.recurrencePlaceholder')" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1328,7 +1326,7 @@
                     v-model.number="recurrence.interval"
                     type="number"
                     min="1"
-                    class="h-10 w-24"
+                    class="w-24"
                   />
                   <span class="text-muted-foreground text-sm">
                     {{
@@ -1372,7 +1370,7 @@
                     :model-value="recurrence.endMode"
                     @update:model-value="onRecurrenceEndModeChange"
                   >
-                    <SelectTrigger id="schedule-recurrence-end" class="h-10 w-full">
+                    <SelectTrigger id="schedule-recurrence-end" class="w-full">
                       <SelectValue :placeholder="$t('schedule.endConditionPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1431,7 +1429,7 @@
                       v-model.number="recurrence.count"
                       type="number"
                       min="1"
-                      class="h-10 w-24"
+                      class="w-24"
                     />
                     <span class="text-muted-foreground text-sm">
                       {{ $t('schedule.countSuffix') }}
@@ -1448,7 +1446,7 @@
                   id="schedule-recurrence-raw"
                   v-model="recurrence.rawRule"
                   placeholder="FREQ=WEEKLY;BYDAY=FR"
-                  class="h-10 font-mono text-xs"
+                  class="font-mono text-xs"
                 />
               </Field>
             </FieldSet>

@@ -6,6 +6,7 @@
 
   import { Button } from '@/components/ui/button';
   import { Icon } from '@/components/ui/icon';
+  import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
@@ -25,9 +26,6 @@
   const otpRequired = ref(false);
   const token = ref('');
   const busy = ref(false);
-
-  const inputClass =
-    'w-full border-input placeholder:text-muted-foreground focus:border-ring focus:ring-ring rounded-lg border bg-transparent px-3 py-2 text-sm focus:ring-1 focus:outline-none';
 
   onMounted(() => {
     void syncStore.refresh();
@@ -154,12 +152,11 @@
         {{ $t('settings.sync.serverUrl') }}
       </Label>
       <div class="flex items-center gap-3">
-        <input
+        <Input
           id="settings-sync-server"
           v-model="serverUrl"
           type="url"
           :placeholder="$t('settings.sync.serverUrlPlaceholder')"
-          :class="inputClass"
           @keydown.enter="onSaveServer"
         />
         <Button
@@ -202,23 +199,21 @@
 
         <form class="space-y-2" @submit.prevent="onSignIn">
           <template v-if="authMode === 'password'">
-            <input
+            <Input
               v-model="username"
               type="text"
               autocomplete="username"
               :placeholder="$t('settings.sync.username')"
               :aria-label="$t('settings.sync.username')"
-              :class="inputClass"
             />
-            <input
+            <Input
               v-model="password"
               type="password"
               autocomplete="current-password"
               :placeholder="$t('settings.sync.password')"
               :aria-label="$t('settings.sync.password')"
-              :class="inputClass"
             />
-            <input
+            <Input
               v-if="otpRequired"
               v-model="otp"
               type="text"
@@ -226,17 +221,15 @@
               autocomplete="one-time-code"
               :placeholder="$t('settings.sync.otp')"
               :aria-label="$t('settings.sync.otp')"
-              :class="inputClass"
             />
           </template>
-          <input
+          <Input
             v-else
             v-model="token"
             type="password"
             autocomplete="off"
             :placeholder="$t('settings.sync.token')"
             :aria-label="$t('settings.sync.token')"
-            :class="inputClass"
           />
           <Button
             type="submit"

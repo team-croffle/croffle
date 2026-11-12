@@ -61,7 +61,12 @@
 <template>
   <div
     :id="props.id"
-    :class="cn('bg-background flex h-10 items-center gap-1 rounded-md border px-2', props.class)"
+    :class="
+      cn(
+        'border-input flex h-9 items-center gap-1 rounded-md border bg-transparent px-2 shadow-xs dark:bg-input/30',
+        props.class,
+      )
+    "
   >
     <Icon icon="lucide:clock" class="text-muted-foreground ml-1 size-4 shrink-0" />
     <Select :model-value="hour" @update:model-value="onHourChange">

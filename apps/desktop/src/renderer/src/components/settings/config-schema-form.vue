@@ -53,7 +53,7 @@
     </div>
 
     <div v-for="(schema, key) in items" :key="key" class="space-y-2">
-      <div v-if="schema.type === 'boolean'" class="flex items-center justify-between">
+      <div v-if="schema.type === 'boolean'" class="flex items-center justify-between gap-4">
         <div class="min-w-0 space-y-0.5">
           <Label class="text-sm font-semibold">{{ schema.label }}</Label>
           <p v-if="schema.description" class="text-muted-foreground text-xs">
@@ -69,15 +69,21 @@
         />
       </div>
 
-      <template v-else-if="schema.type === 'select' && schema.options">
-        <Label :for="`ext-setting-${key}`" class="text-foreground text-sm font-medium">
-          {{ schema.label }}
-        </Label>
+      <div v-else class="flex items-center justify-between gap-4">
+        <div class="min-w-0 space-y-0.5">
+          <Label :for="`ext-setting-${key}`" class="text-foreground text-sm font-medium">
+            {{ schema.label }}
+          </Label>
+          <p v-if="schema.description" class="text-muted-foreground text-xs">
+            {{ schema.description }}
+          </p>
+        </div>
         <Select
+          v-if="schema.type === 'select' && schema.options"
           :model-value="String(values[key] ?? schema.defaultValue)"
           @update:model-value="(v: unknown) => updateValue(key, v)"
         >
-          <SelectTrigger :id="`ext-setting-${key}`" class="w-full">
+          <SelectTrigger :id="`ext-setting-${key}`" class="w-60">
             <SelectValue :placeholder="schema.label" />
           </SelectTrigger>
           <SelectContent>
@@ -90,26 +96,15 @@
             </SelectItem>
           </SelectContent>
         </Select>
-        <p v-if="schema.description" class="text-muted-foreground text-xs">
-          {{ schema.description }}
-        </p>
-      </template>
-
-      <template v-else>
-        <Label :for="`ext-setting-${key}`" class="text-foreground text-sm font-medium">
-          {{ schema.label }}
-        </Label>
         <Input
+          v-else
           :id="`ext-setting-${key}`"
           :model-value="String(values[key] ?? '')"
           :type="schema.type === 'number' ? 'number' : 'text'"
-          class="h-10"
+          :class="schema.type === 'number' ? 'w-24' : 'w-60'"
           @update:model-value="(v) => updateValue(key, schema.type === 'number' ? Number(v) : v)"
         />
-        <p v-if="schema.description" class="text-muted-foreground text-xs">
-          {{ schema.description }}
-        </p>
-      </template>
+      </div>
     </div>
   </section>
 </template>
