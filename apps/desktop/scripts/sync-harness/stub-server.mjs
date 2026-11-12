@@ -22,6 +22,8 @@ const CHILD_FIRST = env.CHILD_FIRST === '1';
 const INVALID_ROW_ID = env.INVALID_ROW_ID ?? '';
 let fail503 = Number(env.FAIL_503_TIMES ?? 0);
 let dropPushResponses = 0;
+/** The next N pushes are applied at once but answered only after this many milliseconds. */
+let delayPush = { times: 0, ms: 0 };
 /** Bootstrap pages served before every further bootstrap request answers 503 (-1 = off). */
 let bootstrapPagesLeft = Number(env.FAIL_BOOTSTRAP_AFTER ?? -1);
 
@@ -180,6 +182,19 @@ const handlers = {
       console.log(JSON.stringify({ route: 'POST /sync/push', status: 'dropped after apply' }));
       return res.destroy();
     }
+    if (delayPush.times > 0) {
+      // Applied, answer held back: the window in which the desktop can edit a row it is sending.
+      delayPush.times--;
+      console.log(
+        JSON.stringify({
+          route: 'POST /sync/push',
+          status: 'held',
+          ms: delayPush.ms,
+          commits: commits.map((c) => ({ opId: c.opId, rowId: c.rowId, version: c.version })),
+        }),
+      );
+      return setTimeout(() => send(res, 200, result), delayPush.ms);
+    }
     return send(res, 200, result);
   },
 
@@ -270,6 +285,12 @@ const handlers = {
   'POST /__stub/dropPush': (_req, res, body) => {
     dropPushResponses = Number(body.times ?? 1);
     return send(res, 200, { dropPushResponses });
+  },
+
+  /** The next N pushes are applied, then answered after `ms`: `{ times, ms }`. */
+  'POST /__stub/delayPush': (_req, res, body) => {
+    delayPush = { times: Number(body.times ?? 1), ms: Number(body.ms ?? 5000) };
+    return send(res, 200, { delayPush });
   },
 
   /** Everything the stub holds, for comparing with the desktop database. */

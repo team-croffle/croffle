@@ -41,6 +41,7 @@ curl -XPOST localhost:8787/__stub/write -d '{"table":"tag","row":{"id":"t1","nam
 curl -XPOST localhost:8787/__stub/purge -d '{"seq":5}'      # cursors before 5 now get 410
 curl -XPOST localhost:8787/__stub/fail503 -d '{"times":2}'  # the next 2 sync requests answer 503
 curl -XPOST localhost:8787/__stub/dropPush -d '{"times":4}' # the next 4 pushes apply, then drop the answer
+curl -XPOST localhost:8787/__stub/delayPush -d '{"times":1,"ms":8000}' # the next push applies, answers 8 s later (V-11: edit the row meanwhile)
 curl localhost:8787/__stub/state                            # everything the stub holds
 ```
 
