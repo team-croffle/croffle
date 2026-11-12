@@ -2,6 +2,7 @@
 intent: "001"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-12", words: "dd", rev: "W-16 태그 시점 변경 제안(1번: stage할 때 HEAD에 태그)에 대한 답", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-12", words: "spec의 테스트 경로 정정 승인", rev: "V-2 실행 경로만 정정 (audit 1.3.0 A-4)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-11", words: "그래. 이번만이니까 게이트 추가까지 해서 승인할게", rev: "bf53558 (+ W-5 gate line added on these words)", kind: summary }
 summary_for_user: |
@@ -68,7 +69,7 @@ summary_for_user: |
 
 ### 릴리스 · 발행
 - 데스크톱 태그: `release.yml`의 태그를 `desktop-v${version}`으로, `electron-builder.yml`의 `publish.tagNamePrefix: desktop-v`. 릴리스 제목 관례는 유지한다. (구현 중 확인, electron-updater 6.8 소스) 기본 설정(`fullChangelog: false`)에서 노트는 feed의 본문을 그대로 쓰므로 접두어와 무관하게 보인다 — 2026-10-20 분석의 "노트가 빈다"는 `fullChangelog: true`에만 해당한다. 그래서 `releaseInfo` 주입은 하지 않고, `update-modal.vue`는 노트가 비었을 때(draft를 본문 없이 게시한 경우) 릴리스 페이지 링크만 보여 준다. 대신 다른 문제가 있다: rc 설치본은 `allowPrerelease`가 자동으로 켜지고 그 경로는 semver가 아닌 태그(`desktop-v…`)를 모두 건너뛰므로, `autoUpdater.allowPrerelease = false`로 고정해 rc 설치본도 다음 stable로 업데이트되게 한다.
-- npm staging: `publish-packages`의 `changeset publish`를 스크립트(`scripts/stage-packages.mjs`)로 바꾼다. 패키지마다 npm에 없는 버전이면 `pnpm pack`(workspace 의존성 치환) → tarball을 `npm stage publish --provenance`(npm CLI ≥ 11.15.0, OIDC). 이미 stage된 버전은 건너뛴다. 출력된 stage id를 job summary에 남긴다. git 태그(`@croffledev/<pkg>@<version>`)는 stage 때 만들지 않고, 다음 실행에서 "npm에 공개되었는데 태그가 없는 버전"을 찾아 만든다. npmjs.com의 trusted publishing 설정을 "stage만 허용"으로 바꾸는 일은 사용자가 한다(2FA).
+- npm staging: `publish-packages`의 `changeset publish`를 스크립트(`scripts/stage-packages.mjs`)로 바꾼다. 패키지마다 npm에 없는 버전이면 `pnpm pack`(workspace 의존성 치환) → tarball을 `npm stage publish --provenance`(npm CLI ≥ 11.15.0, OIDC). 이미 stage된 버전은 건너뛴다. 출력된 stage id를 job summary에 남긴다. git 태그(`@croffledev/<pkg>@<version>`)는 stage할 때 그 커밋(HEAD)에 단다 (2026-11-12 변경: 공개 뒤 과거 커밋에 다는 방식은 GitHub가 GITHUB_TOKEN의 ref 생성을 workflow 파일 차이로 거부함 — `.loctx/reports/1.3.0/publish-packages-manual.log`). stage한 버전을 npm에서 거절하면 그 태그는 손으로 지운다. npmjs.com의 trusted publishing 설정을 "stage만 허용"으로 바꾸는 일은 사용자가 한다(2FA).
 - AGENTS.md: Versioning · CI/CD · Changeset 규칙 문장을 바뀐 동작에 맞춘다. 템플릿 `.github/release-notes.md`도.
 
 ## 작업 단위

@@ -4,11 +4,15 @@
 // maintainer approves it on npmjs.com or with `npm stage approve <id>` (2FA).
 //
 // For each package:
-//   - the version is live on npm  → make sure its git tag `<name>@<version>` exists
+//   - the version is live on npm  → nothing (reported)
 //   - the version is already staged → nothing (waiting for approval)
-//   - otherwise                     → `pnpm pack` (resolves workspace: ranges) and
-//                                     `npm stage publish <tarball> --provenance`
-// Git tags follow approval: they are created on the first run after a version went live.
+//   - otherwise                     → `pnpm pack` (resolves workspace: ranges),
+//                                     `npm stage publish <tarball> --provenance`, and the git
+//                                     tag `<name>@<version>` on this commit
+// The tag goes on the commit that was staged, when it is staged — this run is the merge of the
+// version PR, so HEAD is that source. A later run cannot tag an older commit: GitHub refuses a
+// GITHUB_TOKEN ref whose workflow files differ from the default branch. If a staged version is
+// rejected on npm, delete its tag by hand.
 //
 // DRY_RUN=1 passes --dry-run to npm and creates no tags. Needs npm >= 11.15.0.
 
@@ -60,24 +64,7 @@ function isStaged(name, version) {
   }
 }
 
-/**
- * The commit that set this version in the package's package.json (the merged version PR): the
- * source that was packed and staged, not whatever master holds when approval is noticed.
- */
-function versionCommit(dir, version) {
-  const sha = run('git', [
-    'log',
-    '-n1',
-    '--format=%H',
-    '-G',
-    `"version": "${version.replace(/[.]/g, '\\.')}"`,
-    '--',
-    join(dir, 'package.json'),
-  ]).trim();
-  return sha || 'HEAD';
-}
-
-function ensureTag(tag, target) {
+function ensureTag(tag) {
   if (tryRun('git', ['rev-parse', '-q', '--verify', `refs/tags/${tag}`]).ok) {
     return 'tag exists';
   }
@@ -89,7 +76,7 @@ function ensureTag(tag, target) {
   }
   // Tagging is a by-product: a refused tag must not hide whether staging worked. Report the
   // git output in full — the reason a push was refused is not on its last line.
-  const created = tryRun('git', ['tag', tag, target]);
+  const created = tryRun('git', ['tag', tag, 'HEAD']);
   if (!created.ok) {
     warnings.push({ tag, step: 'git tag', output: created.out });
     return 'tag not created (see warnings)';
@@ -118,8 +105,8 @@ function stage(dir, name, version) {
   if (dryRun) {
     args.push('--dry-run');
   }
-  const result = run('npm', args);
-  return result.trim().split('\n').slice(-3).join(' ');
+  const result = run('npm', args).trim().split('\n').slice(-3).join(' ');
+  return dryRun ? result : `${result}; ${ensureTag(`${name}@${version}`)}`;
 }
 
 const npmVersion = run('npm', ['--version']).trim();
@@ -142,7 +129,7 @@ for (const dir of PACKAGES) {
   const tag = `${name}@${version}`;
   try {
     if (isLive(name, version)) {
-      summary.push(`- \`${tag}\`: live on npm, ${ensureTag(tag, versionCommit(dir, version))}`);
+      summary.push(`- \`${tag}\`: live on npm`);
     } else if (isStaged(name, version)) {
       summary.push(`- \`${tag}\`: already staged, waiting for approval`);
     } else {
