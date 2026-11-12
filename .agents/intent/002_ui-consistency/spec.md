@@ -1,7 +1,8 @@
 ---
 intent: "002"
-status: draft
-approvals: []
+status: accepted
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-12", words: "진행", rev: "7132f50", kind: summary }
 summary_for_user: |
   작업 단위는 6개입니다: W-1 `apps/desktop/DESIGN.md` 와 AGENTS.md 연결 → W-2 토큰 연결(`--primary` · `--ring` · `--border` · `--input`)과 색 덮어쓰기 제거 → W-3 버튼 → W-4 입력 · 선택(설정 행 240px 포함) → W-5 다이얼로그 · 카드 · radius → W-6 글자 · 색 정리.
   intent 에 없던 세부 결정이 넷입니다: 툴팁은 강조색이 아니라 전경색 배경, 모든 다이얼로그 radius 를 14px 로(부품 기본값 변경), 제목 표시줄용 버튼 size `icon-xs`(28px) 추가, 태그 추천은 32px 로 키우지 않고 배지 모양으로. 중요도 선택기는 높이 규칙에서 뺐습니다.
