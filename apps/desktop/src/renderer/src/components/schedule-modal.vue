@@ -951,7 +951,7 @@
 
               <div class="grid grid-cols-2 gap-3">
                 <Field>
-                  <FieldLabel class="text-muted-foreground text-xs">
+                  <FieldLabel>
                     {{ $t('schedule.startDate') }}
                   </FieldLabel>
                   <Popover v-model:open="isStartCalendarOpen">
@@ -973,10 +973,7 @@
                           />
                           <span class="truncate">{{ formatCalendarDate(startDate) }}</span>
                         </span>
-                        <Icon
-                          icon="lucide:chevron-down"
-                          class="text-muted-foreground size-3.5 opacity-60"
-                        />
+                        <Icon icon="lucide:chevron-down" class="text-muted-foreground opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent class="z-50 w-auto p-0">
@@ -991,7 +988,7 @@
                 </Field>
 
                 <Field>
-                  <FieldLabel class="text-muted-foreground text-xs">
+                  <FieldLabel>
                     {{ $t('schedule.endDate') }}
                   </FieldLabel>
                   <Popover v-model:open="isEndCalendarOpen">
@@ -1013,10 +1010,7 @@
                           />
                           <span class="truncate">{{ formatCalendarDate(endDate) }}</span>
                         </span>
-                        <Icon
-                          icon="lucide:chevron-down"
-                          class="text-muted-foreground size-3.5 opacity-60"
-                        />
+                        <Icon icon="lucide:chevron-down" class="text-muted-foreground opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent class="z-50 w-auto p-0">
@@ -1036,13 +1030,13 @@
                 class="grid grid-cols-2 gap-3 duration-200 animate-in fade-in-0 slide-in-from-top-1"
               >
                 <Field>
-                  <FieldLabel for="schedule-start-time" class="text-muted-foreground text-xs">
+                  <FieldLabel for="schedule-start-time">
                     {{ $t('schedule.startTime') }}
                   </FieldLabel>
                   <TimeField id="schedule-start-time" v-model="startTime" />
                 </Field>
                 <Field>
-                  <FieldLabel for="schedule-end-time" class="text-muted-foreground text-xs">
+                  <FieldLabel for="schedule-end-time">
                     {{ $t('schedule.endTime') }}
                   </FieldLabel>
                   <TimeField id="schedule-end-time" v-model="endTime" />
@@ -1387,10 +1381,7 @@
                           />
                           <span class="truncate">{{ formatCalendarDate(untilDate) }}</span>
                         </span>
-                        <Icon
-                          icon="lucide:chevron-down"
-                          class="text-muted-foreground size-3.5 opacity-60"
-                        />
+                        <Icon icon="lucide:chevron-down" class="text-muted-foreground opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent class="z-50 w-auto p-0">
@@ -1452,7 +1443,7 @@
             v-if="scheduleModalMode !== 'add'"
             type="button"
             variant="ghost"
-            class="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            class="text-destructive hover:bg-destructive/10 hover:text-destructive min-w-20"
             @click="handleDelete"
           >
             <Icon icon="lucide:trash-2" />

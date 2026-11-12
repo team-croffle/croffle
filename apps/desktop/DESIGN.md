@@ -36,13 +36,13 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 
 ## Controls
 
-| Control                                   | Height | How                                    |
-| ----------------------------------------- | ------ | -------------------------------------- |
-| Button, Input, Select trigger, time field | 36px   | the part's default size — add no `h-*` |
-| Dense toggle (weekday chips)              | 32px   | `size="sm"`                            |
-| Icon button in content and dialogs        | 32px   | `size="icon-sm"`                       |
-| Icon button in the sidebar rail           | 36px   | `size="icon"`                          |
-| Icon button in the title bar              | 28px   | `size="icon-xs"`                       |
+| Control                                                   | Height | How                                    |
+| --------------------------------------------------------- | ------ | -------------------------------------- |
+| Button, Input, Select trigger, time field                 | 36px   | the part's default size — add no `h-*` |
+| Dense toggle (weekday chips)                              | 32px   | `size="sm"`                            |
+| Icon button on its own in content                         | 32px   | `size="icon-sm"`                       |
+| Icon button next to 36px controls, or in the sidebar rail | 36px   | `size="icon"`                          |
+| Icon button in the title bar                              | 28px   | `size="icon-xs"`                       |
 
 - Use `Button`, `Input`, `Textarea`, `Select`, `Switch`, `Badge` from `components/ui`. Do not write
   a bare `<button>` or `<input>`. Exceptions: color swatches, the options of the priority picker,
