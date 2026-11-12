@@ -967,10 +967,7 @@
                         "
                       >
                         <span class="flex min-w-0 items-center gap-2">
-                          <Icon
-                            icon="lucide:calendar"
-                            class="text-muted-foreground size-4 shrink-0"
-                          />
+                          <Icon icon="lucide:calendar" class="text-muted-foreground shrink-0" />
                           <span class="truncate">{{ formatCalendarDate(startDate) }}</span>
                         </span>
                         <Icon icon="lucide:chevron-down" class="text-muted-foreground opacity-50" />
@@ -1004,10 +1001,7 @@
                         "
                       >
                         <span class="flex min-w-0 items-center gap-2">
-                          <Icon
-                            icon="lucide:calendar"
-                            class="text-muted-foreground size-4 shrink-0"
-                          />
+                          <Icon icon="lucide:calendar" class="text-muted-foreground shrink-0" />
                           <span class="truncate">{{ formatCalendarDate(endDate) }}</span>
                         </span>
                         <Icon icon="lucide:chevron-down" class="text-muted-foreground opacity-50" />
@@ -1334,7 +1328,7 @@
                     :aria-pressed="recurrence.byWeekday.includes(day)"
                     :class="
                       recurrence.byWeekday.includes(day)
-                        ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                        ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary dark:border-primary dark:bg-primary/15 dark:hover:bg-primary/20'
                         : 'text-muted-foreground'
                     "
                     :disabled="!weekdaysEditable"
@@ -1375,10 +1369,7 @@
                         class="w-full justify-between font-normal"
                       >
                         <span class="flex min-w-0 items-center gap-2">
-                          <Icon
-                            icon="lucide:calendar"
-                            class="text-muted-foreground size-4 shrink-0"
-                          />
+                          <Icon icon="lucide:calendar" class="text-muted-foreground shrink-0" />
                           <span class="truncate">{{ formatCalendarDate(untilDate) }}</span>
                         </span>
                         <Icon icon="lucide:chevron-down" class="text-muted-foreground opacity-50" />

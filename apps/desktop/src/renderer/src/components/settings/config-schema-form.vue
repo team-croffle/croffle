@@ -83,7 +83,7 @@
           :model-value="String(values[key] ?? schema.defaultValue)"
           @update:model-value="(v: unknown) => updateValue(key, v)"
         >
-          <SelectTrigger :id="`ext-setting-${key}`" class="w-60">
+          <SelectTrigger :id="`ext-setting-${key}`" class="w-60 shrink-0">
             <SelectValue :placeholder="schema.label" />
           </SelectTrigger>
           <SelectContent>
@@ -101,7 +101,7 @@
           :id="`ext-setting-${key}`"
           :model-value="String(values[key] ?? '')"
           :type="schema.type === 'number' ? 'number' : 'text'"
-          :class="schema.type === 'number' ? 'w-24' : 'w-60'"
+          :class="schema.type === 'number' ? 'w-24 shrink-0' : 'w-60 shrink-0'"
           @update:model-value="(v) => updateValue(key, schema.type === 'number' ? Number(v) : v)"
         />
       </div>

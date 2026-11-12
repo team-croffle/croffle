@@ -47,6 +47,8 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 - Use `Button`, `Input`, `Textarea`, `Select`, `Switch`, `Badge` from `components/ui`. Do not write
   a bare `<button>` or `<input>`. Exceptions: color swatches, the options of the priority picker,
   the small remove button inside a `Badge`, the three window buttons, and `<input type="color">`.
+- Keep the focus ring of a part. A composite control (the time field, the tags input) shows the
+  same ring on its wrapper with `focus-within:`.
 - Do not override a part's height, horizontal padding, font weight, radius, border color or focus
   ring from a screen. If a size is missing, add a variant to the part.
 - A trigger that shows a value and opens a picker (the date fields) is
@@ -68,8 +70,8 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 - Width comes from the label and the size's padding. Never add `px-*` to make a button wider.
 - Dialog footer buttons have `min-w-20` (80px), sit right-aligned with `gap-2`, and the main action
   is the rightmost one.
-- An icon inside a button is 16px and is spaced by the button's own `gap-2`. Do not add `mr-*` or
-  size classes to it.
+- An icon inside a button is 16px and is spaced by the gap of the button's size. Do not add `mr-*`
+  or size classes to it.
 
 ### Inputs
 
@@ -77,6 +79,7 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 - In a settings row (label and hint on the left, control on the right) the control is `w-60`
   (240px) and the row is `flex items-center justify-between gap-4`.
 - Number inputs are `w-24`.
+- A fixed-width control in a row also gets `shrink-0`, so a long label wraps instead of squeezing it.
 - Labels are `Label` with `text-sm font-medium`; hints are `text-xs text-muted-foreground`.
 
 ## Radius
@@ -86,8 +89,10 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 | Step    | Value | Class          | For                                                      |
 | ------- | ----- | -------------- | -------------------------------------------------------- |
 | Control | 8px   | `rounded-md`   | buttons, inputs, selects, badges, list and nav items     |
-| Surface | 14px  | `rounded-xl`   | cards, dialogs, panels, popovers that hold content       |
+| Surface | 14px  | `rounded-xl`   | cards, dialogs, panels                                   |
 | Round   | —     | `rounded-full` | avatars, swatches, status dots, the collapsed add button |
+
+Menus and popovers (select lists, context menus, the date picker) keep the part's 8px.
 
 Exceptions: the calendar card is the app's main surface and uses 24px (`--radius-3xl`); calendar
 events use `--radius-lg`. In `<style>` blocks use the variables (`var(--radius-md)`), not pixel
@@ -110,15 +115,16 @@ values.
 
 ## Type
 
-| Text                       | Class                                  |
-| -------------------------- | -------------------------------------- |
-| Settings page title        | `text-2xl font-bold`                   |
-| Dialog title               | `text-lg font-semibold` (part default) |
-| Section heading            | `text-base font-bold text-foreground`  |
-| Label                      | `text-sm font-medium`                  |
-| Body                       | `text-sm`                              |
-| Hint, meta                 | `text-xs text-muted-foreground`        |
-| Smallest (badges in lists) | `text-2xs`                             |
+| Text                                   | Class                                  |
+| -------------------------------------- | -------------------------------------- |
+| Settings page title                    | `text-2xl font-bold`                   |
+| Dialog title                           | `text-lg font-semibold` (part default) |
+| Section heading                        | `text-base font-bold text-foreground`  |
+| Heading inside a card or sidebar panel | `text-sm font-bold`                    |
+| Label                                  | `text-sm font-medium`                  |
+| Body                                   | `text-sm`                              |
+| Hint, meta                             | `text-xs text-muted-foreground`        |
+| Smallest (badges in lists)             | `text-2xs`                             |
 
 Icons are sized with `size-*` (`size-4` = 16px by default, `size-5` for sidebar rail icons), not
 `h-* w-*`.
