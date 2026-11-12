@@ -118,12 +118,12 @@
         <Button
           variant="ghost"
           size="icon"
-          class="text-muted-foreground h-7 w-7"
+          class="text-muted-foreground"
           :aria-label="$t('rightSidebar.toggle')"
           :title="`${$t('rightSidebar.toggle')} (${SHORTCUT_RIGHT_SIDEBAR})`"
           @click="uiStore.toggleRightSidebar"
         >
-          <Icon icon="lucide:panel-right" class="h-4 w-4" />
+          <Icon icon="lucide:panel-right" />
         </Button>
       </div>
 
@@ -133,14 +133,10 @@
     <SidebarContent class="bg-croffle-sidebar no-scrollbar min-h-0 flex-1 overflow-y-auto p-4 pt-0">
       <div class="mt-2 flex justify-center">
         <Button
-          class="h-11 w-full rounded-lg font-medium shadow-sm transition-all duration-300 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
+          class="w-full transition-all duration-300 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-0"
           @click="uiStore.openScheduleModal('add')"
         >
-          <Icon
-            icon="lucide:plus"
-            class="h-5 w-5 transition-all"
-            :class="rightSidebarOpen ? 'mr-1' : ''"
-          />
+          <Icon icon="lucide:plus" />
           <span class="group-data-[collapsible=icon]:hidden">{{ $t('rightSidebar.add') }}</span>
         </Button>
       </div>

@@ -244,7 +244,7 @@
               busy || (authMode === 'password' ? !username.trim() || !password : !token.trim())
             "
           >
-            <Icon v-if="busy" icon="lucide:loader-2" class="h-4 w-4 animate-spin" />
+            <Icon v-if="busy" icon="lucide:loader-2" class="animate-spin" />
             {{ $t('settings.sync.signIn') }}
           </Button>
         </form>
@@ -300,7 +300,7 @@
         :disabled="busy || status.running || !status.enabled || !status.signedIn"
         @click="onSyncNow"
       >
-        <Icon icon="lucide:refresh-cw" :class="['h-4 w-4', status.running ? 'animate-spin' : '']" />
+        <Icon icon="lucide:refresh-cw" :class="status.running ? 'animate-spin' : ''" />
         {{ status.running ? $t('settings.sync.syncing') : $t('settings.sync.syncNow') }}
       </Button>
     </div>

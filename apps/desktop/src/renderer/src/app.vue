@@ -333,13 +333,13 @@
         <div class="relative flex h-full w-12 items-center justify-center">
           <Button
             variant="ghost"
-            size="icon"
-            class="no-drag h-7 w-7 text-neutral-500"
+            size="icon-xs"
+            class="no-drag text-neutral-500"
             :aria-label="$t('titleBar.toggleLeftSidebar')"
             :title="`${$t('titleBar.toggleLeftSidebar')} (${SHORTCUT_LEFT_SIDEBAR})`"
             @click="uiStore.toggleLeftSidebar()"
           >
-            <Icon icon="lucide:panel-left" class="h-4 w-4" />
+            <Icon icon="lucide:panel-left" />
           </Button>
 
           <div class="absolute right-0 h-4 w-px bg-neutral-300"></div>
@@ -351,15 +351,17 @@
       <div class="no-drag flex h-full items-center">
         <ContextMenu>
           <ContextMenuTrigger as-child>
-            <button
-              class="flex h-6 w-6 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-900 dark:hover:bg-neutral-500"
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              class="text-neutral-500"
               :aria-label="$t('titleBar.toggleTheme')"
               :title="$t('titleBar.themeMenuHint')"
               @click="themeStore.changeTheme"
             >
-              <Icon v-if="themeStore.isDark" icon="lucide:sun" class="h-4 w-4" />
-              <Icon v-else icon="lucide:moon" class="h-4 w-4" />
-            </button>
+              <Icon v-if="themeStore.isDark" icon="lucide:sun" />
+              <Icon v-else icon="lucide:moon" />
+            </Button>
           </ContextMenuTrigger>
           <ContextMenuContent class="w-44">
             <ContextMenuRadioGroup

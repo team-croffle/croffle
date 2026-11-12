@@ -972,7 +972,7 @@
                         variant="outline"
                         :class="
                           cn(
-                            'hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal',
+                            'w-full justify-between font-normal',
                             !startDate && 'text-muted-foreground',
                           )
                         "
@@ -1012,7 +1012,7 @@
                         variant="outline"
                         :class="
                           cn(
-                            'hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal',
+                            'w-full justify-between font-normal',
                             !endDate && 'text-muted-foreground',
                           )
                         "
@@ -1159,16 +1159,18 @@
                   />
                 </TagsInput>
                 <div v-if="tagQuery.trim()" class="flex flex-wrap items-center gap-1.5">
-                  <button
+                  <Badge
                     v-for="tag in tagSuggestions"
                     :key="tag.id"
+                    as="button"
                     type="button"
-                    class="hover:bg-muted/50 rounded-md border px-2 py-0.5 text-xs"
+                    variant="outline"
+                    class="hover:bg-accent cursor-pointer"
                     :style="{ borderColor: tag.color }"
                     @click="addTagByName(tag.name)"
                   >
                     {{ tag.name }}
-                  </button>
+                  </Badge>
                   <span v-if="!hasExactTagMatch" class="text-muted-foreground text-xs">
                     {{ $t('schedule.tagCreateHint', { name: tagQuery.trim() }) }}
                   </span>
@@ -1275,12 +1277,12 @@
                     <Button
                       type="button"
                       variant="outline"
-                      class="h-10 px-3"
+                      size="icon"
                       :disabled="reminderEditingDisabled"
                       :aria-label="$t('schedule.reminderAdd')"
                       @click="addCustomReminder"
                     >
-                      <Icon icon="lucide:plus" class="size-4" />
+                      <Icon icon="lucide:plus" />
                     </Button>
                   </div>
 
@@ -1341,21 +1343,23 @@
               <Field v-if="showWeekdays">
                 <FieldLabel>{{ $t('schedule.weekdays') }}</FieldLabel>
                 <div class="flex flex-wrap gap-1.5">
-                  <button
+                  <Button
                     v-for="day in WEEKDAY_OPTIONS"
                     :key="day"
                     type="button"
-                    class="h-8 min-w-8 rounded-md border px-2 text-xs font-medium transition-colors"
+                    variant="outline"
+                    size="sm"
+                    :aria-pressed="recurrence.byWeekday.includes(day)"
                     :class="
                       recurrence.byWeekday.includes(day)
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-muted/50'
+                        ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                        : 'text-muted-foreground'
                     "
                     :disabled="!weekdaysEditable"
                     @click="toggleWeekday(day)"
                   >
                     {{ $t(`recurrence.weekday.${day}`) }}
-                  </button>
+                  </Button>
                 </div>
               </Field>
 
@@ -1386,7 +1390,7 @@
                       <Button
                         type="button"
                         variant="outline"
-                        class="hover:bg-muted/50 h-10 w-full justify-between px-3 font-normal"
+                        class="w-full justify-between font-normal"
                       >
                         <span class="flex min-w-0 items-center gap-2">
                           <Icon
@@ -1460,37 +1464,44 @@
             v-if="scheduleModalMode !== 'add'"
             type="button"
             variant="ghost"
-            class="text-destructive hover:bg-destructive/10 hover:text-destructive h-9 px-3"
+            class="text-destructive hover:bg-destructive/10 hover:text-destructive"
             @click="handleDelete"
           >
-            <Icon icon="lucide:trash-2" class="mr-1.5 size-4" />
+            <Icon icon="lucide:trash-2" />
             {{ $t('common.delete') }}
           </Button>
         </div>
 
         <div v-if="isViewMode" class="flex shrink-0 gap-2">
-          <Button type="button" variant="outline" class="h-9" @click="uiStore.closeScheduleModal()">
+          <Button
+            type="button"
+            variant="outline"
+            class="min-w-20"
+            @click="uiStore.closeScheduleModal()"
+          >
             {{ $t('common.close') }}
           </Button>
-          <Button type="button" class="h-9" @click="startEditing">
-            <Icon icon="lucide:pencil" class="mr-1.5 size-4" />
+          <Button type="button" class="min-w-20" @click="startEditing">
+            <Icon icon="lucide:pencil" />
             {{ $t('common.edit') }}
           </Button>
         </div>
         <div v-else class="flex shrink-0 gap-2">
-          <Button type="button" variant="outline" class="h-9" @click="uiStore.closeScheduleModal()">
+          <Button
+            type="button"
+            variant="outline"
+            class="min-w-20"
+            @click="uiStore.closeScheduleModal()"
+          >
             {{ $t('common.cancel') }}
           </Button>
           <Button
             type="button"
             :disabled="!form.title.trim() || !startDate || !endDate"
-            class="h-9"
+            class="min-w-20"
             @click="handleSave"
           >
-            <Icon
-              :icon="scheduleModalMode === 'edit' ? 'lucide:check' : 'lucide:plus'"
-              class="mr-1.5 size-4"
-            />
+            <Icon :icon="scheduleModalMode === 'edit' ? 'lucide:check' : 'lucide:plus'" />
             {{ scheduleModalMode === 'edit' ? $t('common.save') : $t('common.add') }}
           </Button>
         </div>

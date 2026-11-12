@@ -40,10 +40,10 @@
         <DialogDescription>{{ confirmDescription }}</DialogDescription>
       </DialogHeader>
       <DialogFooter class="gap-2">
-        <Button variant="outline" @click="uiStore.resolveConfirm(false)">
+        <Button variant="outline" class="min-w-20" @click="uiStore.resolveConfirm(false)">
           {{ confirmCancelLabel || t('common.cancel') }}
         </Button>
-        <Button :variant="confirmVariant" @click="uiStore.resolveConfirm(true)">
+        <Button :variant="confirmVariant" class="min-w-20" @click="uiStore.resolveConfirm(true)">
           {{ confirmConfirmLabel || t('common.delete') }}
         </Button>
       </DialogFooter>
