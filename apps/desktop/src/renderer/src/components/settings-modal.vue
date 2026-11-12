@@ -26,6 +26,7 @@
     DialogDescription,
   } from '@/components/ui/dialog';
   import { Icon } from '@/components/ui/icon';
+  import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
   import {
     Select,
@@ -627,12 +628,14 @@
                     {{ $t('settings.general.display') }}
                   </h4>
 
-                  <div class="space-y-2">
-                    <Label for="settings-language" class="text-foreground text-sm font-medium">
-                      {{ $t('settings.general.language') }}
-                    </Label>
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0 space-y-0.5">
+                      <Label for="settings-language" class="text-foreground text-sm font-medium">
+                        {{ $t('settings.general.language') }}
+                      </Label>
+                    </div>
                     <Select v-model="settings.general.language">
-                      <SelectTrigger id="settings-language" class="w-full">
+                      <SelectTrigger id="settings-language" class="w-60">
                         <SelectValue :placeholder="$t('settings.general.languagePlaceholder')" />
                       </SelectTrigger>
                       <SelectContent>
@@ -647,15 +650,17 @@
                     </Select>
                   </div>
 
-                  <div class="space-y-2">
-                    <Label for="settings-theme" class="text-foreground text-sm font-medium">
-                      {{ $t('settings.general.theme') }}
-                    </Label>
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0 space-y-0.5">
+                      <Label for="settings-theme" class="text-foreground text-sm font-medium">
+                        {{ $t('settings.general.theme') }}
+                      </Label>
+                    </div>
                     <Select
                       :model-value="settings.general.theme"
                       @update:model-value="onThemeChange"
                     >
-                      <SelectTrigger id="settings-theme" class="w-full">
+                      <SelectTrigger id="settings-theme" class="w-60">
                         <SelectValue :placeholder="$t('settings.general.themePlaceholder')" />
                       </SelectTrigger>
                       <SelectContent>
@@ -793,18 +798,23 @@
                     {{ $t('settings.general.window') }}
                   </h4>
 
-                  <div class="space-y-2">
-                    <Label
-                      for="settings-close-behavior"
-                      class="text-foreground text-sm font-medium"
-                    >
-                      {{ $t('settings.general.closeBehavior') }}
-                    </Label>
+                  <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0 space-y-0.5">
+                      <Label
+                        for="settings-close-behavior"
+                        class="text-foreground text-sm font-medium"
+                      >
+                        {{ $t('settings.general.closeBehavior') }}
+                      </Label>
+                      <p class="text-muted-foreground text-xs">
+                        {{ $t('settings.general.closeBehaviorHint') }}
+                      </p>
+                    </div>
                     <Select
                       :model-value="settings.general.closeBehavior"
                       @update:model-value="onCloseBehaviorChange"
                     >
-                      <SelectTrigger id="settings-close-behavior" class="w-full">
+                      <SelectTrigger id="settings-close-behavior" class="w-60">
                         <SelectValue
                           :placeholder="$t('settings.general.closeBehaviorPlaceholder')"
                         />
@@ -819,9 +829,6 @@
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    <p class="text-muted-foreground text-xs">
-                      {{ $t('settings.general.closeBehaviorHint') }}
-                    </p>
                   </div>
                 </section>
               </div>
@@ -830,12 +837,14 @@
               <div v-if="activeTab === 'calendar'" class="space-y-6">
                 <p class="text-muted-foreground text-sm">{{ $t('settings.calendar.intro') }}</p>
 
-                <div class="space-y-2">
-                  <Label for="settings-default-view" class="text-foreground text-sm font-medium">
-                    {{ $t('settings.calendar.defaultView') }}
-                  </Label>
+                <div class="flex items-center justify-between gap-4">
+                  <div class="min-w-0 space-y-0.5">
+                    <Label for="settings-default-view" class="text-foreground text-sm font-medium">
+                      {{ $t('settings.calendar.defaultView') }}
+                    </Label>
+                  </div>
                   <Select v-model="settings.calendar.defaultView">
-                    <SelectTrigger id="settings-default-view" class="w-full">
+                    <SelectTrigger id="settings-default-view" class="w-60">
                       <SelectValue :placeholder="$t('settings.calendar.defaultViewPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -850,12 +859,14 @@
                   </Select>
                 </div>
 
-                <div class="space-y-2">
-                  <Label for="settings-week-start" class="text-foreground text-sm font-medium">
-                    {{ $t('settings.calendar.weekStart') }}
-                  </Label>
+                <div class="flex items-center justify-between gap-4">
+                  <div class="min-w-0 space-y-0.5">
+                    <Label for="settings-week-start" class="text-foreground text-sm font-medium">
+                      {{ $t('settings.calendar.weekStart') }}
+                    </Label>
+                  </div>
                   <Select v-model="settings.calendar.weekStartDay">
-                    <SelectTrigger id="settings-week-start" class="w-full">
+                    <SelectTrigger id="settings-week-start" class="w-60">
                       <SelectValue :placeholder="$t('settings.calendar.weekStartPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -870,12 +881,14 @@
                   </Select>
                 </div>
 
-                <div class="space-y-2">
-                  <Label for="settings-time-format" class="text-foreground text-sm font-medium">
-                    {{ $t('settings.calendar.timeFormat') }}
-                  </Label>
+                <div class="flex items-center justify-between gap-4">
+                  <div class="min-w-0 space-y-0.5">
+                    <Label for="settings-time-format" class="text-foreground text-sm font-medium">
+                      {{ $t('settings.calendar.timeFormat') }}
+                    </Label>
+                  </div>
                   <Select v-model="settings.calendar.timeFormat">
-                    <SelectTrigger id="settings-time-format" class="w-full">
+                    <SelectTrigger id="settings-time-format" class="w-60">
                       <SelectValue :placeholder="$t('settings.calendar.timeFormatPlaceholder')" />
                     </SelectTrigger>
                     <SelectContent>
@@ -957,7 +970,7 @@
                       </div>
                       <div class="flex shrink-0 items-center gap-2">
                         <Select :model-value="importMode" @update:model-value="onImportModeChange">
-                          <SelectTrigger id="settings-import-mode" class="h-9 w-40">
+                          <SelectTrigger id="settings-import-mode" class="w-60">
                             <SelectValue :placeholder="$t('settings.calendar.importMode')" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1014,17 +1027,22 @@
                   />
                 </div>
 
-                <div class="space-y-2">
-                  <Label
-                    for="settings-reminder-minutes"
-                    class="text-foreground text-sm font-medium"
-                    >{{ $t('settings.notifications.defaultTime') }}</Label
-                  >
+                <div class="flex items-center justify-between gap-4">
+                  <div class="min-w-0 space-y-0.5">
+                    <Label
+                      for="settings-reminder-minutes"
+                      class="text-foreground text-sm font-medium"
+                      >{{ $t('settings.notifications.defaultTime') }}</Label
+                    >
+                    <p class="text-muted-foreground text-xs">
+                      {{ $t('settings.notifications.defaultTimeHint') }}
+                    </p>
+                  </div>
                   <Select
                     :model-value="String(settings.notifications.defaultReminderMinutes)"
                     @update:model-value="onReminderMinutesChange"
                   >
-                    <SelectTrigger id="settings-reminder-minutes" class="w-full">
+                    <SelectTrigger id="settings-reminder-minutes" class="w-60">
                       <SelectValue
                         :placeholder="$t('settings.notifications.defaultTimePlaceholder')"
                       />
@@ -1039,9 +1057,6 @@
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p class="text-muted-foreground text-xs">
-                    {{ $t('settings.notifications.defaultTimeHint') }}
-                  </p>
                 </div>
               </div>
 
@@ -1062,11 +1077,11 @@
                     {{ $t('settings.extensions.installFromGithub') }}
                   </h4>
                   <div class="flex items-center gap-3">
-                    <input
+                    <Input
                       v-model="installUrl"
                       type="text"
                       :placeholder="$t('settings.extensions.githubPlaceholder')"
-                      class="flex-1 border-input placeholder:text-muted-foreground focus:border-ring focus:ring-ring rounded-lg border bg-transparent px-3 py-2 text-sm focus:ring-1 focus:outline-none"
+                      class="flex-1"
                       @keydown.enter="onInstallPlugin"
                     />
                     <Button
