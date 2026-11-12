@@ -61,10 +61,10 @@
     side="left"
     :open="leftSidebarOpen"
     collapsible="icon"
-    class="border-croffle-border bg-croffle-sidebar border-r pt-8"
+    class="bg-croffle-sidebar border-r pt-8"
   >
     <SidebarHeader
-      class="border-croffle-border bg-croffle-sidebar relative flex flex-col border-b transition-all duration-200"
+      class="bg-croffle-sidebar relative flex flex-col border-b transition-all duration-200"
       :class="[leftSidebarOpen ? 'p-4' : 'items-center py-4']"
     >
       <div
@@ -81,9 +81,7 @@
         </div>
 
         <div v-if="leftSidebarOpen" class="flex flex-col gap-0.5">
-          <span class="font-logo text-croffle-primary text-2xl leading-none font-bold"
-            >CROFFLE</span
-          >
+          <span class="font-logo text-primary text-2xl leading-none font-bold">CROFFLE</span>
 
           <span class="text-croffle-text text-xs leading-none">{{ $t('sidebar.tagline') }}</span>
         </div>
@@ -108,7 +106,7 @@
                 size="lg"
                 class="hover:bg-croffle-hover rounded-lg bg-transparent ring-0 transition-all duration-200 outline-none"
                 :class="[
-                  { 'bg-croffle-primary hover:bg-croffle-primary': item.active },
+                  { 'bg-primary hover:bg-primary': item.active },
                   leftSidebarOpen ? 'mr-2 ml-0' : 'mx-0 justify-center',
                 ]"
                 :tooltip="translateOrRaw(item.title)"
@@ -154,7 +152,7 @@
       </SidebarGroup>
     </SidebarContent>
 
-    <SidebarFooter class="border-croffle-border bg-croffle-sidebar border-t p-3">
+    <SidebarFooter class="bg-croffle-sidebar border-t p-3">
       <div class="flex items-center justify-around gap-2" :class="{ 'flex-col': !leftSidebarOpen }">
         <SidebarMenuButton
           size="sm"

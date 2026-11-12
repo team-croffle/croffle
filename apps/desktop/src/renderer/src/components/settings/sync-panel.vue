@@ -27,10 +27,7 @@
   const busy = ref(false);
 
   const inputClass =
-    'w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm placeholder:text-neutral-400 focus:border-[#A68A64] focus:outline-none focus:ring-1 focus:ring-[#A68A64] dark:border-neutral-700';
-  const primaryButton = 'h-9 gap-2 border-none bg-[#A68A64] text-white hover:bg-[#8E7554]';
-  const secondaryButton =
-    'h-9 gap-2 border-none bg-neutral-200 text-foreground hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700';
+    'w-full border-input placeholder:text-muted-foreground focus:border-ring focus:ring-ring rounded-lg border bg-transparent px-3 py-2 text-sm focus:ring-1 focus:outline-none';
 
   onMounted(() => {
     void syncStore.refresh();
@@ -167,7 +164,6 @@
         />
         <Button
           type="button"
-          :class="primaryButton"
           :disabled="busy || !serverUrl.trim() || serverUrl.trim() === status.url"
           @click="onSaveServer"
         >
@@ -184,7 +180,7 @@
         <p class="text-sm">
           {{ $t('settings.sync.signedInAs', { account: status.accountId ?? '' }) }}
         </p>
-        <Button type="button" :class="secondaryButton" :disabled="busy" @click="onSignOut">
+        <Button type="button" variant="outline" :disabled="busy" @click="onSignOut">
           {{ $t('settings.sync.signOut') }}
         </Button>
       </div>
@@ -197,7 +193,7 @@
             type="button"
             role="tab"
             :aria-selected="authMode === mode"
-            :class="authMode === mode ? primaryButton : secondaryButton"
+            :variant="authMode === mode ? 'default' : 'outline'"
             @click="authMode = mode"
           >
             {{ $t(mode === 'password' ? 'settings.sync.authPassword' : 'settings.sync.authToken') }}
@@ -244,7 +240,6 @@
           />
           <Button
             type="submit"
-            :class="primaryButton"
             :disabled="
               busy || (authMode === 'password' ? !username.trim() || !password : !token.trim())
             "
@@ -301,7 +296,7 @@
       </p>
       <Button
         type="button"
-        :class="secondaryButton"
+        variant="outline"
         :disabled="busy || status.running || !status.enabled || !status.signedIn"
         @click="onSyncNow"
       >

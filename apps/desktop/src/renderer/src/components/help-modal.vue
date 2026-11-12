@@ -78,11 +78,11 @@
   <Dialog :open="open" @update:open="handleClose">
     <DialogContent
       v-if="currentStepData"
-      class="border-croffle-border bg-croffle-bg overflow-hidden rounded-xl p-0 shadow-lg sm:max-w-md"
+      class="bg-croffle-bg overflow-hidden rounded-xl p-0 shadow-lg sm:max-w-md"
     >
       <div class="h-1.5 w-full overflow-hidden bg-neutral-100 dark:bg-neutral-500">
         <div
-          class="bg-croffle-primary h-full transition-all duration-500 ease-in-out"
+          class="bg-primary h-full transition-all duration-500 ease-in-out"
           :style="{ width: `${((currentStep + 1) / totalSteps) * 100}%` }"
         ></div>
       </div>
@@ -90,12 +90,12 @@
       <div class="p-6">
         <DialogHeader class="flex flex-col items-center text-center">
           <div
-            class="bg-croffle-primary/10 text-croffle-primary mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+            class="bg-primary/10 text-primary mb-4 flex h-16 w-16 items-center justify-center rounded-full"
           >
             <Icon :icon="currentStepData.icon" class="h-8 w-8" />
           </div>
 
-          <DialogTitle class="text-croffle-primary text-xl font-bold">
+          <DialogTitle class="text-primary text-xl font-bold">
             {{ currentStepData.title }}
           </DialogTitle>
 
@@ -124,7 +124,7 @@
           <div v-else></div>
 
           <button
-            class="bg-croffle-primary hover:bg-opacity-90 hover:bg-croffle-hover flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all"
+            class="bg-primary hover:bg-opacity-90 hover:bg-croffle-hover flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all"
             @click="nextStep"
           >
             {{ currentStep === totalSteps - 1 ? $t('help.done') : $t('help.next') }}

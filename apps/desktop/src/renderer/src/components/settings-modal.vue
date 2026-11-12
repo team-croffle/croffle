@@ -575,7 +575,7 @@
               :class="[
                 'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
                 activeTab === tab.id
-                  ? 'bg-croffle-sidebar-selected text-croffle-primary'
+                  ? 'bg-croffle-sidebar-selected text-primary'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
               ]"
               @click="
@@ -689,7 +689,7 @@
                         @click="onAccentHexChange(color)"
                       />
                       <label
-                        class="border-croffle-border hover:bg-muted/50 relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed"
+                        class="hover:bg-muted/50 relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed"
                         :title="$t('settings.general.customAccentColor')"
                       >
                         <Icon icon="lucide:palette" class="text-muted-foreground size-3.5" />
@@ -1074,13 +1074,13 @@
                       v-model="installUrl"
                       type="text"
                       :placeholder="$t('settings.extensions.githubPlaceholder')"
-                      class="flex-1 rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm placeholder:text-neutral-400 focus:border-[#A68A64] focus:outline-none focus:ring-1 focus:ring-[#A68A64] dark:border-neutral-700"
+                      class="flex-1 border-input placeholder:text-muted-foreground focus:border-ring focus:ring-ring rounded-lg border bg-transparent px-3 py-2 text-sm focus:ring-1 focus:outline-none"
                       @keydown.enter="onInstallPlugin"
                     />
                     <Button
                       type="button"
                       :disabled="!installUrl || isInstalling"
-                      class="h-9 gap-2 border-none bg-[#A68A64] text-white hover:bg-[#8E7554]"
+                      class="h-9 gap-2"
                       @click="onInstallPlugin"
                     >
                       <Icon
@@ -1107,8 +1107,9 @@
                   <div class="flex items-center gap-3">
                     <Button
                       type="button"
+                      variant="outline"
                       :disabled="isInstalling"
-                      class="h-9 gap-2 border-none bg-neutral-200 text-foreground hover:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+                      class="h-9 gap-2"
                       @click="onLocalZipSelect"
                     >
                       <Icon
@@ -1189,7 +1190,7 @@
                           />
                           <span
                             class="text-xs font-medium"
-                            :class="plugin.enabled ? 'text-[#A68A64]' : 'text-neutral-500'"
+                            :class="plugin.enabled ? 'text-primary' : 'text-muted-foreground'"
                           >
                             {{
                               plugin.enabled
@@ -1248,16 +1249,12 @@
             <Button
               type="button"
               variant="outline"
-              class="h-9 border-neutral-200 px-6 font-semibold"
+              class="h-9 px-6 font-semibold"
               @click="handleCancel"
             >
               {{ $t('common.cancel') }}
             </Button>
-            <Button
-              type="button"
-              class="bg-croffle-primary hover:bg-croffle-hover h-9 text-white"
-              @click="handleSave"
-            >
+            <Button type="button" class="h-9" @click="handleSave">
               {{ $t('common.save') }}
             </Button>
           </div>
