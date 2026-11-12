@@ -750,7 +750,7 @@
       }
     "
   >
-    <DialogContent class="bg-background gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-lg">
+    <DialogContent class="gap-0 overflow-hidden p-0 sm:max-w-lg">
       <DialogHeader class="space-y-3 border-b px-6 pt-6 pb-5 text-left">
         <div class="flex items-start gap-3 pr-6">
           <div
@@ -789,11 +789,7 @@
                 <dt class="sr-only">{{ $t('schedule.dateTime') }}</dt>
                 <dd class="text-foreground flex flex-wrap items-center gap-2">
                   <span>{{ viewDateLabel }}</span>
-                  <Badge
-                    v-if="selectedOccurrence?.isOverride"
-                    variant="outline"
-                    class="rounded-md text-xs"
-                  >
+                  <Badge v-if="selectedOccurrence?.isOverride" variant="outline">
                     <Icon icon="lucide:calendar-clock" class="size-3" />
                     {{ $t('schedule.occurrence.rescheduled') }}
                   </Badge>
@@ -825,7 +821,7 @@
               <div class="min-w-0">
                 <dt class="sr-only">{{ $t('schedule.priority') }}</dt>
                 <dd>
-                  <Badge variant="secondary" class="rounded-md">{{ viewPriorityLabel }}</Badge>
+                  <Badge variant="secondary">{{ viewPriorityLabel }}</Badge>
                 </dd>
               </div>
             </div>
@@ -835,12 +831,7 @@
               <div class="min-w-0">
                 <dt class="sr-only">{{ $t('schedule.reminder') }}</dt>
                 <dd class="flex flex-wrap gap-1.5">
-                  <Badge
-                    v-for="label in viewReminderLabels"
-                    :key="label"
-                    variant="secondary"
-                    class="rounded-md"
-                  >
+                  <Badge v-for="label in viewReminderLabels" :key="label" variant="secondary">
                     {{ label }}
                   </Badge>
                 </dd>
@@ -854,7 +845,6 @@
                   v-for="tag in viewedSchedule.tags"
                   :key="tag.id"
                   variant="outline"
-                  class="rounded-md"
                   :style="{ borderColor: tag.color }"
                 >
                   {{ tag.name }}
@@ -1213,7 +1203,7 @@
                       v-for="minutes in reminderList"
                       :key="minutes"
                       variant="secondary"
-                      class="gap-1 rounded-md pr-1"
+                      class="pr-1"
                     >
                       {{ describeReminderMinutes(minutes) }}
                       <button

@@ -17,6 +17,7 @@
   import ConfigSchemaForm from '@/components/settings/config-schema-form.vue';
   import SettingsExtensionPanel from '@/components/settings/settings-extension-panel.vue';
   import SyncPanel from '@/components/settings/sync-panel.vue';
+  import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import {
     Dialog,
@@ -557,7 +558,7 @@
   <Dialog :open="open" @update:open="(val) => emit('update:open', val)">
     <!-- 반응형 모달 크기 -->
     <DialogContent
-      class="h-[90vh] max-h-235 w-[96vw] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:w-[94vw] sm:max-w-none lg:w-[92vw]"
+      class="h-[90vh] max-h-235 w-[96vw] gap-0 overflow-hidden border-none p-0 sm:w-[94vw] sm:max-w-none lg:w-[92vw]"
     >
       <DialogHeader class="sr-only">
         <DialogTitle>{{ $t('settings.title') }}</DialogTitle>
@@ -595,13 +596,13 @@
 
         <!-- 우측 콘텐츠 -->
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div class="shrink-0 px-6 py-6 md:px-8">
+          <div class="shrink-0 px-6 py-6">
             <h3 class="text-2xl font-bold wrap-break-word">
               {{ activeTabLabel }}
             </h3>
           </div>
 
-          <div class="flex-1 overflow-y-auto px-6 pb-8 md:px-8">
+          <div class="flex-1 overflow-y-auto px-6 pb-8">
             <div v-if="isLoadingSettings" class="w-full max-w-none space-y-3">
               <p class="text-muted-foreground text-sm">{{ $t('settings.loading') }}</p>
             </div>
@@ -1067,9 +1068,7 @@
                 <p class="text-muted-foreground text-sm">{{ $t('settings.extensions.intro') }}</p>
 
                 <!-- 설치 폼 -->
-                <div
-                  class="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
-                >
+                <div class="bg-card rounded-xl border p-5 shadow-sm">
                   <h4
                     class="mb-3 text-sm font-bold text-foreground dark:text-neutral-100 flex items-center gap-2"
                   >
@@ -1128,7 +1127,7 @@
 
                   <div
                     v-if="installedPlugins.length === 0"
-                    class="flex flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-neutral-50 py-12 text-center dark:border-neutral-800 dark:bg-neutral-950"
+                    class="bg-muted/30 flex flex-col items-center justify-center rounded-xl border border-dashed py-12 text-center"
                   >
                     <div class="mb-4 rounded-full bg-neutral-200/50 p-3 dark:bg-neutral-800/50">
                       <Icon icon="lucide:puzzle" class="h-6 w-6 text-neutral-500" />
@@ -1145,7 +1144,7 @@
                     <div
                       v-for="plugin in installedPlugins"
                       :key="plugin.id"
-                      class="flex flex-col rounded-xl border border-neutral-200 bg-white shadow-sm transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                      class="bg-card flex flex-col rounded-xl border shadow-sm"
                     >
                       <div class="flex items-start justify-between p-4">
                         <div class="min-w-0 flex-1">
@@ -1156,10 +1155,7 @@
                             >
                               {{ plugin.name }}
                             </h5>
-                            <span
-                              class="rounded bg-neutral-100 px-1.5 py-0.5 text-2xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
-                              >v{{ plugin.version }}</span
-                            >
+                            <Badge variant="secondary">v{{ plugin.version }}</Badge>
                           </div>
                           <p class="mt-1 text-xs text-neutral-500">by {{ plugin.author }}</p>
                           <p
@@ -1172,7 +1168,7 @@
                       </div>
 
                       <div
-                        class="mt-auto flex items-center justify-between border-t border-neutral-100 bg-neutral-50/50 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-950/50"
+                        class="bg-muted/20 mt-auto flex items-center justify-between border-t px-4 py-3"
                       >
                         <div class="flex items-center gap-2">
                           <Switch
@@ -1240,9 +1236,7 @@
             </div>
           </div>
 
-          <div
-            class="bg-muted/10 mt-auto flex shrink-0 justify-end gap-2 border-t px-6 py-4 md:px-8"
-          >
+          <div class="bg-muted/20 mt-auto flex shrink-0 justify-end gap-2 border-t px-6 py-4">
             <Button type="button" variant="outline" class="min-w-20" @click="handleCancel">
               {{ $t('common.cancel') }}
             </Button>

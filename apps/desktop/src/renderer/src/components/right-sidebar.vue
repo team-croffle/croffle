@@ -143,14 +143,12 @@
       <div
         class="animate-in fade-in flex flex-col gap-4 duration-300 group-data-[collapsible=icon]:hidden"
       >
-        <Card class="bg-croffle-sidebar-content gap-0 overflow-hidden rounded-xl border shadow-sm">
+        <Card class="bg-croffle-sidebar-content gap-0 overflow-hidden">
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
             <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
               <Icon icon="lucide:calendar" class="h-4 w-4" />
               <span>{{ selectedDateLabel }}</span>
-              <Badge
-                class="bg-croffle-sidebar text-croffle-text-dark ml-auto h-5 rounded-md px-1.5"
-              >
+              <Badge variant="secondary" class="ml-auto">
                 {{ selectedSchedules.length }}
               </Badge>
             </CardTitle>
@@ -189,7 +187,7 @@
           </CardContent>
         </Card>
 
-        <Card class="bg-croffle-sidebar-content overflow-hidden rounded-xl border shadow-sm">
+        <Card class="bg-croffle-sidebar-content overflow-hidden">
           <CardHeader class="space-y-0 px-4 pt-0 pb-2">
             <CardTitle class="text-croffle-text-dark flex items-center gap-2 text-sm font-bold">
               <Icon icon="lucide:clock" class="h-4 w-4" />

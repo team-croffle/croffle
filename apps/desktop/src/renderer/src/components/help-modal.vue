@@ -77,10 +77,7 @@
 
 <template>
   <Dialog :open="open" @update:open="handleClose">
-    <DialogContent
-      v-if="currentStepData"
-      class="bg-croffle-bg overflow-hidden rounded-xl p-0 shadow-lg sm:max-w-md"
-    >
+    <DialogContent v-if="currentStepData" class="overflow-hidden p-0 sm:max-w-md">
       <div class="h-1.5 w-full overflow-hidden bg-neutral-100 dark:bg-neutral-500">
         <div
           class="bg-primary h-full transition-all duration-500 ease-in-out"
