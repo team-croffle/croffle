@@ -109,7 +109,13 @@
         </div>
 
         <div class="flex items-center justify-between pt-2">
-          <Button v-if="currentStep > 0" type="button" variant="ghost" @click="prevStep">
+          <Button
+            v-if="currentStep > 0"
+            type="button"
+            variant="ghost"
+            class="min-w-20"
+            @click="prevStep"
+          >
             <Icon icon="lucide:chevron-left" />
             {{ $t('help.prev') }}
           </Button>
