@@ -108,7 +108,7 @@
           {{ currentStepData.content }}
         </div>
 
-        <div class="flex items-center justify-between pt-2">
+        <div class="flex items-center justify-between gap-2 pt-2">
           <Button
             v-if="currentStep > 0"
             type="button"
