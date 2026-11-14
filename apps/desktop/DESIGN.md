@@ -24,7 +24,7 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 | Focus ring                 | `ring-ring` (applied by the parts)                        |
 | Danger                     | `bg-destructive`, `text-destructive`                      |
 
-- `--primary`, `--ring`, `--border` and `--input` are wired to the Croffle tokens
+- `--primary`, `--ring`, `--sidebar-ring`, `--border` and `--input` are wired to the Croffle tokens
   (`--croffle-primary`, `--croffle-border`), which follow the accent color the user picks in
   Settings. Anything painted with `primary` changes with that setting; a hex value does not.
 - `--croffle-*` variables are visible to extensions. Do not rename them or change their values.
@@ -49,6 +49,8 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
   the small remove button inside a `Badge`, the three window buttons, and `<input type="color">`.
 - Keep the focus ring of a part. A composite control (the time field, the tags input) shows the
   same ring on its wrapper with `focus-within:`.
+- These rules are about how a screen uses a part. What a generated part draws inside itself (the
+  day buttons of the date picker, the items of a select list or a menu) keeps the part's own sizes.
 - Do not override a part's height, horizontal padding, font weight, radius, border color or focus
   ring from a screen. If a size is missing, add a variant to the part.
 - A trigger that shows a value and opens a picker (the date fields) is
@@ -72,6 +74,8 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 - Width comes from the label and the size's padding. Never add `px-*` to make a button wider.
 - Dialog footer buttons have `min-w-20` (80px), sit right-aligned with `gap-2`, and the main action
   is the rightmost one.
+- A secondary action that leaves the flow (Delete in the schedule dialog, Back in the help dialog)
+  may sit at the left end of the footer; the row still has `gap-2`.
 - An icon inside a button is 16px and is spaced by the gap of the button's size. Do not add `mr-*`
   or size classes to it.
 
