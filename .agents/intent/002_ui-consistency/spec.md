@@ -2,6 +2,7 @@
 intent: "002"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-15", words: "1. 응. 그렇게 하자 / 4. 그래. 그렇게 해.", rev: "master de85350 에서 PM 이 제안한 정정 2건(아래 '정정 기록' 10 · 11): 1 = 여러 날에 걸친 일정은 이어지는 쪽 모서리가 0px + PM 이 바꾼 검사 기대값의 사후 수용, 4 = 확장 설정의 숫자 입력은 96px 로 확정", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-15", words: "2. 응. 고쳐 / 3. ㅇㅇ.", rev: "master 6557133 에서 PM 이 제안한 정정 3건(아래 '정정 기록' 7~9): 2 = 도움말 푸터에 gap-2 를 넣고 배치는 그대로 + --sidebar-ring 을 강조색에 연결, 3 = 생성된 부품 안쪽 치수는 규칙 대상이 아님", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-12", words: "동의. 감사에서 문제되지 않도록 잘 기록해라", rev: "fdb625b (PR #122 head) 에서 PM 이 제안한 정정 6건: V-3, V-4, S-4/V-7, S-7, S-11, S-13 — 아래 '정정 기록'", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-12", words: "진행", rev: "7132f50", kind: summary }
@@ -248,7 +249,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
     1. 일반 `Button`(`default`/`outline`/`destructive`/`ghost`), `Input`(`time-field` 포함), `SelectTrigger`의 `height === 36` (±0.5px); 요일 선택 토글 및 `size="sm"` 버튼의 `height === 32` (±0.5px). 중요도 선택(아이콘과 글자를 세로로 쌓은 3칸 선택기)과 태그 추천(배지 모양)은 측정 대상에서 제외.
     2. 아이콘 버튼의 `width × height`가 제목 표시줄(`app.vue`, 창 제어 버튼 3개 제외) `28 × 28`px, 본문/모달 내 아이콘 버튼은 혼자 놓이면 `32 × 32`px, 36px 컨트롤과 한 줄에 놓이면(달력 이전 · 다음, 알림 추가) `36 × 36`px, 좌측 사이드바 레일(`left-sidebar.vue`)은 펼친 상태와 접힌 상태 모두 `36 × 36`px이며(정정 3), 버튼 안 `<svg>`의 `width === 16`, `height === 16`이고 텍스트와 아이콘이 함께 있는 기본 크기 버튼의 `columnGap === '8px'`(`sm` 은 `6px`, 정정 4).
     3. 모든 다이얼로그 푸터 버튼의 `width >= 80`px(`min-w-20`), 푸터 버튼 컨테이너의 `columnGap === '8px'`(`gap-2`), 주 버튼(`bg-primary`)이 푸터 내 버튼 중 가장 오른쪽(`rect.right` 최대)에 위치하며, 설정 모달 취소 버튼과 저장 버튼의 `paddingLeft === '16px'`, `paddingRight === '16px'`, `fontWeight === '500'`이 서로 정확히 일치함.
-    4. 설정 모달의 행 오른쪽 `SelectTrigger` 8개 및 `config-schema-form` 행 컨트롤의 `width === 240` (±1px, `w-60`), 일정 모달 숫자 입력 3개의 `width === 96` (±1px, `w-24`), 동기화 로그인 폼 및 확장 설치 URL 입력의 폭이 부모 컨테이너 내부 폭(`w-full`, ±1px)과 일치함.
+    4. 설정 모달의 행 오른쪽 `SelectTrigger` 8개 및 `config-schema-form` 행 컨트롤의 `width === 240` (±1px, `w-60`; 그 가운데 숫자 입력은 S-9 대로 `96` — 정정 11), 일정 모달 숫자 입력 3개의 `width === 96` (±1px, `w-24`), 동기화 로그인 폼 및 확장 설치 URL 입력의 폭이 부모 컨테이너 내부 폭(`w-full`, ±1px)과 일치함.
   - 기대 결과: 라이트·다크 양쪽 테마와 7개 대상 화면 전체에서 측정된 모든 대상 컨트롤이 위 수치 기준을 100% 만족하여 `violations: 0` 및 종료 코드 `0`을 출력합니다.
   - 실패 판정: 어느 한 화면·테마에서라도 높이·너비·간격·패딩·굵기 실측치가 허용 오차를 벗어나거나(`violations > 0`), 7개 화면 중 하나라도 열리지 않아 측정 대상 수가 0이거나, 스크립트가 비정상 종료되는 경우 실패로 판정합니다.
   - 증적 경로: `.loctx/reports/1.3.0/rc2/v07-runtime-dimensions.log`
@@ -262,7 +263,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
       > .loctx/reports/1.3.0/rc2/v08-runtime-radius-typo.log 2>&1
     ```
     스크립트는 다음 항목을 단언합니다:
-    1. 컨트롤(`Button`, `Input`, `SelectTrigger`, 달력 툴바 버튼, 설정 탭 항목)의 `borderRadius === '8px'`(원형 `rounded-full` 제외), 달력 이벤트(`.fc-event`)의 `borderRadius === '10px'`, 열린 모든 다이얼로그(`DialogContent`)와 카드(`Card`, 설정/일정 내 토큰 카드)의 `borderRadius === '14px'`, 예외인 달력 외곽 카드(`calendar.vue`)만 `borderRadius === '24px'`.
+    1. 컨트롤(`Button`, `Input`, `SelectTrigger`, 달력 툴바 버튼, 설정 탭 항목)의 `borderRadius === '8px'`(원형 `rounded-full` 제외), 달력 이벤트(`.fc-event`)의 `borderRadius === '10px'`(자정을 넘거나 여러 날에 걸쳐 조각으로 그려지는 일정은 바깥쪽 끝만 10px, 조각이 이어지는 쪽은 FullCalendar 가 0px 로 둠 — 정정 10), 열린 모든 다이얼로그(`DialogContent`)와 카드(`Card`, 설정/일정 내 토큰 카드)의 `borderRadius === '14px'`, 예외인 달력 외곽 카드(`calendar.vue`)만 `borderRadius === '24px'`.
     2. 확인형 다이얼로그(확인·도움말·업데이트 모달) `DialogContent`의 `getComputedStyle(el).maxWidth === '448px'`(`sm:max-w-md`), 폼형 다이얼로그의 구분된 푸터(`schedule-modal`, `settings-modal`)의 `borderTopWidth === '1px'`, `paddingTop === '16px'`, `paddingBottom === '16px'`, `paddingLeft === '24px'`, `paddingRight === '24px'`.
     3. 모든 다이얼로그 제목(`DialogTitle`)의 `fontSize === '18px'` 및 `fontWeight === '600'`, 섹션 소제목의 `fontSize === '16px'` 및 `fontWeight === '700'`, 폼/설정 라벨의 `fontSize === '14px'` 및 `fontWeight === '500'`.
     4. 다크 모드(`.dark`)에서 확장 설정(`config-schema-form.vue`) 소제목의 `getComputedStyle(el).color`가 루트 `--foreground` 계산 색상과 일치하며 어두운 색(`rgb(23, 23, 23)` 등 `neutral-900`)이 아님.
@@ -340,6 +341,14 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM이 검토 · 수정�
 | 9 | V-7, V-8 의 대상 | "Button · Input · SelectTrigger … 컨트롤" | 생성된 부품의 안쪽(날짜 선택 달력의 버튼, 선택 목록 · 컨텍스트 메뉴의 항목)은 높이 · radius 규칙의 대상이 아님. 그 부품의 바깥(팝오버 · 목록 · 메뉴 8px)은 정정 5 그대로 대상 | 규칙은 화면이 부품을 어떻게 쓰느냐에 대한 것입니다. 안쪽 값은 `post-audit/attempt-11` 에 기록(달력 버튼 28 · 32px, 항목 32px / 6px) |
 
 정정 7 · 8 은 코드를 바꿉니다(이 커밋). 작업 단위는 추가하지 않고 W-2(토큰) · W-3(버튼)의 보완으로 처리합니다.
+
+### 보완 감사 2 뒤의 정정 (2026-11-15)
+사용자 승인: "1. 응. 그렇게 하자 / 4. 그래. 그렇게 해." (`approvals:` 의 `kind: change`). 코드는 바뀌지 않습니다.
+
+| # | 대상 | 그전 | 정정 | 이유와 경위 |
+|---|---|---|---|---|
+| 10 | V-8 달력 이벤트 | `.fc-event` 의 radius 10px | 하루 안의 일정은 네 모서리 10px. 여러 조각으로 그려지는 일정은 바깥쪽 끝만 10px, 이어지는 쪽은 0px | FullCalendar 가 이어지는 조각의 모서리를 0 으로 둡니다. **경위:** 23시대에 만든 일정이 자정을 넘어 검사가 실패하자(`post-audit/attempt-12`) PM 이 승인 없이 검사 기대값을 먼저 바꿨습니다(`attempt-13`). 감사 D-1 의 위반이고, 사용자가 사후 수용했습니다. 하루 안의 일정이 원래 기준을 충족한다는 것은 `attempt-17` 에서 따로 확인했습니다 |
+| 11 | V-7 의 4 | 확장 설정(`config-schema-form`) 행 컨트롤 240px | 그 가운데 숫자 입력은 96px | S-9 는 "숫자 입력은 `w-24`" 이고 V-7 문구만 240px 로 묶어 적었습니다. 코드는 처음부터 96px 입니다(`ece0cc3`) |
 
 ## 우려
 - **강조색 위 흰 글자 대비가 낮습니다(약 2:1).** 지금도 같은 상태이고 이번에 스위치 · 체크박스 · 확인 모달 버튼으로 넓어집니다. 색 체계 문제라 고치지 않고 로컬 로드맵에 적습니다.
