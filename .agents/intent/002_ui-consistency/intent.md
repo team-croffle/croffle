@@ -6,7 +6,8 @@ status: approved
 origin: user
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-12", words: "승인", rev: "69273a2" }
-waivers: []
+waivers:
+  - { step: "test: spec V-7 · V-8 의 대상 가운데 '설정을 불러오지 못했을 때의 화면'(버튼 2개)의 실측. 밖에서 그 화면을 열지 못했음(.loctx/reports/1.3.0/rc2/post-audit/attempt-9, attempt-10). 이 화면에 한정", words: "3. ㅇㅇ.", at: "2026-11-15", scope: once }
 supersedes: null
 ---
 ## 문제
