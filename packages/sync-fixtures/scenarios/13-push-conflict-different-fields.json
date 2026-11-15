@@ -1,0 +1,290 @@
+{
+  "name": "push-conflict-different-fields",
+  "protocol": 1,
+  "description": "A conflict names the row fields whose values differ between the commit and the server row (server 0.1.1), sorted, without the bookkeeping fields. It is information only: nothing is applied, and the client still settles with last-writer-wins. Same data gives an empty list; a delete against a live row differs in deletedAt.",
+  "accounts": [
+    {
+      "id": "acct-1",
+      "username": "alice",
+      "teams": ["team-default"]
+    }
+  ],
+  "devices": [
+    {
+      "id": "client-1",
+      "accountId": "acct-1"
+    },
+    {
+      "id": "client-2",
+      "accountId": "acct-1"
+    }
+  ],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "startDate": 1700003600000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-1"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-2",
+        "body": {
+          "clientId": "client-2",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000002000,
+              "lastWriterId": "device:client-2",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "startDate": 1700007200000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000002000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-2"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-3",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000003000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "retro",
+                "startDate": 1700003600000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000003000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": [],
+          "conflicts": [
+            {
+              "opId": "op-3",
+              "table": "schedule",
+              "rowId": "row-1",
+              "serverVersion": 2,
+              "serverLastWriterId": "device:client-2",
+              "serverRow": {
+                "title": "standup",
+                "startDate": 1700007200000
+              },
+              "differentFields": ["startDate", "title"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-4",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000004000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "startDate": 1700007200000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000004000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": [],
+          "conflicts": [
+            {
+              "opId": "op-4",
+              "table": "schedule",
+              "rowId": "row-1",
+              "serverVersion": 2,
+              "serverLastWriterId": "device:client-2",
+              "serverRow": {
+                "title": "standup",
+                "startDate": 1700007200000
+              },
+              "differentFields": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-5",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "delete",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000005000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "standup",
+                "startDate": 1700007200000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": 1700000005000,
+                "version": 2,
+                "updatedAtMs": 1700000005000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": [],
+          "conflicts": [
+            {
+              "opId": "op-5",
+              "table": "schedule",
+              "rowId": "row-1",
+              "serverVersion": 2,
+              "serverLastWriterId": "device:client-2",
+              "serverRow": {
+                "title": "standup",
+                "startDate": 1700007200000
+              },
+              "differentFields": ["deletedAt"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-6",
+              "table": "schedule",
+              "rowId": "row-1",
+              "op": "upsert",
+              "baseVersion": 2,
+              "version": 3,
+              "updatedAtMs": 1700000006000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-1",
+                "title": "retro",
+                "startDate": 1700007200000,
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 3,
+                "updatedAtMs": 1700000006000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-6"],
+          "conflicts": [],
+          "serverSeq": 3
+        }
+      }
+    }
+  ]
+}

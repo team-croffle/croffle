@@ -172,3 +172,53 @@ func TestLiveDashboardRevokeStopsAllTokens(t *testing.T) {
 		t.Errorf("refresh after dashboard revoke: %d", status)
 	}
 }
+
+func TestLiveConflictDifferentFields(t *testing.T) {
+	srv := startServer(t)
+	token := srv.login(t)
+
+	livePush(t, srv, token, liveCommit("op-1", "row-1", 0, 1))
+	moved := liveCommit("op-2", "row-1", 1, 2)
+	moved.Row["title"] = "moved"
+	livePush(t, srv, token, moved)
+
+	stale := liveCommit("op-3", "row-1", 1, 3)
+	stale.Row["title"] = "mine"
+	stale.Row["location"] = "room 1"
+	// A row-less delete is allowed by protocol 1; it compares only deletedAt.
+	rowless := protocol.Commit{
+		OpID: "op-4", Table: "schedule", RowID: "row-1", Op: protocol.OpDelete,
+		BaseVersion: 1, Version: 3, UpdatedAtMs: 1_700_000_000_009, LastWriterID: "device:" + testClientID,
+	}
+	res, body := srv.post(t, "/sync/push", protocol.PushRequest{ClientID: testClientID,
+		Commits: []protocol.Commit{stale, rowless}}, token)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("push: %d %s", res.StatusCode, body)
+	}
+	// Raw JSON: the field must be present (an empty list is "[]", never absent).
+	if strings.Count(string(body), `"differentFields":`) != 2 {
+		t.Fatalf("differentFields missing: %s", body)
+	}
+	var parsed protocol.PushResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Conflicts) != 2 {
+		t.Fatalf("conflicts = %+v", parsed.Conflicts)
+	}
+	if got := strings.Join(parsed.Conflicts[0].DifferentFields, ","); got != "location,title" {
+		t.Errorf("stale upsert differs in %q, want location,title", got)
+	}
+	if got := strings.Join(parsed.Conflicts[1].DifferentFields, ","); got != "deletedAt" {
+		t.Errorf("row-less delete differs in %q, want deletedAt", got)
+	}
+
+	// Nothing was applied: the server row is still the second write.
+	var title string
+	if err := queryRow(t, srv.path, "SELECT json_extract(payload, '$.title') FROM sync_row WHERE rowKey = 'row-1'").Scan(&title); err != nil {
+		t.Fatal(err)
+	}
+	if title != "moved" {
+		t.Errorf("server row title = %q after conflicts, want moved", title)
+	}
+}
