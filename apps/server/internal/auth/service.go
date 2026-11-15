@@ -257,16 +257,6 @@ func (s *Service) IssuePair(ctx context.Context, req LoginRequest) (PairResult, 
 	}
 
 	now := s.now()
-	if err := s.store.RegisterDevice(ctx, store.Device{
-		ID:         clientID,
-		AccountID:  account.ID,
-		Name:       deviceName(req.DeviceName),
-		CreatedAt:  now,
-		LastSeenAt: &now,
-	}); err != nil {
-		return PairResult{}, fmt.Errorf("register device: %w", err)
-	}
-
 	family, err := newFamilyID()
 	if err != nil {
 		return PairResult{}, err
@@ -275,12 +265,16 @@ func (s *Service) IssuePair(ctx context.Context, req LoginRequest) (PairResult, 
 	if err != nil {
 		return PairResult{}, err
 	}
-	if err := s.store.CreateTokenPair(ctx, pair); err != nil {
-		if errors.Is(err, store.ErrNotFound) {
-			// The device was revoked between registering and storing.
-			return PairResult{}, ErrInvalidCredentials
-		}
-		return PairResult{}, fmt.Errorf("store token pair: %w", err)
+	// One transaction for both, so a concurrent revocation cannot fall between
+	// registering the device and storing its pair.
+	if err := s.store.RegisterDeviceWithPair(ctx, store.Device{
+		ID:         clientID,
+		AccountID:  account.ID,
+		Name:       deviceName(req.DeviceName),
+		CreatedAt:  now,
+		LastSeenAt: &now,
+	}, pair); err != nil {
+		return PairResult{}, fmt.Errorf("register device and store token pair: %w", err)
 	}
 
 	teams, err := s.store.TeamsOf(ctx, account.ID)

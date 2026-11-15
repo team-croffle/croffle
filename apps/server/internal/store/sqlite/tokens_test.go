@@ -3,12 +3,16 @@ package sqlite
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/argon2"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
@@ -224,25 +228,36 @@ func TestSweepExpiredAuthTokens(t *testing.T) {
 	}
 }
 
-// token010 and passwordHash010 stand for a token and an argon2id hash written
-// by server 0.1.0 (the hash format has not changed since).
-// token010 is made when the test runs, so no credential-like value is in the
-// source.
-var token010 = func() string {
-	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
-		panic(err)
-	}
-	return base64.RawURLEncoding.EncodeToString(raw)
-}()
+// legacy010 builds credentials the way server 0.1.0 stored them, without
+// calling the code under test: a random 32-byte token in base64url, its plain
+// SHA-256, and an argon2id hash in 0.1.0's encoding (m=19456, t=2, p=1,
+// 16-byte salt, 32-byte key). Nothing credential-like is written into the
+// source; the values exist only while the test runs.
+type legacy010 struct {
+	token        string
+	tokenHash    []byte
+	password     string
+	passwordHash string
+}
 
-var passwordHash010 = func() string {
-	h, err := auth.HashPassword("hunter2-010")
-	if err != nil {
-		panic(err)
+func newLegacy010(t *testing.T) legacy010 {
+	t.Helper()
+	random := func(n int) []byte {
+		b := make([]byte, n)
+		if _, err := rand.Read(b); err != nil {
+			t.Fatal(err)
+		}
+		return b
 	}
-	return h
-}()
+	token := base64.RawURLEncoding.EncodeToString(random(32))
+	sum := sha256.Sum256([]byte(token))
+	password := base64.RawURLEncoding.EncodeToString(random(12))
+	salt := random(16)
+	key := argon2.IDKey([]byte(password), salt, 2, 19*1024, 1, 32)
+	encoded := fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, 19*1024, 2, 1,
+		base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(key))
+	return legacy010{token: token, tokenHash: sum[:], password: password, passwordHash: encoded}
+}
 
 // TestMigrateFrom010 opens a database built by the 0.1.0 migrations only, with
 // a 0.1.0 device token, and checks that 0.1.1 upgrades it in place and the
@@ -250,6 +265,7 @@ var passwordHash010 = func() string {
 func TestMigrateFrom010(t *testing.T) {
 	path := tempPath(t)
 	ctx := context.Background()
+	cred := newLegacy010(t)
 
 	raw, err := sql.Open(driverName, dsn(path, true))
 	if err != nil {
@@ -275,9 +291,9 @@ func TestMigrateFrom010(t *testing.T) {
 		`INSERT INTO account (id, username, passwordHash, createdAt) VALUES ('acct-1', 'alice', ?, 1)`,
 		`INSERT INTO device (id, accountId, name, tokenHash, createdAt) VALUES ('dev-1', 'acct-1', 'laptop', ?, 1)`,
 	} {
-		arg := any(passwordHash010)
+		arg := any(cred.passwordHash)
 		if strings.Contains(q, "device") {
-			arg = auth.HashToken(token010)
+			arg = cred.tokenHash
 		}
 		if _, err := raw.Exec(q, arg); err != nil {
 			t.Fatal(err)
@@ -288,7 +304,7 @@ func TestMigrateFrom010(t *testing.T) {
 	}
 
 	db := open(t, path)
-	device, err := db.FindDeviceByTokenHash(ctx, auth.HashToken(token010))
+	device, err := db.FindDeviceByTokenHash(ctx, cred.tokenHash)
 	if err != nil {
 		t.Fatalf("0.1.0 token no longer resolves: %v", err)
 	}
@@ -308,11 +324,11 @@ func TestMigrateFrom010(t *testing.T) {
 	// Through the real auth service: the 0.1.0 token authenticates, and the
 	// 0.1.0 password signs in without a code and without an expiry.
 	svc := auth.NewService(db, time.Now)
-	if identity, err := svc.Authenticate(ctx, token010); err != nil || identity.DeviceID != "dev-1" {
+	if identity, err := svc.Authenticate(ctx, cred.token); err != nil || identity.DeviceID != "dev-1" {
 		t.Fatalf("0.1.0 token: %+v, %v", identity, err)
 	}
 	result, err := svc.Login(ctx, auth.LoginRequest{
-		Username: "alice", Password: "hunter2-010", ClientID: "dev-new", RemoteIP: "192.0.2.1",
+		Username: "alice", Password: cred.password, ClientID: "dev-new", RemoteIP: "192.0.2.1",
 	})
 	if err != nil || result.ExpiresAt != nil {
 		t.Fatalf("0.1.0 password: %+v, %v", result, err)
@@ -374,5 +390,43 @@ func TestRevokeDeviceTokensSpansFamilies(t *testing.T) {
 	}
 	if _, err := db.FindDeviceByTokenHash(ctx, []byte("dt")); err != nil {
 		t.Fatalf("device token touched: %v", err)
+	}
+}
+
+// A sign-in registers the device and stores its pair in one transaction, so a
+// revocation is either before all of it or after all of it.
+func TestRegisterDeviceWithPairIsOneStep(t *testing.T) {
+	db := open(t, tempPath(t))
+	ctx := context.Background()
+	newAccount(t, db, "acct-1", "alice")
+	newAccount(t, db, "acct-2", "bob")
+	now := time.Now()
+	device := store.Device{ID: "dev-1", AccountID: "acct-1", Name: "d", CreatedAt: now}
+
+	if err := db.RegisterDeviceWithPair(ctx, device, pair("dev-1", "f1", "1", now)); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.RevokeDevice(ctx, "dev-1"); err != nil {
+		t.Fatal(err)
+	}
+	// A sign-in after the revoke re-arms the device and gets a working pair;
+	// the pair from before the revoke stays revoked.
+	if err := db.RegisterDeviceWithPair(ctx, device, pair("dev-1", "f2", "2", now)); err != nil {
+		t.Fatal(err)
+	}
+	if token, _ := db.FindAuthToken(ctx, []byte("a1")); token.Usable(now) {
+		t.Error("the pre-revoke pair came back")
+	}
+	if token, _ := db.FindAuthToken(ctx, []byte("a2")); !token.Usable(now) {
+		t.Error("the post-revoke sign-in got no usable pair")
+	}
+
+	// Someone else's device id: nothing is registered and nothing stored.
+	foreign := store.Device{ID: "dev-1", AccountID: "acct-2", Name: "x", CreatedAt: now}
+	if err := db.RegisterDeviceWithPair(ctx, foreign, pair("dev-1", "f3", "3", now)); !errors.Is(err, ErrDeviceOwnedByAnotherAccount) {
+		t.Fatalf("foreign device: %v", err)
+	}
+	if _, err := db.FindAuthToken(ctx, []byte("a3")); !errors.Is(err, store.ErrNotFound) {
+		t.Fatal("a pair was stored for a foreign device")
 	}
 }

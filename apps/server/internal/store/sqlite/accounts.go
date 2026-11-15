@@ -117,28 +117,47 @@ func (db *DB) RegisterDevice(ctx context.Context, device store.Device) error {
 	}
 
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, `
-			INSERT INTO device (id, accountId, name, createdAt, lastSeenAt)
-			VALUES (?, ?, ?, ?, ?)
-			ON CONFLICT (id) DO UPDATE SET
-				name       = excluded.name,
-				lastSeenAt = excluded.lastSeenAt,
-				revokedAt  = NULL
-			WHERE device.accountId = excluded.accountId`,
-			device.ID, device.AccountID, device.Name,
-			toMillis(device.CreatedAt), toMillisPtr(device.LastSeenAt))
-		if err != nil {
-			return fmt.Errorf("sqlite: register device: %w", err)
-		}
-		affected, err := res.RowsAffected()
-		if err != nil {
-			return fmt.Errorf("sqlite: register device rows: %w", err)
-		}
-		if affected == 0 {
-			return ErrDeviceOwnedByAnotherAccount
-		}
-		return nil
+		return registerDevice(ctx, tx, device)
 	})
+}
+
+func (db *DB) RegisterDeviceWithPair(ctx context.Context, device store.Device, pair store.TokenPair) error {
+	if device.ID == "" || device.AccountID == "" {
+		return errors.New("sqlite: device id and account id are required")
+	}
+	if pair.Access.DeviceID != device.ID {
+		return errors.New("sqlite: the pair belongs to another device")
+	}
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if err := registerDevice(ctx, tx, device); err != nil {
+			return err
+		}
+		return insertPair(ctx, tx, pair)
+	})
+}
+
+func registerDevice(ctx context.Context, tx *sql.Tx, device store.Device) error {
+	res, err := tx.ExecContext(ctx, `
+		INSERT INTO device (id, accountId, name, createdAt, lastSeenAt)
+		VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT (id) DO UPDATE SET
+			name       = excluded.name,
+			lastSeenAt = excluded.lastSeenAt,
+			revokedAt  = NULL
+		WHERE device.accountId = excluded.accountId`,
+		device.ID, device.AccountID, device.Name,
+		toMillis(device.CreatedAt), toMillisPtr(device.LastSeenAt))
+	if err != nil {
+		return fmt.Errorf("sqlite: register device: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("sqlite: register device rows: %w", err)
+	}
+	if affected == 0 {
+		return ErrDeviceOwnedByAnotherAccount
+	}
+	return nil
 }
 
 // deviceColumns is the column list scanDevice expects, in order.
