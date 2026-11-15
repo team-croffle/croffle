@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -407,5 +408,32 @@ func TestAuthenticateThrottlesLastSeenWrites(t *testing.T) {
 	// single write connection; it is only refreshed once it is stale.
 	if len(st.touched) != 1 {
 		t.Errorf("TouchDevice called %d times for a stale device, want 1", len(st.touched))
+	}
+}
+
+func TestLimiterKeysAreIndependent(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	limiter := NewLimiter(func() time.Time { return now })
+	for i := 0; i < loginBurst; i++ {
+		limiter.Allow("ip|alice")
+	}
+	if limiter.Allow("ip|alice") {
+		t.Fatal("alice should be limited")
+	}
+	if !limiter.Allow("ip|bob") {
+		t.Fatal("bob must not share alice's bucket")
+	}
+}
+
+func TestLimiterEvictsIdleKeysWhenFull(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	limiter := NewLimiter(func() time.Time { return now })
+	for i := 0; i < limiterMaxKeys; i++ {
+		limiter.Allow(fmt.Sprintf("k%d", i))
+	}
+	now = now.Add(limiterEvictIdle + time.Second)
+	limiter.Allow("fresh")
+	if got := limiter.size(); got != 1 {
+		t.Fatalf("idle keys not evicted: %d tracked", got)
 	}
 }

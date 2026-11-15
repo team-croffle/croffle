@@ -386,4 +386,19 @@ The protocol scenarios in [`packages/sync-fixtures`](../../packages/sync-fixture
 are read by this server's tests **and** by the desktop, so a wire change that
 lands on only one side fails in CI.
 
+### Dependencies
+
+The server is mostly the Go standard library. A dependency is added only when it
+replaces security-sensitive or protocol code we would otherwise write by hand,
+and only from a well-established source:
+
+| Module                   | Used for                                   |
+| ------------------------ | ------------------------------------------ |
+| `modernc.org/sqlite`     | SQLite without cgo                         |
+| `golang.org/x/crypto`    | argon2id password hashing                  |
+| `golang.org/x/term`      | the hidden password prompt of the commands |
+| `golang.org/x/time/rate` | the login rate limit                       |
+
+Still one binary and one SQLite file: nothing here needs another service.
+
 Licence: MIT, the same as the rest of the repository.
