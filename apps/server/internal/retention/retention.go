@@ -90,7 +90,7 @@ func (s *Service) SweepOnce(ctx context.Context) {
 		return
 	}
 
-	if result.DeletedCommits == 0 && result.DeletedOps == 0 && result.DeletedSessions == 0 {
+	if result.DeletedCommits == 0 && result.DeletedOps == 0 && result.DeletedSessions == 0 && result.DeletedTokens == 0 {
 		s.logger.DebugContext(ctx, "retention sweep found nothing to remove")
 		return
 	}
@@ -101,6 +101,7 @@ func (s *Service) SweepOnce(ctx context.Context) {
 		slog.Int64("deleted_commits", result.DeletedCommits),
 		slog.Int64("deleted_ops", result.DeletedOps),
 		slog.Int64("deleted_sessions", result.DeletedSessions),
+		slog.Int64("deleted_tokens", result.DeletedTokens),
 		slog.Int64("oldest_commit_seq", result.OldestCommitSeq),
 		slog.Int64("duration_ms", time.Since(started).Milliseconds()),
 	)
@@ -109,6 +110,7 @@ func (s *Service) SweepOnce(ctx context.Context) {
 		DeletedCommits:  result.DeletedCommits,
 		DeletedOps:      result.DeletedOps,
 		DeletedSessions: result.DeletedSessions,
+		DeletedTokens:   result.DeletedTokens,
 		OldestCommitSeq: result.OldestCommitSeq,
 	}})
 }

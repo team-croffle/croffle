@@ -58,19 +58,21 @@ func (db *DB) UpsertDevice(ctx context.Context, device store.Device) error {
 		// The WHERE on the conflict clause is the ownership check; it makes the
 		// update a no-op for a foreign device, which RowsAffected then reports.
 		res, err := tx.ExecContext(ctx, `
-			INSERT INTO device (id, accountId, name, tokenHash, createdAt, lastSeenAt, revokedAt)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO device (id, accountId, name, tokenHash, createdAt, lastSeenAt, revokedAt, tokenExpiresAt)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT (id) DO UPDATE SET
-				name       = excluded.name,
-				tokenHash  = excluded.tokenHash,
-				lastSeenAt = excluded.lastSeenAt,
+				name           = excluded.name,
+				tokenHash      = excluded.tokenHash,
+				tokenExpiresAt = excluded.tokenExpiresAt,
+				lastSeenAt     = excluded.lastSeenAt,
 				-- A fresh login re-arms a revoked device: revoking withdraws a
 				-- token, it does not bar an account that can still prove itself.
 				-- Disabling the account is what stops it for good.
 				revokedAt  = NULL
 			WHERE device.accountId = excluded.accountId`,
 			device.ID, device.AccountID, device.Name, device.TokenHash,
-			toMillis(device.CreatedAt), toMillisPtr(device.LastSeenAt), toMillisPtr(device.RevokedAt))
+			toMillis(device.CreatedAt), toMillisPtr(device.LastSeenAt), toMillisPtr(device.RevokedAt),
+			toMillisPtr(device.TokenExpiresAt))
 		if err != nil {
 			return fmt.Errorf("sqlite: upsert device: %w", err)
 		}
@@ -90,29 +92,82 @@ func (db *DB) FindDeviceByTokenHash(ctx context.Context, tokenHash []byte) (*sto
 	if len(tokenHash) == 0 {
 		return nil, store.ErrNotFound
 	}
-
-	var (
-		device     store.Device
-		createdAt  int64
-		lastSeenAt *int64
-		revokedAt  *int64
-	)
-
-	err := db.read.QueryRowContext(ctx, `
-		SELECT id, accountId, name, tokenHash, createdAt, lastSeenAt, revokedAt
-		FROM device WHERE tokenHash = ?`, tokenHash).Scan(
-		&device.ID, &device.AccountID, &device.Name, &device.TokenHash,
-		&createdAt, &lastSeenAt, &revokedAt)
+	device, err := scanDevice(db.read.QueryRowContext(ctx,
+		`SELECT `+deviceColumns+` FROM device WHERE tokenHash = ?`, tokenHash))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, store.ErrNotFound
+	}
+	return device, err
+}
+
+func (db *DB) FindDeviceByID(ctx context.Context, id string) (*store.Device, error) {
+	device, err := scanDevice(db.read.QueryRowContext(ctx,
+		`SELECT `+deviceColumns+` FROM device WHERE id = ?`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, store.ErrNotFound
+	}
+	return device, err
+}
+
+// RegisterDevice is UpsertDevice without the device token: a new row gets no
+// token, and an existing row keeps the one it has.
+func (db *DB) RegisterDevice(ctx context.Context, device store.Device) error {
+	if device.ID == "" || device.AccountID == "" {
+		return errors.New("sqlite: device id and account id are required")
+	}
+
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, `
+			INSERT INTO device (id, accountId, name, createdAt, lastSeenAt)
+			VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT (id) DO UPDATE SET
+				name       = excluded.name,
+				lastSeenAt = excluded.lastSeenAt,
+				revokedAt  = NULL
+			WHERE device.accountId = excluded.accountId`,
+			device.ID, device.AccountID, device.Name,
+			toMillis(device.CreatedAt), toMillisPtr(device.LastSeenAt))
+		if err != nil {
+			return fmt.Errorf("sqlite: register device: %w", err)
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("sqlite: register device rows: %w", err)
+		}
+		if affected == 0 {
+			return ErrDeviceOwnedByAnotherAccount
+		}
+		return nil
+	})
+}
+
+// deviceColumns is the column list scanDevice expects, in order.
+const deviceColumns = `id, accountId, name, tokenHash, createdAt, lastSeenAt, revokedAt, tokenExpiresAt`
+
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanDevice(row rowScanner) (*store.Device, error) {
+	var (
+		device         store.Device
+		createdAt      int64
+		lastSeenAt     *int64
+		revokedAt      *int64
+		tokenExpiresAt *int64
+	)
+	err := row.Scan(&device.ID, &device.AccountID, &device.Name, &device.TokenHash,
+		&createdAt, &lastSeenAt, &revokedAt, &tokenExpiresAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: read device: %w", err)
 	}
-
 	device.CreatedAt = fromMillis(createdAt)
 	device.LastSeenAt = fromMillisPtr(lastSeenAt)
 	device.RevokedAt = fromMillisPtr(revokedAt)
+	device.TokenExpiresAt = fromMillisPtr(tokenExpiresAt)
 	return &device, nil
 }
 

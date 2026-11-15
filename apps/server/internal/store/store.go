@@ -84,10 +84,57 @@ type Device struct {
 	CreatedAt  time.Time
 	LastSeenAt *time.Time
 	RevokedAt  *time.Time
+	// TokenExpiresAt is when the device token stops working; nil means never,
+	// which is what every 0.1.0 token is.
+	TokenExpiresAt *time.Time
 }
 
 // Revoked reports whether the device's token has been withdrawn.
 func (d Device) Revoked() bool { return d.RevokedAt != nil }
+
+// TokenExpired reports whether the device token's expiry has passed.
+func (d Device) TokenExpired(now time.Time) bool {
+	return d.TokenExpiresAt != nil && !now.Before(*d.TokenExpiresAt)
+}
+
+// TokenKind tells an access token from a refresh token.
+type TokenKind string
+
+const (
+	// TokenAccess authenticates sync requests for a short time.
+	TokenAccess TokenKind = "access"
+	// TokenRefresh is exchanged, once, for a new access/refresh pair. It is
+	// never accepted by a sync endpoint.
+	TokenRefresh TokenKind = "refresh"
+)
+
+// AuthToken is one stored access or refresh token. Only the hash is kept.
+type AuthToken struct {
+	TokenHash []byte
+	DeviceID  string
+	Kind      TokenKind
+	// FamilyID groups every pair descended from one sign-in, so a replayed
+	// refresh token can revoke all of them at once.
+	FamilyID  string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	RevokedAt *time.Time
+}
+
+// Usable reports whether the token is neither revoked nor expired.
+func (t AuthToken) Usable(now time.Time) bool {
+	return t.RevokedAt == nil && now.Before(t.ExpiresAt)
+}
+
+// TokenPair is what one sign-in or one refresh issues.
+type TokenPair struct {
+	Access  AuthToken
+	Refresh AuthToken
+}
+
+// ErrTokenUsed means a refresh token was exchanged a second time.
+var ErrTokenUsed = errors.New("store: refresh token already used")
 
 // Row is the current state of one synchronised row.
 type Row struct {
@@ -281,6 +328,8 @@ type SweepResult struct {
 	DeletedCommits  int64
 	DeletedOps      int64
 	DeletedSessions int64
+	// DeletedTokens counts expired access and refresh tokens removed.
+	DeletedTokens   int64
 	OldestCommitSeq int64
 }
 
@@ -324,8 +373,9 @@ type Admin interface {
 	// ListDevices lists one account's devices, or every device when accountID
 	// is empty.
 	ListDevices(ctx context.Context, accountID string) ([]Device, error)
-	// RevokeDevice withdraws a device's token. The account can obtain a new one
-	// by logging in again; disabling the account is what stops it for good.
+	// RevokeDevice withdraws a device's token and every access and refresh
+	// token it holds. The account can obtain new ones by logging in again;
+	// disabling the account is what stops it for good.
 	RevokeDevice(ctx context.Context, deviceID string) error
 
 	ListTeams(ctx context.Context) ([]Team, error)
@@ -396,6 +446,25 @@ type Store interface {
 	// TouchDevice records that a device was seen. Callers throttle it; it is
 	// bookkeeping and must not become a write per request.
 	TouchDevice(ctx context.Context, deviceID string, at time.Time) error
+	// RegisterDevice creates or renames a device without touching its device
+	// token, and re-arms it if it was revoked. The token-pair sign-in uses it,
+	// so a device that also holds a 0.1 device token keeps that token working.
+	// The same ownership rule as UpsertDevice applies.
+	RegisterDevice(ctx context.Context, device Device) error
+	// FindDeviceByID returns ErrNotFound when there is no such device.
+	FindDeviceByID(ctx context.Context, id string) (*Device, error)
+	// CreateTokenPair stores a fresh access/refresh pair.
+	CreateTokenPair(ctx context.Context, pair TokenPair) error
+	// FindAuthToken resolves an access or refresh token hash. Expired and
+	// revoked tokens are returned too; the caller decides.
+	FindAuthToken(ctx context.Context, tokenHash []byte) (*AuthToken, error)
+	// RotateRefresh marks the refresh token oldHash used and stores next, in one
+	// transaction. It returns ErrTokenUsed when oldHash was already used, and
+	// ErrNotFound when it is unknown, revoked or expired.
+	RotateRefresh(ctx context.Context, oldHash []byte, at time.Time, next TokenPair) error
+	// RevokeTokenFamily revokes every token of one family.
+	RevokeTokenFamily(ctx context.Context, familyID string, at time.Time) error
+
 	// FindDeviceByTokenHash resolves a bearer token to its device. Revoked
 	// devices and disabled accounts are the caller's business to reject.
 	FindDeviceByTokenHash(ctx context.Context, tokenHash []byte) (*Device, error)

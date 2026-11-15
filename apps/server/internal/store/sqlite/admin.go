@@ -62,20 +62,43 @@ func (db *DB) SetAccountPassword(ctx context.Context, accountID, passwordHash st
 }
 
 // RevokeDevice withdraws the device's token by clearing the hash as well as
-// stamping revokedAt: a revoked row keeps no credential material at all.
+// stamping revokedAt: a revoked row keeps no credential material at all. Its
+// access and refresh tokens are revoked in the same transaction.
 func (db *DB) RevokeDevice(ctx context.Context, deviceID string) error {
-	return db.updateOne(ctx, "device", deviceID,
-		`UPDATE device SET revokedAt = ?, tokenHash = NULL WHERE id = ?`,
-		toMillis(timeNow()), deviceID)
+	return db.revokeDevice(ctx, deviceID,
+		`UPDATE device SET revokedAt = ?, tokenHash = NULL WHERE id = ?`, deviceID)
 }
 
 // RevokeAccountDevice revokes a device only if it belongs to accountID. A
 // device of another account is reported as ErrNotFound, the same as one that
 // does not exist, so the dashboard cannot be used to probe device ids.
 func (db *DB) RevokeAccountDevice(ctx context.Context, accountID, deviceID string) error {
-	return db.updateOne(ctx, "device", deviceID,
+	return db.revokeDevice(ctx, deviceID,
 		`UPDATE device SET revokedAt = ?, tokenHash = NULL WHERE id = ? AND accountId = ?`,
-		toMillis(timeNow()), deviceID, accountID)
+		deviceID, accountID)
+}
+
+func (db *DB) revokeDevice(ctx context.Context, deviceID, query string, args ...any) error {
+	now := toMillis(timeNow())
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, query, append([]any{now}, args...)...)
+		if err != nil {
+			return fmt.Errorf("sqlite: revoke device: %w", err)
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("sqlite: revoke device rows: %w", err)
+		}
+		if affected == 0 {
+			return fmt.Errorf("%w: device %q", store.ErrNotFound, deviceID)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE auth_token SET revokedAt = ? WHERE deviceId = ? AND revokedAt IS NULL`,
+			now, deviceID); err != nil {
+			return fmt.Errorf("sqlite: revoke device tokens: %w", err)
+		}
+		return nil
+	})
 }
 
 // updateOne runs a single-row update and turns "no such row" into ErrNotFound,
@@ -98,8 +121,7 @@ func (db *DB) updateOne(ctx context.Context, what, id, query string, args ...any
 }
 
 func (db *DB) ListDevices(ctx context.Context, accountID string) ([]store.Device, error) {
-	query := `SELECT id, accountId, name, tokenHash, createdAt, lastSeenAt, revokedAt
-		FROM device`
+	query := `SELECT ` + deviceColumns + ` FROM device`
 	var args []any
 	if accountID != "" {
 		query += ` WHERE accountId = ?`
@@ -115,20 +137,11 @@ func (db *DB) ListDevices(ctx context.Context, accountID string) ([]store.Device
 
 	devices := []store.Device{}
 	for rows.Next() {
-		var (
-			device     store.Device
-			createdAt  int64
-			lastSeenAt *int64
-			revokedAt  *int64
-		)
-		if err := rows.Scan(&device.ID, &device.AccountID, &device.Name, &device.TokenHash,
-			&createdAt, &lastSeenAt, &revokedAt); err != nil {
-			return nil, fmt.Errorf("sqlite: scan device: %w", err)
+		device, err := scanDevice(rows)
+		if err != nil {
+			return nil, err
 		}
-		device.CreatedAt = fromMillis(createdAt)
-		device.LastSeenAt = fromMillisPtr(lastSeenAt)
-		device.RevokedAt = fromMillisPtr(revokedAt)
-		devices = append(devices, device)
+		devices = append(devices, *device)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("sqlite: iterate devices: %w", err)

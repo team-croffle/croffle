@@ -65,6 +65,17 @@ func (db *DB) Sweep(ctx context.Context, cfg store.SweepConfig) (store.SweepResu
 	}
 	result.DeletedSessions = deletedSessions
 
+	// Expired access and refresh tokens. A used refresh token is kept until it
+	// expires on purpose: that is what lets a replay be recognised.
+	deletedTokens, err := db.sweepTable(ctx,
+		`DELETE FROM auth_token WHERE tokenHash IN (
+			SELECT tokenHash FROM auth_token WHERE expiresAt < ? ORDER BY expiresAt LIMIT ?)`,
+		toMillis(cfg.Now()))
+	if err != nil {
+		return result, err
+	}
+	result.DeletedTokens = deletedTokens
+
 	if purgeThrough != nil {
 		if err := db.raisePurgedThrough(ctx, *purgeThrough); err != nil {
 			return result, err
@@ -76,7 +87,7 @@ func (db *DB) Sweep(ctx context.Context, cfg store.SweepConfig) (store.SweepResu
 		return result, fmt.Errorf("sqlite: read oldest sequence: %w", err)
 	}
 
-	if result.DeletedCommits+result.DeletedOps+result.DeletedSessions > 0 {
+	if result.DeletedCommits+result.DeletedOps+result.DeletedSessions+result.DeletedTokens > 0 {
 		// A large delete inflates the WAL; truncating it here keeps the file
 		// from growing after every sweep.
 		if _, err := db.write.ExecContext(ctx, `PRAGMA wal_checkpoint(TRUNCATE)`); err != nil {

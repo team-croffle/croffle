@@ -105,6 +105,7 @@ type RetentionSwept struct {
 	DeletedCommits  int64 `json:"deletedCommits"`
 	DeletedOps      int64 `json:"deletedOps"`
 	DeletedSessions int64 `json:"deletedSessions"`
+	DeletedTokens   int64 `json:"deletedTokens"`
 	OldestCommitSeq int64 `json:"oldestCommitSeq"`
 }
 
