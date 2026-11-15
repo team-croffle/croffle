@@ -35,13 +35,17 @@ func (c *command) user() error {
 		return c.userSetDisabled(action, false)
 	case "set-password":
 		return c.userSetPassword()
+	case "otp":
+		return c.userOTP()
 	default:
 		return c.usage(
 			"croffle-server user create <username> --password-stdin",
 			"croffle-server user list [--json]",
 			"croffle-server user disable <username>",
 			"croffle-server user enable <username>",
-			"croffle-server user set-password <username> --password-stdin")
+			"croffle-server user set-password <username> --password-stdin",
+			"croffle-server user otp status <username>",
+			"croffle-server user otp disable <username>")
 	}
 }
 
@@ -156,6 +160,51 @@ func (c *command) userSetDisabled(action string, disabled bool) error {
 	} else {
 		c.printf("enabled %s\n", account.Username)
 	}
+	return nil
+}
+
+// userOTP shows or removes an account's one-time codes. Enrolment is done by
+// the account itself in the dashboard; the operator's part is the way out when
+// someone has lost their authenticator and their recovery codes.
+func (c *command) userOTP() error {
+	action := c.action()
+	if action != "status" && action != "disable" {
+		return c.usage(
+			"croffle-server user otp status <username>",
+			"croffle-server user otp disable <username>")
+	}
+	fs := c.flags(action, action == "status")
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+	account, err := c.resolveAccount(c.arg(0))
+	if err != nil {
+		return err
+	}
+
+	if action == "disable" {
+		if err := c.db.DeleteOTP(c.ctx, account.ID); err != nil {
+			return err
+		}
+		c.printf("one-time codes are off for %s; the password alone signs in again\n", account.Username)
+		return nil
+	}
+
+	state := "off"
+	enrolment, err := c.db.FindOTP(c.ctx, account.ID)
+	switch {
+	case errors.Is(err, store.ErrNotFound):
+	case err != nil:
+		return err
+	case enrolment.Enabled():
+		state = "enabled"
+	default:
+		state = "pending"
+	}
+	if c.asJSON {
+		return c.writeJSON(map[string]string{"username": account.Username, "otp": state})
+	}
+	c.printf("%s: %s\n", account.Username, state)
 	return nil
 }
 

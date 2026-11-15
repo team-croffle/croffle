@@ -217,6 +217,8 @@ Commands:
   user disable <username>                   block authentication
   user enable <username>                    allow authentication again
   user set-password <username> --password-stdin
+  user otp status <username>                off, pending or enabled
+  user otp disable <username>               remove one-time codes (lost device)
   token issue <username>                    issue a device token (printed once)
   token list [username]                     list devices
   token revoke <device-id>                  withdraw a device token

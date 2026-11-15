@@ -27,7 +27,13 @@ type Authenticator interface {
 	// CheckPassword is the dashboard's door: it verifies a password without
 	// issuing a device token, so a browser login cannot become a sync
 	// credential.
-	CheckPassword(ctx context.Context, username, password, remoteIP string) (*store.Account, error)
+	CheckPassword(ctx context.Context, username, password, otp, remoteIP string) (*store.Account, error)
+
+	// One-time codes, managed by the account itself from the dashboard.
+	OTPState(ctx context.Context, accountID string) (string, error)
+	BeginOTP(ctx context.Context, accountID, username string) (auth.OTPEnrollment, error)
+	ConfirmOTP(ctx context.Context, accountID, code string) ([]string, error)
+	DisableOTP(ctx context.Context, username, password, code, remoteIP string) error
 }
 
 // IdentityOf returns the caller resolved by requireAuth. The second result is

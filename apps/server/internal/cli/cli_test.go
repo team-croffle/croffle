@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
 )
 
 type result struct {
@@ -496,5 +499,54 @@ func TestTokenIssueExpiry(t *testing.T) {
 	}
 	if _, err := r.run("", "token", "issue", "alice", "--expires-in", "soon"); err == nil {
 		t.Error("a bad duration was accepted")
+	}
+}
+
+func TestUserOTPStatusAndDisable(t *testing.T) {
+	r := newRunner(t)
+	r.mustRun("hunter2\n", "user", "create", "alice", "--password-stdin")
+
+	if res := r.mustRun("", "user", "otp", "status", "alice"); strings.TrimSpace(res.out) != "alice: off" {
+		t.Fatalf("status = %q", res.out)
+	}
+
+	db, err := sqlite.Open(context.Background(), r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	account, err := db.FindAccountByUsername(context.Background(), "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	if err := db.StartOTP(context.Background(), account.ID, "SECRET", now); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+	if res := r.mustRun("", "user", "otp", "status", "alice", "--json"); !strings.Contains(res.out, `"otp": "pending"`) {
+		t.Fatalf("pending status = %q", res.out)
+	}
+
+	db, err = sqlite.Open(context.Background(), r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.EnableOTP(context.Background(), account.ID, 1, [][]byte{[]byte("h")}, now); err != nil {
+		t.Fatal(err)
+	}
+	_ = db.Close()
+	if res := r.mustRun("", "user", "otp", "status", "alice"); strings.TrimSpace(res.out) != "alice: enabled" {
+		t.Fatalf("enabled status = %q", res.out)
+	}
+
+	res := r.mustRun("", "user", "otp", "disable", "alice")
+	if !strings.Contains(res.out, "off for alice") {
+		t.Fatalf("disable = %q", res.out)
+	}
+	if res := r.mustRun("", "user", "otp", "status", "alice"); strings.TrimSpace(res.out) != "alice: off" {
+		t.Fatalf("status after disable = %q", res.out)
+	}
+	if _, err := r.run("", "user", "otp", "nope", "alice"); err == nil {
+		t.Error("unknown otp action accepted")
 	}
 }

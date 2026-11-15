@@ -52,8 +52,22 @@ func (allowAnyToken) Refresh(context.Context, string) (auth.PairResult, error) {
 	return auth.PairResult{}, auth.ErrInvalidCredentials
 }
 
-func (allowAnyToken) CheckPassword(context.Context, string, string, string) (*store.Account, error) {
+func (allowAnyToken) CheckPassword(context.Context, string, string, string, string) (*store.Account, error) {
 	return nil, auth.ErrInvalidCredentials
+}
+
+func (allowAnyToken) OTPState(context.Context, string) (string, error) { return "off", nil }
+
+func (allowAnyToken) BeginOTP(context.Context, string, string) (auth.OTPEnrollment, error) {
+	return auth.OTPEnrollment{}, auth.ErrInvalidCredentials
+}
+
+func (allowAnyToken) ConfirmOTP(context.Context, string, string) ([]string, error) {
+	return nil, auth.ErrInvalidCredentials
+}
+
+func (allowAnyToken) DisableOTP(context.Context, string, string, string, string) error {
+	return auth.ErrInvalidCredentials
 }
 
 func testHandler(t *testing.T, mutate func(*Options)) http.Handler {

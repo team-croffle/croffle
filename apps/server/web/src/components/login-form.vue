@@ -7,6 +7,9 @@
 
   const username = ref('');
   const password = ref('');
+  const otp = ref('');
+  // Shown once the server answers otp_required: the account has one-time codes.
+  const needsOtp = ref(false);
   const error = ref('');
   const busy = ref(false);
 
@@ -14,15 +17,26 @@
     busy.value = true;
     error.value = '';
     try {
-      await api.login(username.value, password.value);
+      await api.login(username.value, password.value, otp.value);
       // The password never leaves this component, and is dropped as soon as the
       // session cookie exists.
       password.value = '';
+      otp.value = '';
       emit('signedIn');
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'otp_required') {
+        needsOtp.value = true;
+        return;
+      }
+      if (err instanceof ApiError && err.status === 429) {
+        error.value = 'Too many attempts. Wait a little and try again.';
+        return;
+      }
       error.value =
         err instanceof ApiError && err.status === 401
-          ? 'Wrong username or password.'
+          ? needsOtp.value
+            ? 'Wrong username, password or code.'
+            : 'Wrong username or password.'
           : (err as Error).message;
     } finally {
       busy.value = false;
@@ -34,7 +48,7 @@
   <form class="login" @submit.prevent="submit">
     <h1>Croffle Server</h1>
     <p class="notice">
-      This dashboard is read-only. Accounts, tokens and teams are managed with
+      Shows this account's own data. Accounts, other people's devices and teams are managed with
       <code>croffle-server</code> commands.
     </p>
 
@@ -45,6 +59,10 @@
     <label>
       Password
       <input v-model="password" type="password" autocomplete="current-password" required />
+    </label>
+    <label v-if="needsOtp">
+      One-time code (or a recovery code)
+      <input v-model="otp" autocomplete="one-time-code" inputmode="text" required />
     </label>
 
     <p v-if="error" class="error">{{ error }}</p>

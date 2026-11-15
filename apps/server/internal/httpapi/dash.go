@@ -58,6 +58,9 @@ func (s *server) dashRoutes(mux *http.ServeMux) {
 	s.dashRoute(mux, http.MethodGet, "/dash/me", s.requireSession(s.dashMe))
 	s.dashRoute(mux, http.MethodGet, "/dash/devices", s.requireSession(s.dashDevices))
 	s.dashRoute(mux, http.MethodPost, "/dash/devices/{id}/revoke", s.requireSession(s.dashRevokeDevice))
+	s.dashRoute(mux, http.MethodPost, "/dash/otp/enroll", s.requireSession(s.dashOTPEnroll))
+	s.dashRoute(mux, http.MethodPost, "/dash/otp/confirm", s.requireSession(s.dashOTPConfirm))
+	s.dashRoute(mux, http.MethodPost, "/dash/otp/disable", s.requireSession(s.dashOTPDisable))
 	s.dashRoute(mux, http.MethodGet, "/dash/teams", s.requireSession(s.dashTeams))
 	s.dashRoute(mux, http.MethodGet, "/dash/rows", s.requireSession(s.dashRows))
 	s.dashRoute(mux, http.MethodGet, "/dash/commits", s.requireSession(s.dashCommits))
@@ -77,12 +80,15 @@ func (s *server) dashRoute(mux *http.ServeMux, method, path string, h http.Handl
 type dashLoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	// OTP is the one-time or recovery code, sent after an otp_required answer.
+	OTP string `json:"otp,omitempty"`
 }
 
 type dashMeResponse struct {
-	AccountID string   `json:"accountId"`
-	Username  string   `json:"username"`
-	Teams     []string `json:"teams"`
+	AccountID  string   `json:"accountId"`
+	Username   string   `json:"username"`
+	Teams      []string `json:"teams"`
+	OTPEnabled bool     `json:"otpEnabled"`
 }
 
 func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +100,7 @@ func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
 	// CheckPassword rather than Login: a browser login must not leave a device
 	// row behind, and must not mint a token that can push. Rate limiting and
 	// the equal-time failure path are shared with the device login.
-	account, err := s.auth.CheckPassword(r.Context(), req.Username, req.Password, RemoteIP(r.Context()))
+	account, err := s.auth.CheckPassword(r.Context(), req.Username, req.Password, req.OTP, RemoteIP(r.Context()))
 	if err != nil {
 		s.writeAuthError(w, r, err, slog.String("surface", "dashboard"))
 		return
@@ -130,10 +136,12 @@ func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
 	}})
 
 	teams, _ := s.dash.TeamsOf(r.Context(), account.ID)
+	state, _ := s.auth.OTPState(r.Context(), account.ID)
 	writeJSON(w, http.StatusOK, dashMeResponse{
-		AccountID: account.ID,
-		Username:  account.Username,
-		Teams:     orEmpty(teams),
+		AccountID:  account.ID,
+		Username:   account.Username,
+		Teams:      orEmpty(teams),
+		OTPEnabled: state == "enabled",
 	})
 }
 
@@ -152,10 +160,16 @@ func (s *server) dashLogout(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) dashMe(w http.ResponseWriter, r *http.Request) {
 	identity := sessionOf(r.Context())
+	state, err := s.auth.OTPState(r.Context(), identity.accountID)
+	if err != nil {
+		s.writeSyncError(w, r, err)
+		return
+	}
 	writeJSON(w, http.StatusOK, dashMeResponse{
-		AccountID: identity.accountID,
-		Username:  identity.username,
-		Teams:     orEmpty(identity.teams),
+		AccountID:  identity.accountID,
+		Username:   identity.username,
+		Teams:      orEmpty(identity.teams),
+		OTPEnabled: state == "enabled",
 	})
 }
 
@@ -214,6 +228,84 @@ func (s *server) dashRevokeDevice(w http.ResponseWriter, r *http.Request) {
 		slog.String("request_id", RequestID(r.Context())),
 	)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type otpEnrollResponse struct {
+	Secret     string `json:"secret"`
+	OTPAuthURI string `json:"otpauthUri"`
+	QRPNG      string `json:"qrPng"`
+}
+
+// dashOTPEnroll starts (or restarts) one-time code enrolment.
+func (s *server) dashOTPEnroll(w http.ResponseWriter, r *http.Request) {
+	identity := sessionOf(r.Context())
+	enrolment, err := s.auth.BeginOTP(r.Context(), identity.accountID, identity.username)
+	if err != nil {
+		s.writeOTPError(w, r, err)
+		return
+	}
+	// The secret is credential material: never cache this response.
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, otpEnrollResponse{
+		Secret: enrolment.Secret, OTPAuthURI: enrolment.URI, QRPNG: enrolment.QRPNG,
+	})
+}
+
+type otpCodeRequest struct {
+	Code     string `json:"code"`
+	Password string `json:"password,omitempty"`
+}
+
+// dashOTPConfirm switches codes on and returns the recovery codes, once.
+func (s *server) dashOTPConfirm(w http.ResponseWriter, r *http.Request) {
+	identity := sessionOf(r.Context())
+	var req otpCodeRequest
+	if !DecodeJSON(w, r, &req) {
+		return
+	}
+	codes, err := s.auth.ConfirmOTP(r.Context(), identity.accountID, req.Code)
+	if err != nil {
+		s.writeOTPError(w, r, err)
+		return
+	}
+	s.logger.InfoContext(r.Context(), "one-time codes enabled",
+		slog.String("account_id", identity.accountID),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, map[string]any{"recoveryCodes": codes})
+}
+
+// dashOTPDisable switches codes off; it needs the password and a code.
+func (s *server) dashOTPDisable(w http.ResponseWriter, r *http.Request) {
+	identity := sessionOf(r.Context())
+	var req otpCodeRequest
+	if !DecodeJSON(w, r, &req) {
+		return
+	}
+	err := s.auth.DisableOTP(r.Context(), identity.username, req.Password, req.Code, RemoteIP(r.Context()))
+	if err != nil {
+		s.writeAuthError(w, r, err, slog.String("surface", "dashboard"))
+		return
+	}
+	s.logger.InfoContext(r.Context(), "one-time codes disabled",
+		slog.String("account_id", identity.accountID),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) writeOTPError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, auth.ErrOTPEnabled):
+		writeError(w, http.StatusConflict, "otp_enabled", "one-time codes are already enabled")
+	case errors.Is(err, auth.ErrOTPNotPending):
+		writeError(w, http.StatusConflict, "otp_not_pending", "start enrolment first")
+	case errors.Is(err, auth.ErrInvalidCode):
+		writeError(w, http.StatusBadRequest, "invalid_code", "that code does not match")
+	default:
+		s.writeSyncError(w, r, err)
+	}
 }
 
 func (s *server) dashTeams(w http.ResponseWriter, r *http.Request) {
