@@ -121,7 +121,7 @@ func errorCodeOf(body []byte) string {
 	return parsed.Code
 }
 
-func TestLiveOTPRequiredAtEveryDoor(t *testing.T) {
+func TestOTPRequiredAtEveryDoor(t *testing.T) {
 	doors := map[string]func(srv *liveServer, otp string) (*http.Response, []byte){
 		"/auth/login": func(srv *liveServer, otp string) (*http.Response, []byte) {
 			return srv.post(t, "/auth/login", protocol.LoginRequest{
@@ -167,7 +167,7 @@ func TestLiveOTPRequiredAtEveryDoor(t *testing.T) {
 	}
 }
 
-func TestLiveOTPStepReplay(t *testing.T) {
+func TestOTPStepReplayLive(t *testing.T) {
 	srv := startServer(t)
 	codes := srv.enrolOTP(t)
 
@@ -191,7 +191,7 @@ func TestLiveOTPStepReplay(t *testing.T) {
 	}
 }
 
-func TestLiveOTPDisableAndCrossOrigin(t *testing.T) {
+func TestOTPDisableAndCrossOrigin(t *testing.T) {
 	srv := startServer(t)
 	codes := srv.enrolOTP(t)
 
