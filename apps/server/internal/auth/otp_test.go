@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/pquerna/otp/totp"
+
+	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
 // otpFixture is a service with a movable clock and an enrolled account.
@@ -229,5 +231,28 @@ func TestOTPFailuresCountTowardsTheRateLimit(t *testing.T) {
 	}
 	if _, err := f.svc.Login(ctx, wrong); !errors.Is(err, ErrRateLimited) {
 		t.Fatalf("after %d wrong codes: %v, want ErrRateLimited", loginBurst, err)
+	}
+}
+
+func TestConfirmIsBoundToTheSecretItChecked(t *testing.T) {
+	_, st, now := newFixture(t, "hunter2")
+	svc := NewService(st, func() time.Time { return now })
+	ctx := context.Background()
+
+	first, err := svc.BeginOTP(ctx, "acct-1", "alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := codeAt(t, first.Secret, now)
+	// The enrolment is restarted with a new secret before the confirmation
+	// lands; the store must refuse to enable the new one with the old code.
+	if err := st.EnableOTP(ctx, "acct-1", "SOME-OTHER-SECRET", 1, nil, now); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("enable with a secret that is not pending: %v", err)
+	}
+	if _, err := svc.BeginOTP(ctx, "acct-1", "alice"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.ConfirmOTP(ctx, "acct-1", code); !errors.Is(err, ErrInvalidCode) {
+		t.Fatalf("old secret's code confirmed the new enrolment: %v", err)
 	}
 }

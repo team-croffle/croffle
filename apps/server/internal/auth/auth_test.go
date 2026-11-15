@@ -218,6 +218,9 @@ func (f *fakeStore) tokenMap() map[string]*store.AuthToken {
 }
 
 func (f *fakeStore) CreateTokenPair(_ context.Context, pair store.TokenPair) error {
+	if f.device == nil || f.device.ID != pair.Access.DeviceID || f.device.Revoked() {
+		return store.ErrNotFound
+	}
 	for _, token := range []store.AuthToken{pair.Access, pair.Refresh} {
 		token := token
 		f.tokenMap()[string(token.TokenHash)] = &token
@@ -246,6 +249,15 @@ func (f *fakeStore) RotateRefresh(ctx context.Context, oldHash []byte, at time.T
 	return f.CreateTokenPair(ctx, next)
 }
 
+func (f *fakeStore) RevokeDeviceTokens(_ context.Context, deviceID string, at time.Time) error {
+	for _, token := range f.tokenMap() {
+		if token.DeviceID == deviceID && token.RevokedAt == nil {
+			token.RevokedAt = &at
+		}
+	}
+	return nil
+}
+
 func (f *fakeStore) RevokeTokenFamily(_ context.Context, family string, at time.Time) error {
 	for _, token := range f.tokenMap() {
 		if token.FamilyID == family && token.RevokedAt == nil {
@@ -271,8 +283,8 @@ func (f *fakeStore) StartOTP(_ context.Context, accountID, secret string, at tim
 	return nil
 }
 
-func (f *fakeStore) EnableOTP(_ context.Context, _ string, step int64, hashes [][]byte, at time.Time) error {
-	if f.otp == nil || f.otp.Enabled() {
+func (f *fakeStore) EnableOTP(_ context.Context, _, secret string, step int64, hashes [][]byte, at time.Time) error {
+	if f.otp == nil || f.otp.Enabled() || f.otp.Secret != secret {
 		return store.ErrNotFound
 	}
 	f.otp.EnabledAt = &at
@@ -723,5 +735,33 @@ func TestAccessTokenExpiresAndFollowsTheDevice(t *testing.T) {
 	st.account.DisabledAt = nil
 	if _, err := svc.Refresh(ctx, next.RefreshToken); !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("expired refresh token: %v", err)
+	}
+}
+
+func TestRefreshReuseRevokesEveryPairOfTheDevice(t *testing.T) {
+	svc, _, _ := newFixture(t, "hunter2")
+	ctx := context.Background()
+
+	device, err := svc.Login(ctx, validLogin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, _ := svc.IssuePair(ctx, validLogin())
+	second, _ := svc.IssuePair(ctx, validLogin()) // another family, same device
+	if _, err := svc.Refresh(ctx, first.RefreshToken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Refresh(ctx, first.RefreshToken); !errors.Is(err, ErrRefreshReused) {
+		t.Fatalf("replay: %v", err)
+	}
+	if _, err := svc.Authenticate(ctx, second.AccessToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("another family's access token survived the reuse: %v", err)
+	}
+	if _, err := svc.Refresh(ctx, second.RefreshToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("another family's refresh token survived the reuse: %v", err)
+	}
+	// The device token is a different credential and stays.
+	if _, err := svc.Authenticate(ctx, device.Token); err != nil {
+		t.Errorf("device token cut off by a refresh reuse: %v", err)
 	}
 }

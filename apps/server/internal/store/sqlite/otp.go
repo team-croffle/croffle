@@ -53,12 +53,12 @@ func (db *DB) StartOTP(ctx context.Context, accountID, secret string, at time.Ti
 	})
 }
 
-func (db *DB) EnableOTP(ctx context.Context, accountID string, step int64, recoveryHashes [][]byte, at time.Time) error {
+func (db *DB) EnableOTP(ctx context.Context, accountID, secret string, step int64, recoveryHashes [][]byte, at time.Time) error {
 	now := toMillis(at)
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
 		res, err := tx.ExecContext(ctx, `
 			UPDATE account_otp SET enabledAt = ?, lastStep = ?
-			WHERE accountId = ? AND enabledAt IS NULL`, now, step, accountID)
+			WHERE accountId = ? AND secret = ? AND enabledAt IS NULL`, now, step, accountID, secret)
 		if err != nil {
 			return fmt.Errorf("sqlite: enable otp: %w", err)
 		}

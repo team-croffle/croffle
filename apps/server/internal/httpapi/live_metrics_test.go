@@ -56,6 +56,12 @@ func TestMetricsCountWhatHappened(t *testing.T) {
 	cookie := srv.dashLogin(t)
 	srv.postWithCookie(t, "/dash/devices/dev-secret-777/revoke", map[string]string{}, cookie, nil)
 	_, _ = http.Get(srv.url + "/no-such-route/alice/acct-1")
+	// Any token is a valid method; a made-up one must not become a label.
+	if req, err := http.NewRequest("ALICEACCT1", srv.url+"/health", nil); err == nil {
+		if res, err := http.DefaultClient.Do(req); err == nil {
+			_ = res.Body.Close()
+		}
+	}
 
 	body := scrape(t, m)
 	for series, want := range map[string]string{
@@ -85,7 +91,10 @@ func TestMetricsCountWhatHappened(t *testing.T) {
 			t.Errorf("metrics lack %s", want)
 		}
 	}
-	for _, leak := range []string{"acct-1", "alice", "dev-secret-777", "client-1", "127.0.0.1", "no-such-route"} {
+	if !strings.Contains(body, `method="other"`) {
+		t.Error("an unknown method was not folded into other")
+	}
+	for _, leak := range []string{"acct-1", "alice", "ALICEACCT1", "dev-secret-777", "client-1", "127.0.0.1", "no-such-route"} {
 		if strings.Contains(body, leak) {
 			t.Errorf("metrics contain %q", leak)
 		}

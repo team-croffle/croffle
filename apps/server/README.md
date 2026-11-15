@@ -239,8 +239,8 @@ setting says.
 returns `accessToken`, `refreshToken` and their expiries (unix ms). Exchange the
 refresh token for the next pair with `{"grantType": "refresh_token", "refreshToken"}`
 before the access token runs out. Each refresh token works **once**: presenting a
-spent one again revokes every token descended from the same sign-in, because only
-a stolen copy is ever replayed. A refresh token is never accepted by a sync
+spent one again revokes every access and refresh token of that device, because
+only a stolen copy is ever replayed. The device token is left alone. A refresh token is never accepted by a sync
 endpoint. Signing in this way leaves the device's device token alone, so a 1.3.0
 sign-in on the same machine keeps working. The desktop does not use this
 endpoint yet.

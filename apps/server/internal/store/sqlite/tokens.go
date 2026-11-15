@@ -95,7 +95,33 @@ func (db *DB) RevokeTokenFamily(ctx context.Context, familyID string, at time.Ti
 	})
 }
 
+func (db *DB) RevokeDeviceTokens(ctx context.Context, deviceID string, at time.Time) error {
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE auth_token SET revokedAt = ? WHERE deviceId = ? AND revokedAt IS NULL`,
+			toMillis(at), deviceID); err != nil {
+			return fmt.Errorf("sqlite: revoke device tokens: %w", err)
+		}
+		return nil
+	})
+}
+
+// insertPair refuses a device that is missing or revoked. The check runs in
+// the writer's transaction, so it is ordered against every revocation: a pair
+// is either stored before a revoke (and revoked by it) or not stored at all.
 func insertPair(ctx context.Context, tx *sql.Tx, pair store.TokenPair) error {
+	var live int
+	err := tx.QueryRowContext(ctx,
+		`SELECT 1 FROM device WHERE id = ? AND revokedAt IS NULL`, pair.Access.DeviceID).Scan(&live)
+	if errors.Is(err, sql.ErrNoRows) {
+		return store.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("sqlite: check device: %w", err)
+	}
+	if pair.Refresh.DeviceID != pair.Access.DeviceID {
+		return errors.New("sqlite: a pair belongs to one device")
+	}
 	for _, token := range []store.AuthToken{pair.Access, pair.Refresh} {
 		if len(token.TokenHash) == 0 || token.DeviceID == "" || token.FamilyID == "" {
 			return errors.New("sqlite: token hash, device and family are required")

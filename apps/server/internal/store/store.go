@@ -482,7 +482,9 @@ type Store interface {
 	RegisterDevice(ctx context.Context, device Device) error
 	// FindDeviceByID returns ErrNotFound when there is no such device.
 	FindDeviceByID(ctx context.Context, id string) (*Device, error)
-	// CreateTokenPair stores a fresh access/refresh pair.
+	// CreateTokenPair stores a fresh access/refresh pair. It returns
+	// ErrNotFound when the device is missing or revoked, checked in the same
+	// transaction, so a pair can never outlive a revocation it raced with.
 	CreateTokenPair(ctx context.Context, pair TokenPair) error
 	// FindAuthToken resolves an access or refresh token hash. Expired and
 	// revoked tokens are returned too; the caller decides.
@@ -493,6 +495,9 @@ type Store interface {
 	RotateRefresh(ctx context.Context, oldHash []byte, at time.Time, next TokenPair) error
 	// RevokeTokenFamily revokes every token of one family.
 	RevokeTokenFamily(ctx context.Context, familyID string, at time.Time) error
+	// RevokeDeviceTokens revokes every access and refresh token of a device,
+	// whatever family; the device token itself is left alone.
+	RevokeDeviceTokens(ctx context.Context, deviceID string, at time.Time) error
 
 	// FindOTP returns ErrNotFound when the account has no enrolment.
 	FindOTP(ctx context.Context, accountID string) (*OTP, error)
@@ -500,9 +505,10 @@ type Store interface {
 	// It returns ErrDuplicate when the account already has one enabled.
 	StartOTP(ctx context.Context, accountID, secret string, at time.Time) error
 	// EnableOTP turns a pending enrolment on at step, and stores the recovery
-	// code hashes, replacing any earlier ones. ErrNotFound when nothing is
-	// pending.
-	EnableOTP(ctx context.Context, accountID string, step int64, recoveryHashes [][]byte, at time.Time) error
+	// code hashes, replacing any earlier ones. secret is the one the code was
+	// checked against: ErrNotFound when nothing is pending, or when the pending
+	// enrolment was restarted with another secret in the meantime.
+	EnableOTP(ctx context.Context, accountID, secret string, step int64, recoveryHashes [][]byte, at time.Time) error
 	// AdvanceOTPStep records that a code for step was accepted. It reports
 	// false when step is not after the last accepted one (a replay).
 	AdvanceOTPStep(ctx context.Context, accountID string, step int64) (bool, error)

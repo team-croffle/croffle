@@ -90,8 +90,21 @@ func (m *Metrics) Handler() http.Handler {
 }
 
 func (m *Metrics) ObserveRequest(route, method string, code int, elapsed time.Duration) {
+	method = knownMethod(method)
 	m.requests.WithLabelValues(route, method, strconv.Itoa(code)).Inc()
 	m.duration.WithLabelValues(route, method).Observe(elapsed.Seconds())
+}
+
+// knownMethod keeps the method label bounded: the method is client input, and
+// any token is a valid one, so anything outside the standard set is "other".
+func knownMethod(method string) string {
+	switch method {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch,
+		http.MethodDelete, http.MethodOptions, http.MethodConnect, http.MethodTrace:
+		return method
+	default:
+		return "other"
+	}
 }
 
 func (m *Metrics) PushCommits(accepted, conflicts, retries int) {

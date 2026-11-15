@@ -67,7 +67,7 @@ CSRF 는 Go 1.25 부터 표준인 `net/http.CrossOriginProtection` 을 쓰므로
 ### W-6 access · refresh 발급 (`internal/auth`, `internal/httpapi`, `internal/protocol`)
 - `POST /auth/token`, 본문 `{ grantType, … }`:
   - `grantType: "password"` — `username`, `password`, `otp?`, `clientId`, `deviceName?`. `/auth/login` 과 같은 검증 · rate limit · OTP 규칙. 기기 행을 만들거나 갱신하되 **기기 토큰은 건드리지 않습니다**(같은 기기가 1.3.0 방식 토큰을 쓰고 있어도 끊기지 않게).
-  - `grantType: "refresh_token"` — `refreshToken`. 유효하면 옛 것은 `usedAt` 을 찍고 새 쌍을 줍니다. `usedAt` 이 이미 있는 refresh 면 그 `familyId` 를 모두 회수하고 `401 unauthorized` 를 줍니다(로그에 `refresh reuse` 경고).
+  - `grantType: "refresh_token"` — `refreshToken`. 유효하면 옛 것은 `usedAt` 을 찍고 새 쌍을 줍니다. `usedAt` 이 이미 있는 refresh 면 그 기기의 access · refresh 토큰을 family 와 상관없이 모두 회수하고(S-6. 처음 설계는 `familyId` 만 회수했으나 리뷰 1에서 S-6 과 어긋난다는 지적을 받아 고침, 기기 토큰은 그대로) `401 unauthorized` 를 줍니다(로그에 `refresh reuse` 경고).
   - 응답 `{ accessToken, accessExpiresAt, refreshToken, refreshExpiresAt, accountId, teamId? }`, 시각은 unix ms.
 - 수명: `CROFFLE_ACCESS_TOKEN_TTL`(기본 15분), `CROFFLE_REFRESH_TOKEN_TTL`(기본 30일, 회전할 때마다 새로 계산 — 30일 안에 한 번이라도 쓰면 계속 이어짐).
 - `requireAuth` → `Authenticate`: 먼저 `device.tokenHash`, 없으면 `auth_token` 의 `kind='access'` 를 찾습니다. refresh token 은 동기화 요청에 쓸 수 없습니다(401). 기기 회수 · 계정 비활성은 두 경로 모두에 적용됩니다.
@@ -207,7 +207,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 실패 판정: `CROFFLE_DEVICE_TOKEN_TTL` 설정이 기존 토큰까지 만료시키거나, 만료 시각이 지난 기기 토큰이 `200`을 반환하거나, `--no-expiry`로 발급한 토큰에 만료가 붙거나, `token list`·대시보드에 만료 정보가 표시되지 않으면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v06-device-token-ttl.log`
 
-- V-7 **`POST /auth/token` 발급 · 회전 · 기존 기기 토큰 공존 · refresh 재사용 시 family 전체 회수 · 동기화 엔드포인트의 refresh 거부 (음성 확인)**
+- V-7 **`POST /auth/token` 발급 · 회전 · 기존 기기 토큰 공존 · refresh 재사용 시 그 기기의 access · refresh 전체 회수 · 동기화 엔드포인트의 refresh 거부 (음성 확인)**
   - 검증 대상: S-6, W-4, W-6
   - 실행 방법:
     1) 자동 테스트: `go test -v ./internal/store/sqlite ./internal/auth ./internal/httpapi -run 'TestAuthToken|TestRefreshRotation|TestRefreshReuseRevokesFamily|TestRejectRefreshTokenOnSync|TestSweepExpiredAuthTokens'`를 실행합니다.
@@ -215,15 +215,15 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
     3) 기존 기기 토큰 `D1`과 새 access token `A1`으로 각각 `POST /auth/whoami`, `POST /sync/pull`, `POST /sync/push`를 호출합니다.
     4) **음성 확인 (refresh 토큰으로 동기화/인증 엔드포인트 호출)**: `Authorization: Bearer <R1>` 헤더로 `POST /auth/whoami`, `POST /sync/push`, `POST /sync/pull`, `POST /sync/bootstrap` 4개 엔드포인트를 각각 호출합니다.
     5) **정상 회전**: `POST /auth/token` (`{"grantType":"refresh_token","refreshToken":"<R1>"}`)을 호출해 새 쌍 `(A2, R2)`를 받고, `A2`로 `POST /auth/whoami`를 호출합니다.
-    6) **음성 확인 (소비된 refresh 토큰 재사용 감지 및 family 회수)**: 이미 사용한 `R1`으로 다시 `POST /auth/token` (`{"grantType":"refresh_token","refreshToken":"<R1>"}`)을 호출한 뒤, 직전에 발급받은 유효 토큰 `A2`로 `POST /auth/whoami` · `POST /sync/pull`을 호출하고, `R2`로 `POST /auth/token`을 호출합니다. 서버 표준출력 JSON 로그에서 `refresh reuse` 경고 로그를 확인합니다.
+    6) **음성 확인 (소비된 refresh 토큰 재사용 감지 및 기기 토큰 쌍 전체 회수)**: 이미 사용한 `R1`으로 다시 `POST /auth/token` (`{"grantType":"refresh_token","refreshToken":"<R1>"}`)을 호출한 뒤, 직전에 발급받은 유효 토큰 `A2`로 `POST /auth/whoami` · `POST /sync/pull`을 호출하고, `R2`로 `POST /auth/token`을 호출합니다. 서버 표준출력 JSON 로그에서 `refresh reuse` 경고 로그를 확인합니다.
   - 기대 결과:
     1) `POST /auth/token` password 응답은 HTTP `200`이며 `accessToken`, `accessExpiresAt`(기본 약 `now + 15m` unix ms), `refreshToken`, `refreshExpiresAt`(기본 약 `now + 30d` unix ms), `accountId`, `teamId` 필드를 모두 반환합니다.
     2) 같은 `clientId`로 `/auth/token`을 호출해도 `device.tokenHash`는 바뀌지 않아 기존 기기 토큰 `D1`과 새 `A1` 모두 HTTP `200`으로 동작합니다.
     3) 4)에서 refresh token `R1`을 Bearer로 보낸 `/auth/whoami`, `/sync/push`, `/sync/pull`, `/sync/bootstrap` 요청은 4건 모두 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)로 거부됩니다.
     4) 5)에서 `R1` 회전은 HTTP `200`으로 새로운 `A2` · `R2`(`A2 != A1`, `R2 != R1`)를 발급하고 `A2`는 정상 인증됩니다.
-    5) 6)에서 이미 쓴 `R1`을 다시 제출하면 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)을 반환하고 해당 `familyId` 전체가 회수되어, `A2`를 쓴 `/auth/whoami`·`/sync/pull`과 `R2`를 쓴 `/auth/token`이 모두 HTTP `401`로 즉시 거부되며, 서버 로그에 `refresh reuse` 경고가 기록됩니다.
+    5) 6)에서 이미 쓴 `R1`을 다시 제출하면 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)을 반환하고 그 기기의 access · refresh 토큰 전체(다른 family 포함)가 회수되어, `A2`를 쓴 `/auth/whoami`·`/sync/pull`과 `R2`를 쓴 `/auth/token`이 모두 HTTP `401`로 즉시 거부되며, 서버 로그에 `refresh reuse` 경고가 기록됩니다.
     6) retention `Sweep` 실행 시 만료된 `auth_token` 행이 삭제됩니다.
-  - 실패 판정: `/auth/token`이 같은 기기의 기존 기기 토큰 `D1`을 끊거나, refresh token으로 동기화 엔드포인트가 `200`을 주거나, 이미 사용한 refresh token 재전송 시 `200`이 나거나 같은 family의 `A2`·`R2`가 계속 유효하면 실패입니다.
+  - 실패 판정: `/auth/token`이 같은 기기의 기존 기기 토큰 `D1`을 끊거나, refresh token으로 동기화 엔드포인트가 `200`을 주거나, 이미 사용한 refresh token 재전송 시 `200`이 나거나 그 기기의 `A2`·`R2`(또는 다른 family 의 토큰)가 계속 유효하면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v07-token-pair-rotation-reuse.log`
 
 - V-8 **대시보드 CSRF(`http.CrossOriginProtection`) · 본인 기기 회수 · 타 계정 기기 회수 404 · 회수 시 토큰 3종 즉시 차단 (음성 확인)**

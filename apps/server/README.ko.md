@@ -229,8 +229,8 @@ server {
 `{"grantType": "password", "username", "password", "otp"?, "clientId", "deviceName"?}`
 를 보내면 `accessToken`, `refreshToken` 과 각각의 만료 시각(unix ms)을 받습니다. access
 token 이 끝나기 전에 `{"grantType": "refresh_token", "refreshToken"}` 으로 다음 쌍을
-받습니다. refresh token 은 **한 번만** 쓸 수 있습니다. 이미 쓴 것을 다시 내밀면 같은
-로그인에서 나온 토큰을 모두 회수합니다. 다시 내미는 것은 훔친 사본뿐이기 때문입니다.
+받습니다. refresh token 은 **한 번만** 쓸 수 있습니다. 이미 쓴 것을 다시 내밀면 그
+기기의 access · refresh 토큰을 모두 회수합니다(기기 토큰은 그대로). 다시 내미는 것은 훔친 사본뿐이기 때문입니다.
 refresh token 은 동기화 엔드포인트에서 받지 않습니다. 이 방식으로 로그인해도 그
 기기의 기기 토큰은 건드리지 않으므로, 같은 기기의 1.3.0 로그인은 계속 동작합니다.
 데스크톱은 아직 이 엔드포인트를 쓰지 않습니다.

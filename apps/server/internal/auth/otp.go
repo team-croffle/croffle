@@ -135,7 +135,7 @@ func (s *Service) ConfirmOTP(ctx context.Context, accountID, code string) ([]str
 		hashes = append(hashes, hashRecoveryCode(recovery))
 	}
 
-	if err := s.store.EnableOTP(ctx, accountID, step, hashes, s.now()); err != nil {
+	if err := s.store.EnableOTP(ctx, accountID, enrolment.Secret, step, hashes, s.now()); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return nil, ErrOTPNotPending
 		}
