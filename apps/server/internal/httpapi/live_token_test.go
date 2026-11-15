@@ -29,7 +29,7 @@ func passwordGrant() protocol.TokenRequest {
 	}
 }
 
-func TestLiveAuthTokenCoexistsWithTheDeviceToken(t *testing.T) {
+func TestAuthTokenCoexistsWithTheDeviceToken(t *testing.T) {
 	srv := startServer(t)
 	deviceToken := srv.login(t)
 
@@ -55,7 +55,7 @@ func TestLiveAuthTokenCoexistsWithTheDeviceToken(t *testing.T) {
 	}
 }
 
-func TestLiveRejectRefreshTokenOnSync(t *testing.T) {
+func TestRejectRefreshTokenOnSync(t *testing.T) {
 	srv := startServer(t)
 	_, pair, _ := srv.tokenPair(t, passwordGrant())
 
@@ -67,7 +67,7 @@ func TestLiveRejectRefreshTokenOnSync(t *testing.T) {
 	}
 }
 
-func TestLiveRefreshReuseRevokesFamily(t *testing.T) {
+func TestRefreshReuseRevokesFamilyLive(t *testing.T) {
 	srv := startServer(t)
 	_, first, _ := srv.tokenPair(t, passwordGrant())
 
@@ -102,7 +102,7 @@ func TestLiveRefreshReuseRevokesFamily(t *testing.T) {
 	}
 }
 
-func TestLiveAuthTokenRejectsBadRequests(t *testing.T) {
+func TestAuthTokenRejectsBadRequests(t *testing.T) {
 	srv := startServer(t)
 	cases := map[string]protocol.TokenRequest{
 		"unknown grant":     {GrantType: "client_credentials"},
@@ -120,7 +120,7 @@ func TestLiveAuthTokenRejectsBadRequests(t *testing.T) {
 	}
 }
 
-func TestLiveRevokeDeviceStopsAllTokens(t *testing.T) {
+func TestRevokeDeviceStopsAllTokens(t *testing.T) {
 	srv := startServer(t)
 	deviceToken := srv.login(t)
 	_, pair, _ := srv.tokenPair(t, passwordGrant())
@@ -140,7 +140,7 @@ func TestLiveRevokeDeviceStopsAllTokens(t *testing.T) {
 	}
 }
 
-func TestLiveDashboardRevokeStopsAllTokens(t *testing.T) {
+func TestRevokeDeviceStopsAllTokensFromTheDashboard(t *testing.T) {
 	srv := startServer(t)
 	deviceToken := srv.login(t)
 	_, pair, _ := srv.tokenPair(t, passwordGrant())
@@ -173,7 +173,7 @@ func TestLiveDashboardRevokeStopsAllTokens(t *testing.T) {
 	}
 }
 
-func TestLiveConflictDifferentFields(t *testing.T) {
+func TestConflictDifferentFields(t *testing.T) {
 	srv := startServer(t)
 	token := srv.login(t)
 
