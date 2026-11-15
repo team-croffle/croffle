@@ -261,3 +261,32 @@ func TestTeamsOf(t *testing.T) {
 		t.Errorf("teams = %v, want [%s]", teams, store.DefaultTeamID)
 	}
 }
+
+func TestRevokeAccountDeviceIsScopedToTheAccount(t *testing.T) {
+	db := open(t, tempPath(t))
+	ctx := context.Background()
+	newAccount(t, db, "acct-1", "alice")
+	newAccount(t, db, "acct-2", "bob")
+	for _, d := range []store.Device{
+		{ID: "dev-a", AccountID: "acct-1", Name: "a", TokenHash: []byte("ha"), CreatedAt: time.Now()},
+		{ID: "dev-b", AccountID: "acct-2", Name: "b", TokenHash: []byte("hb"), CreatedAt: time.Now()},
+	} {
+		if err := db.UpsertDevice(ctx, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := db.RevokeAccountDevice(ctx, "acct-1", "dev-b"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("revoking another account's device: %v, want ErrNotFound", err)
+	}
+	if _, err := db.FindDeviceByTokenHash(ctx, []byte("hb")); err != nil {
+		t.Fatalf("bob's device lost its token: %v", err)
+	}
+
+	if err := db.RevokeAccountDevice(ctx, "acct-1", "dev-a"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.FindDeviceByTokenHash(ctx, []byte("ha")); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("revoked token still resolves: %v", err)
+	}
+}

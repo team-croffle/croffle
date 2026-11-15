@@ -23,6 +23,7 @@ type fakeDash struct {
 	teamList []store.Team
 	created  []store.Session
 	deleted  [][]byte
+	revoked  []string
 }
 
 func newFakeDash() *fakeDash {
@@ -66,6 +67,18 @@ func (f *fakeDash) TeamsOf(_ context.Context, _ string) ([]string, error) { retu
 
 func (f *fakeDash) ListDevices(_ context.Context, _ string) ([]store.Device, error) {
 	return f.devices, nil
+}
+
+func (f *fakeDash) RevokeAccountDevice(_ context.Context, accountID, deviceID string) error {
+	for i, device := range f.devices {
+		if device.ID == deviceID && device.AccountID == accountID {
+			now := time.Now()
+			f.devices[i].RevokedAt = &now
+			f.revoked = append(f.revoked, deviceID)
+			return nil
+		}
+	}
+	return store.ErrNotFound
 }
 
 func (f *fakeDash) ListTeams(_ context.Context) ([]store.Team, error) { return f.teamList, nil }
@@ -316,5 +329,103 @@ func TestDashRoutesAbsentWithoutADashStore(t *testing.T) {
 	rec := postJSON(t, h, "/dash/login", `{"username":"alice","password":"x"}`, "")
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404 (the route should not exist)", rec.Code)
+	}
+}
+
+// dashPost sends a state-changing dashboard request with the given cookie and
+// extra headers (Origin, Sec-Fetch-Site).
+func dashPost(t *testing.T, h http.Handler, path string, cookie *http.Cookie, headers map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestDashCSRFRefusesCrossOriginWrites(t *testing.T) {
+	dash := newFakeDash()
+	dash.devices = []store.Device{{ID: "dev-alice", AccountID: "acct-1", Name: "laptop"}}
+	h := dashHandler(t, dash)
+	cookie := dashLogin(t, h)
+
+	crossSite := []map[string]string{
+		{"Origin": "https://evil.example"},
+		{"Sec-Fetch-Site": "cross-site"},
+	}
+	for _, headers := range crossSite {
+		for _, path := range []string{"/dash/login", "/dash/logout", "/dash/devices/dev-alice/revoke"} {
+			rec := dashPost(t, h, path, cookie, headers)
+			if rec.Code != http.StatusForbidden {
+				t.Errorf("%s with %v: status %d, want 403", path, headers, rec.Code)
+			}
+		}
+	}
+	if len(dash.revoked) != 0 {
+		t.Fatalf("a cross-origin request revoked %v", dash.revoked)
+	}
+
+	// Same-origin requests and safe methods still work.
+	if rec := dashPost(t, h, "/dash/devices/dev-alice/revoke", cookie,
+		map[string]string{"Sec-Fetch-Site": "same-origin"}); rec.Code != http.StatusNoContent {
+		t.Fatalf("same-origin revoke: status %d (%s)", rec.Code, rec.Body.String())
+	}
+	req := httptest.NewRequest(http.MethodGet, "/dash/devices", nil)
+	req.Header.Set("Sec-Fetch-Site", "cross-site")
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("cross-site GET: status %d, want 200 (safe methods pass)", rec.Code)
+	}
+}
+
+func TestDashCSRFTrustedOrigin(t *testing.T) {
+	dash := newFakeDash()
+	dash.devices = []store.Device{{ID: "dev-alice", AccountID: "acct-1"}}
+	h := testHandler(t, func(o *Options) {
+		o.Auth = &fakeAuth{}
+		o.Dash = dash
+		o.DashTrustedOrigins = []string{"https://croffle.example"}
+	})
+	cookie := dashLogin(t, h)
+	rec := dashPost(t, h, "/dash/devices/dev-alice/revoke", cookie,
+		map[string]string{"Origin": "https://croffle.example"})
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("trusted origin: status %d (%s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestDashRevokeDeviceOnlyOwnDevices(t *testing.T) {
+	dash := newFakeDash()
+	dash.devices = []store.Device{
+		{ID: "dev-alice", AccountID: "acct-1"},
+		{ID: "dev-bob", AccountID: "acct-2"},
+	}
+	h := dashHandler(t, dash)
+	cookie := dashLogin(t, h)
+
+	for _, id := range []string{"dev-bob", "unknown-id"} {
+		rec := dashPost(t, h, "/dash/devices/"+id+"/revoke", cookie, nil)
+		if rec.Code != http.StatusNotFound || errorCode(t, rec) != "not_found" {
+			t.Errorf("revoke %s: status %d (%s), want 404 not_found", id, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := dashPost(t, h, "/dash/devices/dev-alice/revoke", cookie, nil); rec.Code != http.StatusNoContent {
+		t.Fatalf("own revoke: status %d", rec.Code)
+	}
+	if len(dash.revoked) != 1 || dash.revoked[0] != "dev-alice" {
+		t.Fatalf("revoked = %v", dash.revoked)
+	}
+
+	// Without a session the route is closed.
+	if rec := dashPost(t, h, "/dash/devices/dev-alice/revoke", nil, nil); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("no session: status %d", rec.Code)
 	}
 }

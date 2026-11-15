@@ -95,6 +95,8 @@ export const api = {
     request<Me>('dash/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   logout: () => request<void>('dash/logout', { method: 'POST' }),
   devices: () => request<{ devices: Device[] }>('dash/devices'),
+  revokeDevice: (id: string) =>
+    request<void>(`dash/devices/${encodeURIComponent(id)}/revoke`, { method: 'POST' }),
   teams: () => request<{ teams: Team[] }>('dash/teams'),
   rows: (afterTable = '', afterRowId = '', limit = 50) =>
     request<{ rows: Row[]; hasMore: boolean; serverSeq: number }>(

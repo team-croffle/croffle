@@ -19,15 +19,21 @@ const (
 	sessionLifetime = 12 * time.Hour
 )
 
-// Dash is what the dashboard needs from the store. It is read-only apart from
-// the session rows themselves: the dashboard of server 0.1 shows state, and
-// anything that changes state is a CLI command.
+// Dash is what the dashboard needs from the store.
+//
+// Since 0.1.1 the dashboard can change state, but only the signed-in account's
+// own: revoking its devices and managing its one-time codes. Operator actions
+// (accounts, other people's devices, teams) stay CLI commands. A session is
+// still never a sync credential: it cannot push or pull.
 type Dash interface {
 	store.Sessions
 
 	FindAccountByID(ctx context.Context, id string) (*store.Account, error)
 	TeamsOf(ctx context.Context, accountID string) ([]string, error)
 	ListDevices(ctx context.Context, accountID string) ([]store.Device, error)
+	// RevokeAccountDevice revokes one of the account's own devices and returns
+	// ErrNotFound for anything else.
+	RevokeAccountDevice(ctx context.Context, accountID, deviceID string) error
 	ListTeams(ctx context.Context) ([]store.Team, error)
 	// Rows and commits are read through the same visibility rules as a sync
 	// client: the dashboard shows your own data, not everyone's. An operator
@@ -47,13 +53,25 @@ func (s *server) dashRoutes(mux *http.ServeMux) {
 	if s.dash == nil {
 		return
 	}
-	s.route(mux, http.MethodPost, "/dash/login", s.dashLogin)
-	s.route(mux, http.MethodPost, "/dash/logout", s.dashLogout)
-	s.route(mux, http.MethodGet, "/dash/me", s.requireSession(s.dashMe))
-	s.route(mux, http.MethodGet, "/dash/devices", s.requireSession(s.dashDevices))
-	s.route(mux, http.MethodGet, "/dash/teams", s.requireSession(s.dashTeams))
-	s.route(mux, http.MethodGet, "/dash/rows", s.requireSession(s.dashRows))
-	s.route(mux, http.MethodGet, "/dash/commits", s.requireSession(s.dashCommits))
+	s.dashRoute(mux, http.MethodPost, "/dash/login", s.dashLogin)
+	s.dashRoute(mux, http.MethodPost, "/dash/logout", s.dashLogout)
+	s.dashRoute(mux, http.MethodGet, "/dash/me", s.requireSession(s.dashMe))
+	s.dashRoute(mux, http.MethodGet, "/dash/devices", s.requireSession(s.dashDevices))
+	s.dashRoute(mux, http.MethodPost, "/dash/devices/{id}/revoke", s.requireSession(s.dashRevokeDevice))
+	s.dashRoute(mux, http.MethodGet, "/dash/teams", s.requireSession(s.dashTeams))
+	s.dashRoute(mux, http.MethodGet, "/dash/rows", s.requireSession(s.dashRows))
+	s.dashRoute(mux, http.MethodGet, "/dash/commits", s.requireSession(s.dashCommits))
+}
+
+// dashRoute registers a dashboard route behind cross-origin protection.
+//
+// The session cookie is SameSite=Strict already; CrossOriginProtection adds the
+// Sec-Fetch-Site / Origin check, which is what stops a cross-site form or fetch
+// once the dashboard has endpoints that change state. Safe methods pass
+// through it untouched.
+func (s *server) dashRoute(mux *http.ServeMux, method, path string, h http.HandlerFunc) {
+	protected := s.csrf.Handler(h)
+	s.route(mux, method, path, protected.ServeHTTP)
 }
 
 type dashLoginRequest struct {
@@ -170,6 +188,29 @@ func (s *server) dashDevices(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"devices": out})
+}
+
+// dashRevokeDevice revokes one of the signed-in account's own devices.
+func (s *server) dashRevokeDevice(w http.ResponseWriter, r *http.Request) {
+	identity := sessionOf(r.Context())
+	deviceID := r.PathValue("id")
+
+	err := s.dash.RevokeAccountDevice(r.Context(), identity.accountID, deviceID)
+	if errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusNotFound, "not_found", "no such device")
+		return
+	}
+	if err != nil {
+		s.writeSyncError(w, r, err)
+		return
+	}
+
+	s.logger.InfoContext(r.Context(), "device revoked from the dashboard",
+		slog.String("account_id", identity.accountID),
+		slog.String("device_id", deviceID),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *server) dashTeams(w http.ResponseWriter, r *http.Request) {

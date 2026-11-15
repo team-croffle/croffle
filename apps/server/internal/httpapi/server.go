@@ -49,6 +49,9 @@ type Options struct {
 	// Assets is the built dashboard. Without it the catch-all answers the JSON
 	// 404 it always did, so an API-only build behaves the same as before.
 	Assets fs.FS
+	// DashTrustedOrigins are extra origins allowed to send state-changing
+	// dashboard requests (already validated by the config package).
+	DashTrustedOrigins []string
 	// Hooks observes what happened. Optional; hooks.Nop when absent.
 	Hooks hooks.Emitter
 	// Now is injectable so tests can assert on the health timestamp.
@@ -67,6 +70,7 @@ type server struct {
 	dash       Dash
 	hooks      hooks.Emitter
 	trustProxy bool
+	csrf       *http.CrossOriginProtection
 	now        func() time.Time
 }
 
@@ -95,6 +99,17 @@ func NewHandler(o Options) http.Handler {
 	if s.hooks == nil {
 		s.hooks = hooks.Nop{}
 	}
+	s.csrf = http.NewCrossOriginProtection()
+	for _, origin := range o.DashTrustedOrigins {
+		// Validated by the config package; an error here is a caller that
+		// skipped it, and refusing the origin is the safe reaction.
+		if err := s.csrf.AddTrustedOrigin(origin); err != nil {
+			s.logger.Warn("ignoring invalid dashboard origin", slog.String("origin", origin))
+		}
+	}
+	s.csrf.SetDenyHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusForbidden, "cross_origin", "cross-origin request refused")
+	}))
 
 	mux := http.NewServeMux()
 	s.route(mux, http.MethodGet, "/health", s.health)

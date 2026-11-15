@@ -105,6 +105,8 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		{name: "base path with query", env: map[string]string{EnvBasePath: "/a?b"}},
 		{name: "unexpected positional arg", args: []string{"serve"}},
 		{name: "unknown flag", args: []string{"--nope"}},
+		{name: "trusted origin with a path", env: map[string]string{EnvDashTrustedOrigins: "https://a.example/x"}},
+		{name: "trusted origin without scheme", env: map[string]string{EnvDashTrustedOrigins: "a.example"}},
 	}
 
 	for _, tc := range cases {
@@ -173,5 +175,21 @@ func TestRetentionDefaultsAndBounds(t *testing.T) {
 		if _, err := Load(nil, envMap(env)); err == nil {
 			t.Errorf("Load(%v) succeeded, want a rejection", env)
 		}
+	}
+}
+
+func TestDashTrustedOrigins(t *testing.T) {
+	cfg, err := Load(nil, envMap(map[string]string{
+		EnvDashTrustedOrigins: "https://a.example, http://b.example:8080,",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.DashTrustedOrigins) != 2 || cfg.DashTrustedOrigins[1] != "http://b.example:8080" {
+		t.Fatalf("origins = %v", cfg.DashTrustedOrigins)
+	}
+	cfg, err = Load(nil, envMap(nil))
+	if err != nil || len(cfg.DashTrustedOrigins) != 0 {
+		t.Fatalf("default origins = %v, %v", cfg.DashTrustedOrigins, err)
 	}
 }

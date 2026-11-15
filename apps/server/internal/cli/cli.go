@@ -2,8 +2,9 @@
 //
 // Server 0.1 has no admin API: accounts, tokens and teams are managed with
 // these commands, which talk to the database file directly. That is deliberate
-// — whoever can run the binary against the file is already the operator — and
-// it is why the dashboard (work item #10) stays read-only.
+// — whoever can run the binary against the file is already the operator. The
+// dashboard only changes the signed-in account's own state (its devices, its
+// one-time codes); everything an operator does is here.
 //
 // In a container the usual form is:
 //
