@@ -62,6 +62,7 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		DeviceName: req.DeviceName,
 		RemoteIP:   RemoteIP(r.Context()),
 	})
+	s.metrics.AuthAttempt("sync", authResult(err))
 	if err != nil {
 		s.writeAuthError(w, r, err, slog.String("username", req.Username))
 		return
@@ -136,7 +137,9 @@ func (s *server) token(w http.ResponseWriter, r *http.Request) {
 			`grantType must be "password" or "refresh_token"`)
 		return
 	}
+	s.metrics.AuthAttempt("token", authResult(err))
 	if errors.Is(err, auth.ErrRefreshReused) {
+		s.metrics.RefreshReuse()
 		// Someone replayed a spent refresh token. The family is already
 		// revoked; the operator needs to know, the client only sees a 401.
 		s.logger.WarnContext(r.Context(), "refresh reuse: token family revoked",

@@ -45,6 +45,8 @@ const (
 	EnvDeviceTokenTTL  = "CROFFLE_DEVICE_TOKEN_TTL"
 	EnvAccessTokenTTL  = "CROFFLE_ACCESS_TOKEN_TTL"
 	EnvRefreshTokenTTL = "CROFFLE_REFRESH_TOKEN_TTL"
+
+	EnvMetricsListen = "CROFFLE_METRICS_LISTEN"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -109,6 +111,9 @@ type Config struct {
 	// POST /auth/token issues (default 15 minutes and 30 days).
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+	// MetricsListen is the host:port of the separate Prometheus listener.
+	// Empty (the default) means no metrics and no extra port.
+	MetricsListen string
 }
 
 // Load parses args (without the program name) and the environment.
@@ -183,6 +188,15 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 	if cfg.AccessTokenTTL >= cfg.RefreshTokenTTL {
 		return nil, fmt.Errorf("%s (%s) must be shorter than %s (%s)",
 			EnvAccessTokenTTL, cfg.AccessTokenTTL, EnvRefreshTokenTTL, cfg.RefreshTokenTTL)
+	}
+
+	if raw := strings.TrimSpace(getenv(EnvMetricsListen)); raw != "" {
+		if cfg.MetricsListen, err = parseListen(raw); err != nil {
+			return nil, fmt.Errorf("%s: %w", EnvMetricsListen, err)
+		}
+		if cfg.MetricsListen == cfg.Listen {
+			return nil, fmt.Errorf("%s must differ from %s: metrics never share the API listener", EnvMetricsListen, EnvListen)
+		}
 	}
 
 	if cfg.DashTrustedOrigins, err = parseOrigins(EnvDashTrustedOrigins, getenv(EnvDashTrustedOrigins)); err != nil {

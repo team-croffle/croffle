@@ -104,6 +104,7 @@ func (s *server) push(w http.ResponseWriter, r *http.Request) {
 		slog.String("request_id", RequestID(r.Context())),
 	)
 
+	s.metrics.PushCommits(len(result.Applied), len(result.Conflicts), len(result.Accepted)-len(result.Applied))
 	writeJSON(w, http.StatusOK, protocol.PushResponse{
 		Accepted:  result.Accepted,
 		Conflicts: conflicts,
@@ -304,6 +305,7 @@ func (s *server) pull(w http.ResponseWriter, r *http.Request) {
 		slog.String("request_id", RequestID(r.Context())),
 	)
 
+	s.metrics.PullChanges(len(result.Changes))
 	writeJSON(w, http.StatusOK, protocol.PullResponse{
 		Changes:   changes,
 		ServerSeq: result.ServerSeq,
@@ -407,6 +409,7 @@ func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
 		slog.String("request_id", RequestID(r.Context())),
 	)
 
+	s.metrics.BootstrapRows(len(result.Rows))
 	writeJSON(w, http.StatusOK, response)
 }
 
