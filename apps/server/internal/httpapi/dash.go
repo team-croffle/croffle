@@ -101,6 +101,7 @@ func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
 	// row behind, and must not mint a token that can push. Rate limiting and
 	// the equal-time failure path are shared with the device login.
 	account, err := s.auth.CheckPassword(r.Context(), req.Username, req.Password, req.OTP, RemoteIP(r.Context()))
+	s.metrics.AuthAttempt("dashboard", authResult(err))
 	if err != nil {
 		s.writeAuthError(w, r, err, slog.String("surface", "dashboard"))
 		return

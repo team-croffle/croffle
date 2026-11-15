@@ -27,6 +27,7 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/hooks/webhook"
 	"github.com/team-croffle/croffle/apps/server/internal/httpapi"
 	"github.com/team-croffle/croffle/apps/server/internal/logging"
+	"github.com/team-croffle/croffle/apps/server/internal/metrics"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/retention"
 	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
@@ -129,6 +130,27 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		return fmt.Errorf("read embedded dashboard: %w", err)
 	}
 
+	// Metrics are opt-in and live on their own listener; without the setting
+	// there is no recorder and no second port.
+	var recorder httpapi.Recorder
+	var metricsSrv *http.Server
+	var metricsLn net.Listener
+	if cfg.MetricsListen != "" {
+		m := metrics.New()
+		recorder = m
+		if metricsLn, err = net.Listen("tcp", cfg.MetricsListen); err != nil {
+			return fmt.Errorf("listen on %s for metrics: %w", cfg.MetricsListen, err)
+		}
+		metricsSrv = &http.Server{
+			Handler:           m.Handler(),
+			ReadHeaderTimeout: readHeaderTimeout,
+			ReadTimeout:       readTimeout,
+			WriteTimeout:      writeTimeout,
+			IdleTimeout:       idleTimeout,
+			ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
+		}
+	}
+
 	handler := httpapi.NewHandler(httpapi.Options{
 		Version:            version,
 		Commit:             commit,
@@ -142,6 +164,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		Assets:             assets,
 		Hooks:              emitter,
 		DashTrustedOrigins: cfg.DashTrustedOrigins,
+		Metrics:            recorder,
 		Retention: func(ctx context.Context) (int64, int64, error) {
 			oldest, err := db.OldestCommitSeq(ctx)
 			if err != nil {
@@ -186,6 +209,19 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		}
 		serveErr <- nil
 	}()
+	if metricsSrv != nil {
+		go func() {
+			if err := metricsSrv.Serve(metricsLn); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				// Losing metrics is not a reason to stop serving sync.
+				logger.Error("metrics listener stopped", slog.String("error", err.Error()))
+			}
+		}()
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+			defer cancel()
+			_ = metricsSrv.Shutdown(shutdownCtx)
+		}()
+	}
 
 	logger.Info("server started",
 		slog.String("version", version),
@@ -197,6 +233,7 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		slog.Duration("retain_commits", cfg.RetainCommits),
 		slog.Duration("retain_ops", cfg.RetainOps),
 		slog.Bool("dashboard", web.Built()),
+		slog.String("metrics_addr", metricsAddr(metricsLn)),
 		slog.Int("protocol_min", protocol.Min),
 		slog.Int("protocol_max", protocol.Max),
 	)
@@ -224,4 +261,11 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 
 	logger.Info("server stopped")
 	return nil
+}
+
+func metricsAddr(ln net.Listener) string {
+	if ln == nil {
+		return ""
+	}
+	return ln.Addr().String()
 }

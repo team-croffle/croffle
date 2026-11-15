@@ -43,6 +43,12 @@ type liveServer struct {
 // account that is a member of the seeded team.
 func startServer(t *testing.T) *liveServer {
 	t.Helper()
+	return startServerWith(t, nil)
+}
+
+// startServerWith is startServer with a hook to adjust the handler options.
+func startServerWith(t *testing.T, mutate func(*httpapi.Options)) *liveServer {
+	t.Helper()
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "server.db")
 
@@ -70,7 +76,7 @@ func startServer(t *testing.T) *liveServer {
 		t.Fatalf("embedded dashboard: %v", err)
 	}
 
-	handler := httpapi.NewHandler(httpapi.Options{
+	options := httpapi.Options{
 		Version:  "test",
 		BasePath: "/",
 		Logger:   slog.New(slog.NewJSONHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError + 1})),
@@ -79,7 +85,11 @@ func startServer(t *testing.T) *liveServer {
 		Sync:     db,
 		Dash:     db,
 		Assets:   assets,
-	})
+	}
+	if mutate != nil {
+		mutate(&options)
+	}
+	handler := httpapi.NewHandler(options)
 
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)

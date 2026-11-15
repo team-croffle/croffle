@@ -52,6 +52,9 @@ type Options struct {
 	// DashTrustedOrigins are extra origins allowed to send state-changing
 	// dashboard requests (already validated by the config package).
 	DashTrustedOrigins []string
+	// Metrics records counters for operators. Optional: without it nothing is
+	// recorded and the request path does no extra work.
+	Metrics Recorder
 	// Hooks observes what happened. Optional; hooks.Nop when absent.
 	Hooks hooks.Emitter
 	// Now is injectable so tests can assert on the health timestamp.
@@ -71,6 +74,7 @@ type server struct {
 	hooks      hooks.Emitter
 	trustProxy bool
 	csrf       *http.CrossOriginProtection
+	metrics    Recorder
 	now        func() time.Time
 }
 
@@ -98,6 +102,10 @@ func NewHandler(o Options) http.Handler {
 	}
 	if s.hooks == nil {
 		s.hooks = hooks.Nop{}
+	}
+	s.metrics = o.Metrics
+	if s.metrics == nil {
+		s.metrics = nopRecorder{}
 	}
 	s.csrf = http.NewCrossOriginProtection()
 	for _, origin := range o.DashTrustedOrigins {
@@ -137,6 +145,9 @@ func NewHandler(o Options) http.Handler {
 	// Outermost first: a panic anywhere below still produces a logged 500, and
 	// the access log sees the status that the body limit may have written.
 	var h http.Handler = mux
+	// Directly around the mux: it records the matched pattern on the request
+	// it is given, and the middleware above hands it copies.
+	h = s.observe(h)
 	h = bodyLimit(MaxBodyBytes, h)
 	h = accessLog(s.logger, h)
 	h = realIP(o.TrustProxy, h)
