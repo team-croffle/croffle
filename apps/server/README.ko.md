@@ -46,30 +46,36 @@ docker compose exec croffle-server croffle-server token issue alice --device-nam
 로그인하거나 토큰을 붙여넣으면 됩니다. 내부적으로는 둘 다 같은 것(토큰)으로
 끝나므로, 두 화면은 하나의 방식입니다.
 
-브라우저로 서버 URL을 열면 대시보드가 나옵니다. 읽기 전용이고, 상태를 바꾸는 일은
-모두 위의 명령으로 합니다.
+브라우저로 서버 URL을 열면 대시보드가 나옵니다. 로그인한 계정 자신의 데이터를
+보여주고, 그 계정이 자기 기기를 회수하거나 일회용 코드를 켤 수 있습니다([인증](#인증)).
+그 밖에 상태를 바꾸는 일은 모두 위의 명령으로 합니다.
 
 ---
 
 ## 설정
 
-환경변수로 설정합니다. 웹훅을 제외한 모든 항목에는 같은 이름의 플래그도 있고
-(`CROFFLE_DB_PATH` → `--db-path`), 둘 다 주면 플래그가 이깁니다. 웹훅 설정은
-의도적으로 환경변수 전용입니다. 이벤트가 어디로 가는지는 운영자가 정하는 것이라,
-그걸 바꿀 수 있는 플래그도 엔드포인트도 두지 않았습니다.
+환경변수로 설정합니다. 앞의 일곱 항목에는 같은 이름의 플래그도 있고
+(`CROFFLE_DB_PATH` → `--db-path`), 둘 다 주면 플래그가 이깁니다. 나머지는
+환경변수 전용입니다. 웹훅은 의도적으로 그렇습니다. 이벤트가 어디로 가는지는
+운영자가 정하는 것이라, 그걸 바꿀 수 있는 플래그도 엔드포인트도 두지 않았습니다.
 
-| 변수                          | 기본값                       | 의미                                                                                                                                            |
-| ----------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CROFFLE_LISTEN`              | `:8787`                      | 수신 주소. 컨테이너에서는 포트 매핑이 동작하도록 `:8787`을 유지하세요.                                                                          |
-| `CROFFLE_DB_PATH`             | `/var/lib/croffle/server.db` | SQLite 파일. 그 디렉터리가 있고 쓰기 가능해야 합니다.                                                                                           |
-| `CROFFLE_LOG_LEVEL`           | `info`                       | `debug`·`info`·`warn`·`error`. 로그는 stdout의 JSON입니다.                                                                                      |
-| `CROFFLE_TRUST_PROXY`         | `false`                      | `X-Forwarded-For`·`X-Forwarded-Proto`를 신뢰합니다. **프록시 뒤에서만 켜세요.** 그렇지 않으면 어떤 클라이언트든 자기 주소를 위조할 수 있습니다. |
-| `CROFFLE_BASE_PATH`           | `/`                          | 프록시가 하위 경로를 떼지 않고 넘길 때의 마운트 지점(예: `/croffle`).                                                                           |
-| `CROFFLE_RETAIN_COMMITS_DAYS` | `90`                         | 변경 이력 보존 기간. 최소 7일.                                                                                                                  |
-| `CROFFLE_RETAIN_OPS_DAYS`     | `30`                         | 재시도 키 보존 기간. 최소 7일.                                                                                                                  |
-| `CROFFLE_WEBHOOK_URL`         | —                            | 선택: 이벤트를 POST할 주소. secret이 필요합니다.                                                                                                |
-| `CROFFLE_WEBHOOK_SECRET`      | —                            | 수신기가 검증할 HMAC 키.                                                                                                                        |
-| `CROFFLE_WEBHOOK_EVENTS`      | `commits_applied,row_shared` | 쉼표로 구분한 이벤트 목록.                                                                                                                      |
+| 변수                           | 기본값                       | 의미                                                                                                                                                         |
+| ------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CROFFLE_LISTEN`               | `:8787`                      | 수신 주소. 컨테이너에서는 포트 매핑이 동작하도록 `:8787`을 유지하세요.                                                                                       |
+| `CROFFLE_DB_PATH`              | `/var/lib/croffle/server.db` | SQLite 파일. 그 디렉터리가 있고 쓰기 가능해야 합니다.                                                                                                        |
+| `CROFFLE_LOG_LEVEL`            | `info`                       | `debug`·`info`·`warn`·`error`. 로그는 stdout의 JSON입니다.                                                                                                   |
+| `CROFFLE_TRUST_PROXY`          | `false`                      | `X-Forwarded-For`·`X-Forwarded-Proto`를 신뢰합니다. **프록시 뒤에서만 켜세요.** 그렇지 않으면 어떤 클라이언트든 자기 주소를 위조할 수 있습니다.              |
+| `CROFFLE_BASE_PATH`            | `/`                          | 프록시가 하위 경로를 떼지 않고 넘길 때의 마운트 지점(예: `/croffle`).                                                                                        |
+| `CROFFLE_RETAIN_COMMITS_DAYS`  | `90`                         | 변경 이력 보존 기간. 최소 7일.                                                                                                                               |
+| `CROFFLE_RETAIN_OPS_DAYS`      | `30`                         | 재시도 키 보존 기간. 최소 7일.                                                                                                                               |
+| `CROFFLE_WEBHOOK_URL`          | —                            | 선택: 이벤트를 POST할 주소. secret이 필요합니다.                                                                                                             |
+| `CROFFLE_WEBHOOK_SECRET`       | —                            | 수신기가 검증할 HMAC 키.                                                                                                                                     |
+| `CROFFLE_WEBHOOK_EVENTS`       | `commits_applied,row_shared` | 쉼표로 구분한 이벤트 목록.                                                                                                                                   |
+| `CROFFLE_DEVICE_TOKEN_TTL`     | `0` (만료 없음)              | 앞으로 로그인으로 발급하는 기기 토큰의 수명. Go duration(`720h`)으로 씁니다. **데스크톱 1.3.0 은 만료될 때마다 다시 로그인해야 합니다.** [인증](#인증) 참고. |
+| `CROFFLE_ACCESS_TOKEN_TTL`     | `15m`                        | `POST /auth/token` 이 주는 access token 의 수명.                                                                                                             |
+| `CROFFLE_REFRESH_TOKEN_TTL`    | `720h`                       | refresh token 의 수명. 갱신할 때마다 다시 계산됩니다. access 수명보다 길어야 합니다.                                                                         |
+| `CROFFLE_METRICS_LISTEN`       | — (꺼짐)                     | Prometheus metrics 를 여는 별도 주소 `host:port`(예: `127.0.0.1:9090`). 비워 두면 포트를 열지 않습니다. [metrics](#metrics) 참고.                            |
+| `CROFFLE_DASH_TRUSTED_ORIGINS` | —                            | 대시보드의 상태를 바꾸는 요청을 더 허용할 출처(`https://croffle.example.com`), 쉼표 구분. `Host` 를 바꿔 넘기는 프록시용.                                    |
 
 잘못된 값은 기본값으로 때우지 않고 **기동을 거절**합니다. 엉뚱한 포트에서 듣거나
 엉뚱한 파일에 쓰는 서버가, 뜨지 않는 서버보다 나쁩니다.
@@ -148,18 +154,19 @@ server {
 모든 명령은 `--db`로 데이터베이스 파일을 지정할 수 있고, 목록 명령은 `--json`을
 받습니다.
 
-| 명령                                                        | 하는 일                                                                                    |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `user create <username> --password-stdin`                   | 계정을 만들고 팀에 넣습니다.                                                               |
-| `user list`                                                 | 계정과 비활성 여부를 보여줍니다.                                                           |
-| `user disable <username>` / `user enable <username>`        | 인증을 막거나 되돌립니다.                                                                  |
-| `user set-password <username> --password-stdin`             | 비밀번호를 바꿉니다. 기존 기기 토큰은 그대로 동작합니다.                                   |
-| `token issue <username> [--device-name N] [--client-id ID]` | 기기 토큰을 발급합니다. **한 번만 출력됩니다.**                                            |
-| `token list [username]`                                     | 기기 목록: 생성·마지막 접속과 `pending`/`active`/`revoked`.                                |
-| `token revoke <device-id>`                                  | 그 기기의 토큰을 회수합니다.                                                               |
-| `team list` · `team add-member <team-id> <username>`        | 팀과 멤버십.                                                                               |
-| `db migrate` · `db info` · `db vacuum`                      | 마이그레이션 적용, 통계 확인, 공간 회수.                                                   |
-| `log dump [--since-seq N] [--limit N]`                      | 변경 로그를 JSON 라인으로 출력합니다. **클라이언트와 서버가 어긋났을 때 가장 먼저 볼 것.** |
+| 명령                                                                                        | 하는 일                                                                                                 |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `user create <username> --password-stdin`                                                   | 계정을 만들고 팀에 넣습니다.                                                                            |
+| `user list`                                                                                 | 계정과 비활성 여부를 보여줍니다.                                                                        |
+| `user disable <username>` / `user enable <username>`                                        | 인증을 막거나 되돌립니다.                                                                               |
+| `user set-password <username> --password-stdin`                                             | 비밀번호를 바꿉니다. 기존 기기 토큰은 그대로 동작합니다.                                                |
+| `token issue <username> [--device-name N] [--client-id ID] [--expires-in D \| --no-expiry]` | 기기 토큰을 발급합니다. **한 번만 출력됩니다.** 플래그가 없으면 `CROFFLE_DEVICE_TOKEN_TTL` 을 따릅니다. |
+| `token list [username]`                                                                     | 기기 목록: 생성·마지막 접속·토큰 만료(`never`)와 `pending`/`active`/`expired`/`revoked`.                |
+| `user otp status <username>` · `user otp disable <username>`                                | 계정의 일회용 코드 상태(`off`/`pending`/`enabled`)를 보거나 끕니다.                                     |
+| `token revoke <device-id>`                                                                  | 그 기기의 토큰을 회수합니다.                                                                            |
+| `team list` · `team add-member <team-id> <username>`                                        | 팀과 멤버십.                                                                                            |
+| `db migrate` · `db info` · `db vacuum`                                                      | 마이그레이션 적용, 통계 확인, 공간 회수.                                                                |
+| `log dump [--since-seq N] [--limit N]`                                                      | 변경 로그를 JSON 라인으로 출력합니다. **클라이언트와 서버가 어긋났을 때 가장 먼저 볼 것.**              |
 
 `--password`보다 `--password-stdin`을 쓰세요. 플래그로 넘긴 비밀번호는 쉘 히스토리와
 프로세스 목록에 남습니다.
@@ -195,6 +202,51 @@ server {
   받을 수 있습니다. 노트북을 잃어버렸을 때 쓰세요.
 - **`user disable`** 은 계정을 멈춥니다. 기존 토큰이 즉시 동작을 멈추고 새로 받을 수도
   없습니다.
+
+기기를 회수하면 그 기기가 가진 토큰이 모두 멈춥니다. 기기 토큰과 access · refresh
+토큰 전부입니다. 계정은 대시보드에서 자기 기기를 직접 회수할 수도 있습니다.
+
+---
+
+## 인증
+
+동기화 요청은 모두 bearer 토큰을 실어 보냅니다. 토큰은 세 가지입니다.
+
+| 토큰          | 받는 곳                           | 수명                                                | 쓰는 곳                 |
+| ------------- | --------------------------------- | --------------------------------------------------- | ----------------------- |
+| 기기 토큰     | `POST /auth/login`, `token issue` | 만료 없음(`CROFFLE_DEVICE_TOKEN_TTL` 을 켜면 그 값) | 데스크톱 1.3.0          |
+| access token  | `POST /auth/token`                | `CROFFLE_ACCESS_TOKEN_TTL`(15분)                    | 동기화 요청             |
+| refresh token | `POST /auth/token`                | `CROFFLE_REFRESH_TOKEN_TTL`(30일)                   | `POST /auth/token` 에만 |
+
+**기기 토큰.** 만료 없음이 기본이고, 앞으로도 계속 쓸 수 있습니다. 데스크톱은
+비밀번호를 저장하지 않으므로 토큰을 조용히 갱신할 수 없기 때문입니다.
+`CROFFLE_DEVICE_TOKEN_TTL` 을 켜면 그 뒤 로그인으로 발급하는 토큰에 만료가 붙습니다
+(이미 발급한 토큰은 그대로입니다). 데스크톱 1.3.0 은 아직 refresh token 을 쓰지 않아서,
+토큰이 만료될 때마다 다시 로그인하라고 안내합니다. 설정과 상관없이
+`token issue --no-expiry` 로 만료 없는 토큰을 낼 수 있습니다.
+
+**access · refresh token.** `POST /auth/token` 에
+`{"grantType": "password", "username", "password", "otp"?, "clientId", "deviceName"?}`
+를 보내면 `accessToken`, `refreshToken` 과 각각의 만료 시각(unix ms)을 받습니다. access
+token 이 끝나기 전에 `{"grantType": "refresh_token", "refreshToken"}` 으로 다음 쌍을
+받습니다. refresh token 은 **한 번만** 쓸 수 있습니다. 이미 쓴 것을 다시 내밀면 같은
+로그인에서 나온 토큰을 모두 회수합니다. 다시 내미는 것은 훔친 사본뿐이기 때문입니다.
+refresh token 은 동기화 엔드포인트에서 받지 않습니다. 이 방식으로 로그인해도 그
+기기의 기기 토큰은 건드리지 않으므로, 같은 기기의 1.3.0 로그인은 계속 동작합니다.
+데스크톱은 아직 이 엔드포인트를 쓰지 않습니다.
+
+**일회용 코드(TOTP).** 계정이 대시보드의 **Security** 에서 직접 켭니다. 인증 앱으로
+QR 코드를 읽고, 코드로 확인하고, 한 번만 보여주는 복구 코드 10개를 보관합니다. 그
+뒤로는 데스크톱 · `POST /auth/token` · 대시보드의 모든 로그인에 6자리 코드나 복구 코드가
+필요합니다. 코드가 없으면 `401 otp_required` 를 돌려주고, 데스크톱 1.3.0 은 이미 이를
+받아 코드를 묻습니다. 코드는 한 번만 받고(이미 쓴 시간 단계의 코드는 거부), 복구
+코드도 각각 한 번만 쓸 수 있으며, 틀린 코드는 틀린 비밀번호처럼 로그인 rate limit 에
+셉니다. 끄려면 계정이 비밀번호와 코드로 확인합니다. 인증 앱과 복구 코드를 모두 잃은
+사람은 운영자가 `user otp disable` 로 풀어 줄 수 있습니다. `token issue` 는 운영자
+명령이라 코드를 묻지 않습니다.
+
+로그인 rate limit 은 주소 · 사용자명마다 5번, 그 뒤 30초에 1번입니다.
+`otp_required` 에서 멈춘 로그인도 한 번으로 셉니다.
 
 ---
 
@@ -302,18 +354,56 @@ secret 없이 URL만 주면 **기동을 거절합니다.** 발신자를 검증�
 
 ---
 
+## metrics
+
+기본은 꺼짐입니다. `CROFFLE_METRICS_LISTEN`(예: `127.0.0.1:9090`)을 주면 서버가 **두
+번째 수신 주소**를 열고, 거기서 Prometheus 텍스트 형식의 `GET /metrics` 하나만
+제공합니다. API 주소에는 metrics 가 없습니다. **이 주소는 내부망에만 두세요.** 자체
+인증이 없습니다.
+
+| 지표                                    | 라벨                                                                                                                    |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `croffle_http_requests_total`           | `route`, `method`, `code`                                                                                               |
+| `croffle_http_request_duration_seconds` | `route`, `method`                                                                                                       |
+| `croffle_sync_push_commits_total`       | `result`: `accepted`, `conflict`, `retry`                                                                               |
+| `croffle_sync_pull_changes_total`       | —                                                                                                                       |
+| `croffle_sync_bootstrap_rows_total`     | —                                                                                                                       |
+| `croffle_auth_attempts_total`           | `surface`: `sync`, `token`, `dashboard`; `result`: `ok`, `invalid`, `otp_required`, `disabled`, `rate_limited`, `error` |
+| `croffle_auth_refresh_reuse_total`      | —                                                                                                                       |
+
+여기에 Go 런타임과 프로세스 기본 지표가 붙습니다. `route` 는 라우트 패턴
+(`POST /sync/push`, `POST /dash/devices/{id}/revoke`)이고, 대시보드 파일과 모르는
+경로는 `other` 입니다. 계정 · 사용자명 · 기기 id · 주소는 어떤 라벨에도 들어가지
+않습니다.
+
+```yaml
+# docker compose: 호스트에만 공개
+environment:
+  CROFFLE_METRICS_LISTEN: ':9090'
+ports:
+  - '127.0.0.1:9090:9090'
+```
+
+---
+
 ## 호환성
 
 | 서버  | 동기화 프로토콜 | 데스크톱 |
 | ----- | --------------- | -------- |
-| 0.1.x | 1               | 1.3.x    |
+| 0.1.0 | 1               | 1.3.x    |
+| 0.1.1 | 1               | 1.3.x    |
 
-`GET /health`가 이 서버가 말하는 범위를 알려줍니다.
+0.1.1 은 프로토콜 1 을 바꾸지 않고 그 위에 기능을 더하므로, 데스크톱 1.3.0 은 그대로
+동작합니다. 새 기능(토큰 쌍, `differentFields`)은 데스크톱이 아직 쓰지 않습니다.
+일회용 코드는 1.3.0 이 이미 `otp_required` 에 답하므로 그대로 동작합니다.
+
+`GET /health`가 이 서버가 말하는 범위와 선택 기능을 알려줍니다.
 
 ```json
 {
-  "server": "0.1.0",
+  "server": "0.1.1",
   "protocol": { "min": 1, "max": 1 },
+  "features": ["conflict-fields", "device-token-ttl", "token-pair", "totp"],
   "db": "ok",
   "retention": { "oldestCommitSeq": 1041, "purgedThroughSeq": 1040 },
   "time": 1792000000000
@@ -329,6 +419,11 @@ secret 없이 URL만 주면 **기동을 거절합니다.** 발신자를 검증�
 `/health`는 무인증 공개이고 데이터베이스에 닿지 못하면 503을 반환합니다. 컨테이너
 헬스체크와 프록시가 둘 다 이걸 봅니다.
 
+push 충돌(`conflicts[]`)에는 보낸 행과 서버 행에서 값이 다른 필드 이름이
+`differentFields` 로 붙습니다(이름순, `version` · `updatedAtMs` · `lastWriterId` ·
+`ownerId` 제외, 데이터가 같으면 `[]`). 정보일 뿐입니다. 충돌 때 서버는 여전히 아무것도
+적용하지 않고, 승자는 여전히 클라이언트가 last-writer-wins 로 정합니다.
+
 ---
 
 ## 보안 메모
@@ -338,8 +433,12 @@ secret 없이 URL만 주면 **기동을 거절합니다.** 발신자를 검증�
   없습니다. 비밀번호도 같습니다(argon2id).
 - **대시보드 세션과 동기화 토큰은 서로 다른 자격증명**이고, 상대의 자리에서는 둘 다
   거부됩니다. 대시보드 세션으로는 push할 수 없습니다.
-- 대시보드는 로그인한 계정의 데이터만 보여줍니다. 다른 계정을 보려면 위의 명령을
-  쓰는데, 그건 이미 파일 접근을 요구합니다.
+- 대시보드는 로그인한 계정의 데이터만 보여주고, 그 계정 자신의 상태(기기, 일회용
+  코드)만 바꿉니다. 상태를 바꾸는 요청은 다른 출처에서 오면 거부합니다. 다른 계정을
+  보려면 위의 명령을 쓰는데, 그건 이미 파일 접근을 요구합니다.
+- 일회용 코드 secret 은 데이터베이스에 그대로 저장합니다(복구 코드는 해시만).
+  데이터베이스 파일을 가진 사람은 코드를 만들 수 있지만, 비밀번호는 여전히 필요합니다.
+  secret 암호화는 0.2.0 에 넣을 예정입니다.
 - 명령은 설계상 인증을 우회합니다. 데이터베이스 파일에 바이너리를 실행할 수 있는
   사람은 이미 운영자입니다.
 
@@ -350,9 +449,10 @@ secret 없이 URL만 주면 **기동을 거절합니다.** 발신자를 검증�
 - **팀은 하나**입니다. 다중 팀은 이후 버전입니다.
 - **공유 취소가 아직 없고**, 공유한 일정을 원격에서 관리할 수도 없습니다.
 - 태그와 리마인더는 일정과 함께 공유되지 않습니다.
-- 토큰은 만료되지 않습니다. 데스크톱이 비밀번호를 저장하지 않아 조용히 갱신할 수
-  없기 때문입니다. 리프레시 토큰은 이후 버전입니다.
-- 대시보드는 읽기 전용이고 metrics는 아직 없습니다.
+- 데스크톱(1.3.0)은 기기 토큰만 씁니다. 아직 `POST /auth/token` 으로 토큰을 갱신하지
+  않으므로, 만료되는 기기 토큰을 쓰면 다시 로그인해야 합니다.
+- 대시보드는 로그인한 계정 자신의 기기와 일회용 코드만 관리합니다. 계정과 팀은
+  명령으로 합니다.
 - 계정 비활성화는 차단일 뿐이고, 데이터를 지우지는 않습니다.
 
 ---
@@ -380,12 +480,14 @@ make build-all  # 대시보드 + 바이너리
 서버는 대부분 Go 표준 라이브러리입니다. 의존성은 손으로 짜야 할 보안 · 프로토콜 코드를
 대신할 때만, 검증된 출처의 것만 더합니다.
 
-| 모듈                     | 쓰는 곳                         |
-| ------------------------ | ------------------------------- |
-| `modernc.org/sqlite`     | cgo 없는 SQLite                 |
-| `golang.org/x/crypto`    | argon2id 비밀번호 해시          |
-| `golang.org/x/term`      | 명령의 비밀번호 입력(화면 숨김) |
-| `golang.org/x/time/rate` | 로그인 rate limit               |
+| 모듈                                  | 쓰는 곳                                  |
+| ------------------------------------- | ---------------------------------------- |
+| `modernc.org/sqlite`                  | cgo 없는 SQLite                          |
+| `golang.org/x/crypto`                 | argon2id 비밀번호 해시                   |
+| `golang.org/x/term`                   | 명령의 비밀번호 입력(화면 숨김)          |
+| `golang.org/x/time/rate`              | 로그인 rate limit                        |
+| `github.com/pquerna/otp`              | 일회용 코드(TOTP, RFC 6238)와 그 QR 코드 |
+| `github.com/prometheus/client_golang` | 선택 기능인 metrics 엔드포인트           |
 
 여전히 바이너리 하나와 SQLite 파일 하나입니다. 다른 서비스를 요구하지 않습니다.
 
