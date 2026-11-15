@@ -27,4 +27,5 @@ const (
 // is additive, and a client that knows none of it still speaks protocol 1.
 //
 //   - device-token-ttl: device tokens may carry an expiry (LoginResponse.ExpiresAt)
-var Features = []string{"device-token-ttl"}
+//   - token-pair: POST /auth/token issues access/refresh pairs
+var Features = []string{"device-token-ttl", "token-pair"}

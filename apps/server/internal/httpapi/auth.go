@@ -21,6 +21,9 @@ const retryAfterSeconds = 30
 type Authenticator interface {
 	Login(ctx context.Context, req auth.LoginRequest) (auth.LoginResult, error)
 	Authenticate(ctx context.Context, token string) (auth.Identity, error)
+	// IssuePair and Refresh back POST /auth/token.
+	IssuePair(ctx context.Context, req auth.LoginRequest) (auth.PairResult, error)
+	Refresh(ctx context.Context, refreshToken string) (auth.PairResult, error)
 	// CheckPassword is the dashboard's door: it verifies a password without
 	// issuing a device token, so a browser login cannot become a sync
 	// credential.
@@ -87,6 +90,88 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		DeviceID:  result.Identity.DeviceID,
 		Method:    "password",
 		Surface:   "sync",
+	}})
+}
+
+// token is POST /auth/token: an access/refresh pair from a password, or the
+// next pair from a refresh token.
+func (s *server) token(w http.ResponseWriter, r *http.Request) {
+	if s.auth == nil {
+		s.notImplemented(w, r)
+		return
+	}
+
+	var req protocol.TokenRequest
+	if !DecodeJSON(w, r, &req) {
+		return
+	}
+
+	var (
+		result auth.PairResult
+		err    error
+		method string
+	)
+	switch req.GrantType {
+	case protocol.GrantPassword:
+		method = "password"
+		result, err = s.auth.IssuePair(r.Context(), auth.LoginRequest{
+			Username:   req.Username,
+			Password:   req.Password,
+			OTP:        req.OTP,
+			ClientID:   req.ClientID,
+			DeviceName: req.DeviceName,
+			RemoteIP:   RemoteIP(r.Context()),
+		})
+	case protocol.GrantRefreshToken:
+		method = "refresh"
+		result, err = s.auth.Refresh(r.Context(), req.RefreshToken)
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_request",
+			`grantType must be "password" or "refresh_token"`)
+		return
+	}
+	if errors.Is(err, auth.ErrRefreshReused) {
+		// Someone replayed a spent refresh token. The family is already
+		// revoked; the operator needs to know, the client only sees a 401.
+		s.logger.WarnContext(r.Context(), "refresh reuse: token family revoked",
+			slog.String("remote_ip", RemoteIP(r.Context())),
+			slog.String("request_id", RequestID(r.Context())),
+		)
+		writeError(w, http.StatusUnauthorized, "unauthorized", "invalid credentials")
+		return
+	}
+	if err != nil {
+		s.writeAuthError(w, r, err, slog.String("grant_type", req.GrantType))
+		return
+	}
+
+	writeJSON(w, http.StatusOK, protocol.TokenResponse{
+		AccessToken:      result.AccessToken,
+		AccessExpiresAt:  result.AccessExpiresAt.UnixMilli(),
+		RefreshToken:     result.RefreshToken,
+		RefreshExpiresAt: result.RefreshExpiresAt.UnixMilli(),
+		AccountID:        result.Identity.AccountID,
+		TeamID:           firstTeam(result.Identity.TeamIDs),
+	})
+
+	s.logger.InfoContext(r.Context(), "token pair issued",
+		slog.String("grant_type", req.GrantType),
+		slog.String("account_id", result.Identity.AccountID),
+		slog.String("device_id", result.Identity.DeviceID),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+	if req.GrantType == protocol.GrantPassword {
+		s.hooks.Emit(r.Context(), hooks.Event{Type: hooks.TypeDeviceRegistered, Data: hooks.DeviceRegistered{
+			AccountID: result.Identity.AccountID,
+			DeviceID:  result.Identity.DeviceID,
+			Name:      req.DeviceName,
+		}})
+	}
+	s.hooks.Emit(r.Context(), hooks.Event{Type: hooks.TypeAuthSucceeded, Data: hooks.AuthSucceeded{
+		AccountID: result.Identity.AccountID,
+		DeviceID:  result.Identity.DeviceID,
+		Method:    method,
+		Surface:   "token",
 	}})
 }
 

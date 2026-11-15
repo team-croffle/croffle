@@ -115,6 +115,7 @@ func NewHandler(o Options) http.Handler {
 	s.route(mux, http.MethodGet, "/health", s.health)
 
 	s.route(mux, http.MethodPost, "/auth/login", s.login)
+	s.route(mux, http.MethodPost, "/auth/token", s.token)
 	s.route(mux, http.MethodPost, "/auth/whoami", s.requireAuth(s.whoami))
 
 	s.route(mux, http.MethodPost, "/sync/push", s.requireAuth(s.push))

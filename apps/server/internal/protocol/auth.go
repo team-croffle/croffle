@@ -39,3 +39,38 @@ type WhoAmIResponse struct {
 	AccountID string  `json:"accountId"`
 	TeamID    *string `json:"teamId,omitempty"`
 }
+
+// Grant types of POST /auth/token.
+const (
+	GrantPassword     = "password"
+	GrantRefreshToken = "refresh_token"
+)
+
+// TokenRequest is POST /auth/token (server 0.1.1).
+//
+// It issues a short-lived access token and a refresh token instead of the
+// non-expiring device token of /auth/login. A refresh token is spent on use:
+// the response carries the next one, and presenting a spent token again
+// revokes every token descended from the same sign-in.
+type TokenRequest struct {
+	GrantType string `json:"grantType"`
+	// For grantType "password": the same fields as LoginRequest.
+	Username   string `json:"username,omitempty"`
+	Password   string `json:"password,omitempty"`
+	OTP        string `json:"otp,omitempty"`
+	ClientID   string `json:"clientId,omitempty"`
+	DeviceName string `json:"deviceName,omitempty"`
+	// For grantType "refresh_token".
+	RefreshToken string `json:"refreshToken,omitempty"`
+}
+
+// TokenResponse carries the only plaintext copies of the pair. Times are unix
+// milliseconds.
+type TokenResponse struct {
+	AccessToken      string  `json:"accessToken"`
+	AccessExpiresAt  int64   `json:"accessExpiresAt"`
+	RefreshToken     string  `json:"refreshToken"`
+	RefreshExpiresAt int64   `json:"refreshExpiresAt"`
+	AccountID        string  `json:"accountId"`
+	TeamID           *string `json:"teamId,omitempty"`
+}

@@ -154,6 +154,9 @@ type fakeStore struct {
 	upserted []store.Device
 	touched  []string
 	findErr  error
+
+	registered []store.Device
+	tokens     map[string]*store.AuthToken
 }
 
 func (f *fakeStore) FindAccountByUsername(_ context.Context, username string) (*store.Account, error) {
@@ -184,6 +187,69 @@ func (f *fakeStore) FindDeviceByTokenHash(_ context.Context, hash []byte) (*stor
 		return nil, store.ErrNotFound
 	}
 	return f.device, nil
+}
+
+func (f *fakeStore) RegisterDevice(_ context.Context, d store.Device) error {
+	if f.device != nil && f.device.ID == d.ID {
+		f.device.Name = d.Name
+		f.device.RevokedAt = nil
+		return nil
+	}
+	f.registered = append(f.registered, d)
+	f.device = &d
+	return nil
+}
+
+func (f *fakeStore) FindDeviceByID(_ context.Context, id string) (*store.Device, error) {
+	if f.device == nil || f.device.ID != id {
+		return nil, store.ErrNotFound
+	}
+	return f.device, nil
+}
+
+func (f *fakeStore) tokenMap() map[string]*store.AuthToken {
+	if f.tokens == nil {
+		f.tokens = map[string]*store.AuthToken{}
+	}
+	return f.tokens
+}
+
+func (f *fakeStore) CreateTokenPair(_ context.Context, pair store.TokenPair) error {
+	for _, token := range []store.AuthToken{pair.Access, pair.Refresh} {
+		token := token
+		f.tokenMap()[string(token.TokenHash)] = &token
+	}
+	return nil
+}
+
+func (f *fakeStore) FindAuthToken(_ context.Context, hash []byte) (*store.AuthToken, error) {
+	token, ok := f.tokenMap()[string(hash)]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	copied := *token
+	return &copied, nil
+}
+
+func (f *fakeStore) RotateRefresh(ctx context.Context, oldHash []byte, at time.Time, next store.TokenPair) error {
+	token, ok := f.tokenMap()[string(oldHash)]
+	if !ok || token.Kind != store.TokenRefresh || token.RevokedAt != nil || !at.Before(token.ExpiresAt) {
+		return store.ErrNotFound
+	}
+	if token.UsedAt != nil {
+		return store.ErrTokenUsed
+	}
+	token.UsedAt = &at
+	return f.CreateTokenPair(ctx, next)
+}
+
+func (f *fakeStore) RevokeTokenFamily(_ context.Context, family string, at time.Time) error {
+	for _, token := range f.tokenMap() {
+		if token.FamilyID == family && token.RevokedAt == nil {
+			token.RevokedAt = &at
+		}
+	}
+	return nil
 }
 
 func (f *fakeStore) TouchDevice(_ context.Context, deviceID string, _ time.Time) error {
@@ -467,5 +533,140 @@ func TestDeviceTokenTTL(t *testing.T) {
 	clock = now.Add(3 * time.Second)
 	if _, err := svc.Authenticate(ctx, result.Token); !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expired token: %v, want ErrInvalidCredentials", err)
+	}
+}
+
+func TestIssuePairKeepsTheDeviceToken(t *testing.T) {
+	svc, st, now := newFixture(t, "hunter2")
+	ctx := context.Background()
+
+	login, err := svc.Login(ctx, validLogin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := svc.IssuePair(ctx, validLogin())
+	if err != nil {
+		t.Fatalf("IssuePair: %v", err)
+	}
+	if pair.AccessToken == "" || pair.RefreshToken == "" || pair.AccessToken == pair.RefreshToken {
+		t.Fatalf("pair = %+v", pair)
+	}
+	if !pair.AccessExpiresAt.Equal(now.Add(DefaultAccessTokenTTL)) ||
+		!pair.RefreshExpiresAt.Equal(now.Add(DefaultRefreshTokenTTL)) {
+		t.Fatalf("expiries = %v / %v", pair.AccessExpiresAt, pair.RefreshExpiresAt)
+	}
+	if pair.Identity.AccountID != "acct-1" || pair.Identity.DeviceID != "client-1" {
+		t.Fatalf("identity = %+v", pair.Identity)
+	}
+
+	// Both the 0.1 device token and the new access token authenticate.
+	for name, token := range map[string]string{"device": login.Token, "access": pair.AccessToken} {
+		if _, err := svc.Authenticate(ctx, token); err != nil {
+			t.Errorf("%s token refused: %v", name, err)
+		}
+	}
+	if string(st.device.TokenHash) != string(HashToken(login.Token)) {
+		t.Error("IssuePair replaced the device token")
+	}
+
+	// A refresh token is not a sync credential.
+	if _, err := svc.Authenticate(ctx, pair.RefreshToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("refresh token as bearer: %v", err)
+	}
+
+	bad := validLogin()
+	bad.Password = "nope"
+	if _, err := svc.IssuePair(ctx, bad); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("wrong password: %v", err)
+	}
+	missing := validLogin()
+	missing.ClientID = ""
+	if _, err := svc.IssuePair(ctx, missing); !errors.Is(err, ErrMissingClientID) {
+		t.Errorf("missing clientId: %v", err)
+	}
+}
+
+func TestRefreshRotatesAndDetectsReuse(t *testing.T) {
+	svc, _, now := newFixture(t, "hunter2")
+	ctx := context.Background()
+
+	first, err := svc.IssuePair(ctx, validLogin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := svc.Refresh(ctx, first.RefreshToken)
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if second.AccessToken == first.AccessToken || second.RefreshToken == first.RefreshToken {
+		t.Fatal("refresh returned the same tokens")
+	}
+	if _, err := svc.Authenticate(ctx, second.AccessToken); err != nil {
+		t.Fatalf("rotated access token refused: %v", err)
+	}
+	// The refresh lifetime restarts at rotation.
+	if !second.RefreshExpiresAt.Equal(now.Add(DefaultRefreshTokenTTL)) {
+		t.Errorf("refresh expiry = %v", second.RefreshExpiresAt)
+	}
+
+	// Replaying the spent token revokes the whole family.
+	if _, err := svc.Refresh(ctx, first.RefreshToken); !errors.Is(err, ErrRefreshReused) {
+		t.Fatalf("replay: %v, want ErrRefreshReused", err)
+	}
+	if _, err := svc.Authenticate(ctx, second.AccessToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("access token survived the reuse: %v", err)
+	}
+	if _, err := svc.Refresh(ctx, second.RefreshToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("refresh token survived the reuse: %v", err)
+	}
+
+	// An access token cannot be used as a refresh token.
+	third, _ := svc.IssuePair(ctx, validLogin())
+	if _, err := svc.Refresh(ctx, third.AccessToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("access as refresh: %v", err)
+	}
+}
+
+func TestAccessTokenExpiresAndFollowsTheDevice(t *testing.T) {
+	_, st, now := newFixture(t, "hunter2")
+	clock := now
+	svc := NewService(st, func() time.Time { return clock }).WithPolicy(Policy{
+		AccessTokenTTL: time.Minute, RefreshTokenTTL: time.Hour,
+	})
+	ctx := context.Background()
+
+	pair, err := svc.IssuePair(ctx, validLogin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock = now.Add(2 * time.Minute)
+	if _, err := svc.Authenticate(ctx, pair.AccessToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("expired access token: %v", err)
+	}
+	next, err := svc.Refresh(ctx, pair.RefreshToken)
+	if err != nil {
+		t.Fatalf("refresh after access expiry: %v", err)
+	}
+
+	revoked := clock
+	st.device.RevokedAt = &revoked
+	if _, err := svc.Authenticate(ctx, next.AccessToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("access token of a revoked device: %v", err)
+	}
+	if _, err := svc.Refresh(ctx, next.RefreshToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("refresh of a revoked device: %v", err)
+	}
+
+	st.device.RevokedAt = nil
+	disabled := clock
+	st.account.DisabledAt = &disabled
+	if _, err := svc.Authenticate(ctx, next.AccessToken); !errors.Is(err, ErrAccountDisabled) {
+		t.Errorf("access token of a disabled account: %v", err)
+	}
+
+	clock = now.Add(2 * time.Hour)
+	st.account.DisabledAt = nil
+	if _, err := svc.Refresh(ctx, next.RefreshToken); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("expired refresh token: %v", err)
 	}
 }

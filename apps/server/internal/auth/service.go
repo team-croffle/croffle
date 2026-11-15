@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,6 +31,16 @@ var (
 	// ErrMissingClientID is returned when a login arrives without the device
 	// identity the desktop is supposed to send.
 	ErrMissingClientID = errors.New("auth: missing clientId")
+	// ErrRefreshReused means a refresh token was presented a second time. The
+	// whole family has been revoked by the time this is returned; the client
+	// sees the same 401 as for any bad credential.
+	ErrRefreshReused = errors.New("auth: refresh token reused")
+)
+
+// Default token-pair lifetimes.
+const (
+	DefaultAccessTokenTTL  = 15 * time.Minute
+	DefaultRefreshTokenTTL = 30 * 24 * time.Hour
 )
 
 // Identity is who a request belongs to, resolved from a token.
@@ -69,6 +81,34 @@ type Policy struct {
 	// DeviceTokenTTL is the lifetime of a device token issued by Login. Zero
 	// means no expiry.
 	DeviceTokenTTL time.Duration
+	// AccessTokenTTL and RefreshTokenTTL are the token-pair lifetimes; zero
+	// means the defaults above. The refresh lifetime restarts at every
+	// rotation, so a device that syncs at least once per period stays signed in.
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+}
+
+func (p Policy) accessTTL() time.Duration {
+	if p.AccessTokenTTL > 0 {
+		return p.AccessTokenTTL
+	}
+	return DefaultAccessTokenTTL
+}
+
+func (p Policy) refreshTTL() time.Duration {
+	if p.RefreshTokenTTL > 0 {
+		return p.RefreshTokenTTL
+	}
+	return DefaultRefreshTokenTTL
+}
+
+// PairResult carries the only plaintext copies of an access/refresh pair.
+type PairResult struct {
+	AccessToken      string
+	AccessExpiresAt  time.Time
+	RefreshToken     string
+	RefreshExpiresAt time.Time
+	Identity         Identity
 }
 
 // Service implements login and token authentication over a store.
@@ -192,16 +232,150 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, err
 	}, nil
 }
 
-// Authenticate resolves a bearer token to an identity.
+// IssuePair verifies a username and password and issues an access/refresh
+// pair for the device.
+//
+// Unlike Login it does not touch the device token: a device that is also
+// signed in the 0.1 way (desktop 1.3.0) keeps that token working.
+func (s *Service) IssuePair(ctx context.Context, req LoginRequest) (PairResult, error) {
+	clientID := strings.TrimSpace(req.ClientID)
+	if clientID == "" {
+		return PairResult{}, ErrMissingClientID
+	}
+
+	account, err := s.CheckPassword(ctx, req.Username, req.Password, req.RemoteIP)
+	if err != nil {
+		return PairResult{}, err
+	}
+
+	now := s.now()
+	if err := s.store.RegisterDevice(ctx, store.Device{
+		ID:         clientID,
+		AccountID:  account.ID,
+		Name:       deviceName(req.DeviceName),
+		CreatedAt:  now,
+		LastSeenAt: &now,
+	}); err != nil {
+		return PairResult{}, fmt.Errorf("register device: %w", err)
+	}
+
+	family, err := newFamilyID()
+	if err != nil {
+		return PairResult{}, err
+	}
+	result, pair, err := s.newPair(clientID, family, now)
+	if err != nil {
+		return PairResult{}, err
+	}
+	if err := s.store.CreateTokenPair(ctx, pair); err != nil {
+		return PairResult{}, fmt.Errorf("store token pair: %w", err)
+	}
+
+	teams, err := s.store.TeamsOf(ctx, account.ID)
+	if err != nil {
+		return PairResult{}, fmt.Errorf("teams of %s: %w", account.ID, err)
+	}
+	result.Identity = Identity{AccountID: account.ID, DeviceID: clientID, TeamIDs: teams}
+	return result, nil
+}
+
+// Refresh exchanges a refresh token for a new pair. Each refresh token works
+// once; presenting it again revokes every token of its family and returns
+// ErrRefreshReused, because only a stolen copy is ever replayed.
+func (s *Service) Refresh(ctx context.Context, refreshToken string) (PairResult, error) {
+	refreshToken = strings.TrimSpace(refreshToken)
+	if refreshToken == "" {
+		return PairResult{}, ErrInvalidCredentials
+	}
+	hash := HashToken(refreshToken)
+
+	token, err := s.store.FindAuthToken(ctx, hash)
+	if errors.Is(err, store.ErrNotFound) {
+		return PairResult{}, ErrInvalidCredentials
+	}
+	if err != nil {
+		return PairResult{}, fmt.Errorf("find refresh token: %w", err)
+	}
+	if token.Kind != store.TokenRefresh {
+		return PairResult{}, ErrInvalidCredentials
+	}
+
+	now := s.now()
+	if token.UsedAt != nil && token.RevokedAt == nil {
+		return PairResult{}, s.reused(ctx, token.FamilyID, now)
+	}
+	if !token.Usable(now) {
+		return PairResult{}, ErrInvalidCredentials
+	}
+
+	identity, err := s.identityOfDevice(ctx, token.DeviceID)
+	if err != nil {
+		return PairResult{}, err
+	}
+
+	result, pair, err := s.newPair(token.DeviceID, token.FamilyID, now)
+	if err != nil {
+		return PairResult{}, err
+	}
+	err = s.store.RotateRefresh(ctx, hash, now, pair)
+	switch {
+	case errors.Is(err, store.ErrTokenUsed):
+		// Lost a race with another exchange of the same token: that is a
+		// replay as well.
+		return PairResult{}, s.reused(ctx, token.FamilyID, now)
+	case errors.Is(err, store.ErrNotFound):
+		return PairResult{}, ErrInvalidCredentials
+	case err != nil:
+		return PairResult{}, fmt.Errorf("rotate refresh token: %w", err)
+	}
+
+	result.Identity = identity
+	return result, nil
+}
+
+func (s *Service) reused(ctx context.Context, family string, now time.Time) error {
+	if err := s.store.RevokeTokenFamily(ctx, family, now); err != nil {
+		return fmt.Errorf("revoke token family after reuse: %w", err)
+	}
+	return ErrRefreshReused
+}
+
+func (s *Service) newPair(deviceID, family string, now time.Time) (PairResult, store.TokenPair, error) {
+	access, accessHash, err := NewToken()
+	if err != nil {
+		return PairResult{}, store.TokenPair{}, err
+	}
+	refresh, refreshHash, err := NewToken()
+	if err != nil {
+		return PairResult{}, store.TokenPair{}, err
+	}
+	result := PairResult{
+		AccessToken:      access,
+		AccessExpiresAt:  now.Add(s.policy.accessTTL()),
+		RefreshToken:     refresh,
+		RefreshExpiresAt: now.Add(s.policy.refreshTTL()),
+	}
+	pair := store.TokenPair{
+		Access: store.AuthToken{TokenHash: accessHash, DeviceID: deviceID, Kind: store.TokenAccess,
+			FamilyID: family, CreatedAt: now, ExpiresAt: result.AccessExpiresAt},
+		Refresh: store.AuthToken{TokenHash: refreshHash, DeviceID: deviceID, Kind: store.TokenRefresh,
+			FamilyID: family, CreatedAt: now, ExpiresAt: result.RefreshExpiresAt},
+	}
+	return result, pair, nil
+}
+
+// Authenticate resolves a bearer token to an identity. It accepts a device
+// token or an access token; a refresh token is never a sync credential.
 func (s *Service) Authenticate(ctx context.Context, token string) (Identity, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return Identity{}, ErrInvalidCredentials
 	}
+	hash := HashToken(token)
 
-	device, err := s.store.FindDeviceByTokenHash(ctx, HashToken(token))
+	device, err := s.store.FindDeviceByTokenHash(ctx, hash)
 	if errors.Is(err, store.ErrNotFound) {
-		return Identity{}, ErrInvalidCredentials
+		return s.authenticateAccess(ctx, hash)
 	}
 	if err != nil {
 		return Identity{}, fmt.Errorf("find device: %w", err)
@@ -211,7 +385,40 @@ func (s *Service) Authenticate(ctx context.Context, token string) (Identity, err
 		// has to sign in again either way.
 		return Identity{}, ErrInvalidCredentials
 	}
+	return s.identityOf(ctx, device)
+}
 
+func (s *Service) authenticateAccess(ctx context.Context, hash []byte) (Identity, error) {
+	token, err := s.store.FindAuthToken(ctx, hash)
+	if errors.Is(err, store.ErrNotFound) {
+		return Identity{}, ErrInvalidCredentials
+	}
+	if err != nil {
+		return Identity{}, fmt.Errorf("find access token: %w", err)
+	}
+	if token.Kind != store.TokenAccess || !token.Usable(s.now()) {
+		return Identity{}, ErrInvalidCredentials
+	}
+	return s.identityOfDevice(ctx, token.DeviceID)
+}
+
+func (s *Service) identityOfDevice(ctx context.Context, deviceID string) (Identity, error) {
+	device, err := s.store.FindDeviceByID(ctx, deviceID)
+	if errors.Is(err, store.ErrNotFound) {
+		return Identity{}, ErrInvalidCredentials
+	}
+	if err != nil {
+		return Identity{}, fmt.Errorf("find device %s: %w", deviceID, err)
+	}
+	if device.Revoked() {
+		return Identity{}, ErrInvalidCredentials
+	}
+	return s.identityOf(ctx, device)
+}
+
+// identityOf finishes authentication for a device that passed its token
+// check: the account must still be allowed in.
+func (s *Service) identityOf(ctx context.Context, device *store.Device) (Identity, error) {
 	account, err := s.store.FindAccountByID(ctx, device.AccountID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
@@ -241,6 +448,14 @@ func (s *Service) touch(ctx context.Context, device *store.Device) {
 		return
 	}
 	_ = s.store.TouchDevice(ctx, device.ID, now)
+}
+
+func newFamilyID() (string, error) {
+	raw := make([]byte, 16)
+	if _, err := rand.Read(raw); err != nil {
+		return "", fmt.Errorf("auth: read family id: %w", err)
+	}
+	return "fam_" + hex.EncodeToString(raw), nil
 }
 
 func deviceName(name string) string {

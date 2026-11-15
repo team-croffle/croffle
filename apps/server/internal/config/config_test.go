@@ -107,6 +107,8 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		{name: "unknown flag", args: []string{"--nope"}},
 		{name: "device token ttl not a duration", env: map[string]string{EnvDeviceTokenTTL: "30 days"}},
 		{name: "device token ttl negative", env: map[string]string{EnvDeviceTokenTTL: "-1h"}},
+		{name: "access ttl zero", env: map[string]string{EnvAccessTokenTTL: "0s"}},
+		{name: "access not shorter than refresh", env: map[string]string{EnvAccessTokenTTL: "2h", EnvRefreshTokenTTL: "1h"}},
 		{name: "trusted origin with a path", env: map[string]string{EnvDashTrustedOrigins: "https://a.example/x"}},
 		{name: "trusted origin without scheme", env: map[string]string{EnvDashTrustedOrigins: "a.example"}},
 	}
@@ -205,5 +207,19 @@ func TestDeviceTokenTTLConfig(t *testing.T) {
 		if cfg.DeviceTokenTTL != want {
 			t.Errorf("%q: got %v, want %v", raw, cfg.DeviceTokenTTL, want)
 		}
+	}
+}
+
+func TestTokenPairTTLConfig(t *testing.T) {
+	cfg, err := Load(nil, envMap(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AccessTokenTTL != 15*time.Minute || cfg.RefreshTokenTTL != 30*24*time.Hour {
+		t.Fatalf("defaults = %v / %v", cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
+	}
+	cfg, err = Load(nil, envMap(map[string]string{EnvAccessTokenTTL: "5m", EnvRefreshTokenTTL: "168h"}))
+	if err != nil || cfg.AccessTokenTTL != 5*time.Minute || cfg.RefreshTokenTTL != 168*time.Hour {
+		t.Fatalf("set = %v / %v, %v", cfg.AccessTokenTTL, cfg.RefreshTokenTTL, err)
 	}
 }
