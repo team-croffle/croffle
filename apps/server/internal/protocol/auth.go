@@ -25,8 +25,10 @@ type LoginResponse struct {
 	// TeamID is the team this account shares into. Server 0.1 has exactly one.
 	TeamID *string `json:"teamId,omitempty"`
 	// ExpiresAt is unix milliseconds, or absent for a token that does not
-	// expire. Server 0.1 never expires tokens: the desktop does not store the
-	// password, so it could not renew one silently. Refresh arrives in 0.2.
+	// expire. It is absent unless the operator set CROFFLE_DEVICE_TOKEN_TTL
+	// (server 0.1.1): desktop 1.3.0 does not store the password, so it could
+	// not renew an expiring token silently. POST /auth/token is the renewable
+	// alternative.
 	ExpiresAt *int64 `json:"expiresAt,omitempty"`
 }
 

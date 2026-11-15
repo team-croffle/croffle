@@ -41,6 +41,8 @@ const (
 	EnvWebhookEvents = "CROFFLE_WEBHOOK_EVENTS"
 
 	EnvDashTrustedOrigins = "CROFFLE_DASH_TRUSTED_ORIGINS"
+
+	EnvDeviceTokenTTL = "CROFFLE_DEVICE_TOKEN_TTL"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -97,6 +99,10 @@ type Config struct {
 	// requests from, for a proxy that rewrites Host. Each is
 	// scheme://host[:port]. Empty is the normal case: same-origin only.
 	DashTrustedOrigins []string
+	// DeviceTokenTTL is the lifetime of device tokens issued by a sign-in from
+	// now on. Zero (the default) means they never expire, which is what
+	// desktop 1.3.0 needs: it cannot renew a token without the password.
+	DeviceTokenTTL time.Duration
 }
 
 // Load parses args (without the program name) and the environment.
@@ -157,6 +163,10 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 	cfg.WebhookURL = strings.TrimSpace(getenv(EnvWebhookURL))
 	cfg.WebhookSecret = getenv(EnvWebhookSecret)
 	cfg.WebhookEvents = splitList(getenv(EnvWebhookEvents))
+
+	if cfg.DeviceTokenTTL, err = ParseTokenTTL(EnvDeviceTokenTTL, getenv(EnvDeviceTokenTTL)); err != nil {
+		return nil, err
+	}
 
 	if cfg.DashTrustedOrigins, err = parseOrigins(EnvDashTrustedOrigins, getenv(EnvDashTrustedOrigins)); err != nil {
 		return nil, err
@@ -293,4 +303,22 @@ func parseOrigins(name, raw string) ([]string, error) {
 		}
 	}
 	return origins, nil
+}
+
+// ParseTokenTTL reads a token lifetime: a Go duration ("720h", "15m"), or
+// empty / "0" for no expiry. The CLI shares it so `token issue` follows the
+// same setting as the server.
+func ParseTokenTTL(name, raw string) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || raw == "0" {
+		return 0, nil
+	}
+	ttl, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("%s: want a duration such as 720h, got %q", name, raw)
+	}
+	if ttl < 0 {
+		return 0, fmt.Errorf("%s: must not be negative, got %q", name, raw)
+	}
+	return ttl, nil
 }

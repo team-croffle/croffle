@@ -105,6 +105,8 @@ func TestLoadRejectsInvalid(t *testing.T) {
 		{name: "base path with query", env: map[string]string{EnvBasePath: "/a?b"}},
 		{name: "unexpected positional arg", args: []string{"serve"}},
 		{name: "unknown flag", args: []string{"--nope"}},
+		{name: "device token ttl not a duration", env: map[string]string{EnvDeviceTokenTTL: "30 days"}},
+		{name: "device token ttl negative", env: map[string]string{EnvDeviceTokenTTL: "-1h"}},
 		{name: "trusted origin with a path", env: map[string]string{EnvDashTrustedOrigins: "https://a.example/x"}},
 		{name: "trusted origin without scheme", env: map[string]string{EnvDashTrustedOrigins: "a.example"}},
 	}
@@ -191,5 +193,17 @@ func TestDashTrustedOrigins(t *testing.T) {
 	cfg, err = Load(nil, envMap(nil))
 	if err != nil || len(cfg.DashTrustedOrigins) != 0 {
 		t.Fatalf("default origins = %v, %v", cfg.DashTrustedOrigins, err)
+	}
+}
+
+func TestDeviceTokenTTLConfig(t *testing.T) {
+	for raw, want := range map[string]time.Duration{"": 0, "0": 0, "720h": 720 * time.Hour, "2s": 2 * time.Second} {
+		cfg, err := Load(nil, envMap(map[string]string{EnvDeviceTokenTTL: raw}))
+		if err != nil {
+			t.Fatalf("%q: %v", raw, err)
+		}
+		if cfg.DeviceTokenTTL != want {
+			t.Errorf("%q: got %v, want %v", raw, cfg.DeviceTokenTTL, want)
+		}
 	}
 }

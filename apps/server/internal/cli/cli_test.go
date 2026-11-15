@@ -18,6 +18,7 @@ type result struct {
 type runner struct {
 	t    *testing.T
 	path string
+	env  map[string]string
 }
 
 func newRunner(t *testing.T) *runner {
@@ -33,7 +34,7 @@ func (r *runner) run(stdin string, args ...string) (result, error) {
 
 	args = append(args, "--db", r.path)
 	err := Execute(context.Background(), args,
-		func(string) string { return "" }, strings.NewReader(stdin), &out, &errOut)
+		func(key string) string { return r.env[key] }, strings.NewReader(stdin), &out, &errOut)
 
 	return result{out: out.String(), err: errOut.String()}, err
 }
@@ -436,5 +437,64 @@ func TestReadPasswordFromNonTerminalFile(t *testing.T) {
 	}
 	if got != "from-file" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestTokenIssueExpiry(t *testing.T) {
+	r := newRunner(t)
+	r.mustRun("hunter2\n", "user", "create", "alice", "--password-stdin")
+
+	type listed struct {
+		Name    string `json:"name"`
+		Expires string `json:"tokenExpiresAt"`
+		State   string `json:"state"`
+	}
+	list := func() map[string]listed {
+		out := r.mustRun("", "token", "list", "alice", "--json").out
+		var devices []listed
+		if err := json.Unmarshal([]byte(out), &devices); err != nil {
+			t.Fatalf("decode %q: %v", out, err)
+		}
+		byName := map[string]listed{}
+		for _, d := range devices {
+			byName[d.Name] = d
+		}
+		return byName
+	}
+
+	// Default: never expires, and the command says so.
+	res := r.mustRun("", "token", "issue", "alice", "--device-name", "default")
+	if !strings.Contains(res.err, "does not expire") {
+		t.Errorf("stderr = %q", res.err)
+	}
+
+	r.mustRun("", "token", "issue", "alice", "--device-name", "one-hour", "--expires-in", "1h")
+
+	// With the server setting on, the setting is the default and --no-expiry
+	// still issues a token that never expires.
+	r.env = map[string]string{"CROFFLE_DEVICE_TOKEN_TTL": "720h"}
+	r.mustRun("", "token", "issue", "alice", "--device-name", "from-setting")
+	res = r.mustRun("", "token", "issue", "alice", "--device-name", "forever", "--no-expiry")
+	if !strings.Contains(res.err, "does not expire") {
+		t.Errorf("--no-expiry stderr = %q", res.err)
+	}
+
+	devices := list()
+	if devices["default"].Expires != "" || devices["forever"].Expires != "" {
+		t.Errorf("no-expiry tokens got an expiry: %+v", devices)
+	}
+	if devices["one-hour"].Expires == "" || devices["from-setting"].Expires == "" {
+		t.Errorf("expiring tokens have none: %+v", devices)
+	}
+	table := r.mustRun("", "token", "list", "alice").out
+	if !strings.Contains(table, "EXPIRES") || !strings.Contains(table, "never") {
+		t.Errorf("table = %q", table)
+	}
+
+	if _, err := r.run("", "token", "issue", "alice", "--expires-in", "1h", "--no-expiry"); err == nil {
+		t.Error("contradicting flags accepted")
+	}
+	if _, err := r.run("", "token", "issue", "alice", "--expires-in", "soon"); err == nil {
+		t.Error("a bad duration was accepted")
 	}
 }

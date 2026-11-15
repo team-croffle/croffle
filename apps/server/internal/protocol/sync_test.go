@@ -280,3 +280,11 @@ func TestDecodeBootstrapCursorRejectsGarbage(t *testing.T) {
 func base64Of(s string) string {
 	return base64.RawURLEncoding.EncodeToString([]byte(s))
 }
+
+func TestFeaturesAreSortedAndUnique(t *testing.T) {
+	for i := 1; i < len(Features); i++ {
+		if Features[i-1] >= Features[i] {
+			t.Fatalf("Features not sorted or has a duplicate: %v", Features)
+		}
+	}
+}

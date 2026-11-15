@@ -15,6 +15,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/config"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
@@ -210,7 +211,14 @@ func (c *command) tokenIssue() error {
 	fs := c.flags("issue", false)
 	deviceName := fs.String("device-name", "", "label for this device")
 	clientID := fs.String("client-id", "", "the desktop's clientId (generated when empty)")
+	expiresIn := fs.String("expires-in", "", "token lifetime, e.g. 720h (default "+config.EnvDeviceTokenTTL+", which defaults to never)")
+	noExpiry := fs.Bool("no-expiry", false, "issue a token that never expires, whatever "+config.EnvDeviceTokenTTL+" says")
 	if err := c.parse(fs); err != nil {
+		return err
+	}
+
+	ttl, err := c.deviceTokenTTL(*expiresIn, *noExpiry)
+	if err != nil {
 		return err
 	}
 
@@ -233,10 +241,16 @@ func (c *command) tokenIssue() error {
 		deviceID = newID("client")
 	}
 
-	if err := c.db.UpsertDevice(c.ctx, store.Device{
+	now := time.Now()
+	device := store.Device{
 		ID: deviceID, AccountID: account.ID,
-		Name: valueOr(*deviceName, "issued by cli"), TokenHash: hash, CreatedAt: time.Now(),
-	}); err != nil {
+		Name: valueOr(*deviceName, "issued by cli"), TokenHash: hash, CreatedAt: now,
+	}
+	if ttl > 0 {
+		expires := now.Add(ttl)
+		device.TokenExpiresAt = &expires
+	}
+	if err := c.db.UpsertDevice(c.ctx, device); err != nil {
 		return err
 	}
 
@@ -244,6 +258,11 @@ func (c *command) tokenIssue() error {
 	// stdout into a file does not bury the warning.
 	fmt.Fprintf(c.errOut, "this token is shown once and is not recoverable; it will be in your shell history\n")
 	c.printf("%s\n", token)
+	if device.TokenExpiresAt != nil {
+		fmt.Fprintf(c.errOut, "it expires at %s\n", formatTime(device.TokenExpiresAt))
+	} else {
+		fmt.Fprintf(c.errOut, "it does not expire; revoke it with `croffle-server token revoke %s`\n", deviceID)
+	}
 
 	if generated {
 		fmt.Fprintf(c.errOut,
@@ -272,6 +291,7 @@ func (c *command) tokenList() error {
 	if err != nil {
 		return err
 	}
+	now := time.Now()
 
 	if c.asJSON {
 		// Not even the hash: it is credential material and no operator task
@@ -282,22 +302,27 @@ func (c *command) tokenList() error {
 			Name      string `json:"name"`
 			CreatedAt string `json:"createdAt"`
 			LastSeen  string `json:"lastSeenAt,omitempty"`
+			Expires   string `json:"tokenExpiresAt,omitempty"`
 			State     string `json:"state"`
 		}
 		out := make([]row, 0, len(devices))
 		for _, d := range devices {
 			out = append(out, row{d.ID, d.AccountID, d.Name,
-				formatTime(&d.CreatedAt), formatTime(d.LastSeenAt), deviceState(d)})
+				formatTime(&d.CreatedAt), formatTime(d.LastSeenAt), formatTime(d.TokenExpiresAt), d.State(now)})
 		}
 		return c.writeJSON(out)
 	}
 
 	rows := make([][]string, 0, len(devices))
 	for _, d := range devices {
+		expires := "never"
+		if d.TokenExpiresAt != nil {
+			expires = formatTime(d.TokenExpiresAt)
+		}
 		rows = append(rows, []string{d.ID, d.AccountID, d.Name,
-			formatTime(&d.CreatedAt), formatTime(d.LastSeenAt), deviceState(d)})
+			formatTime(&d.CreatedAt), formatTime(d.LastSeenAt), expires, d.State(now)})
 	}
-	c.table([]string{"DEVICE", "ACCOUNT", "NAME", "CREATED", "LAST SEEN", "STATE"}, rows)
+	c.table([]string{"DEVICE", "ACCOUNT", "NAME", "CREATED", "LAST SEEN", "EXPIRES", "STATE"}, rows)
 	return nil
 }
 
@@ -596,16 +621,24 @@ func newID(prefix string) string {
 	return prefix + "-" + hex.EncodeToString(buf[:])
 }
 
-func deviceState(d store.Device) string {
-	switch {
-	case d.Revoked():
-		return "revoked"
-	case d.LastSeenAt == nil:
-		// Issued but never used: a token waiting to be pasted into a desktop.
-		return "pending"
-	default:
-		return "active"
+// deviceTokenTTL decides a CLI-issued token's lifetime: --no-expiry wins, then
+// --expires-in, then the server's CROFFLE_DEVICE_TOKEN_TTL, which defaults to
+// never. Zero means no expiry.
+func (c *command) deviceTokenTTL(expiresIn string, noExpiry bool) (time.Duration, error) {
+	if noExpiry {
+		if strings.TrimSpace(expiresIn) != "" {
+			return 0, errors.New("--expires-in and --no-expiry contradict each other; pass one")
+		}
+		return 0, nil
 	}
+	if raw := strings.TrimSpace(expiresIn); raw != "" {
+		ttl, err := time.ParseDuration(raw)
+		if err != nil || ttl <= 0 {
+			return 0, fmt.Errorf("--expires-in: want a positive duration such as 720h, got %q", raw)
+		}
+		return ttl, nil
+	}
+	return config.ParseTokenTTL(config.EnvDeviceTokenTTL, c.getenv(config.EnvDeviceTokenTTL))
 }
 
 func formatTime(t *time.Time) string {

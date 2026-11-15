@@ -12,7 +12,9 @@ export type Device = {
   name: string;
   createdAt: number;
   lastSeenAt?: number;
-  state: 'active' | 'pending' | 'revoked';
+  /** Absent for a device token that never expires. */
+  tokenExpiresAt?: number;
+  state: 'active' | 'pending' | 'expired' | 'revoked';
 };
 
 export type Team = {
@@ -46,6 +48,7 @@ export type Commit = {
 export type Health = {
   server: string;
   protocol: { min: number; max: number };
+  features?: string[];
   db: string;
   retention?: { oldestCommitSeq: number; purgedThroughSeq: number };
   time: number;

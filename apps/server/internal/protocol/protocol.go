@@ -20,3 +20,11 @@ const (
 	HeaderVersion  = "X-Croffle-Sync-Version"
 	HeaderClientID = "X-Croffle-Client"
 )
+
+// Features lists the optional capabilities this server offers on top of the
+// protocol range, sorted by name. GET /health reports it so a client can find
+// out what it may use without the protocol version changing: everything here
+// is additive, and a client that knows none of it still speaks protocol 1.
+//
+//   - device-token-ttl: device tokens may carry an expiry (LoginResponse.ExpiresAt)
+var Features = []string{"device-token-ttl"}

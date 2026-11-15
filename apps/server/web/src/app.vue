@@ -182,6 +182,7 @@
           { key: 'name', label: 'Name' },
           { key: 'createdAt', label: 'Created' },
           { key: 'lastSeenAt', label: 'Last seen' },
+          { key: 'tokenExpiresAt', label: 'Token expires' },
           { key: 'state', label: 'State' },
           { key: 'actions', label: '' },
         ]"
@@ -190,6 +191,11 @@
       >
         <template #createdAt="{ row }">{{ formatTime((row as Device).createdAt) }}</template>
         <template #lastSeenAt="{ row }">{{ formatTime((row as Device).lastSeenAt) }}</template>
+        <template #tokenExpiresAt="{ row }">
+          {{
+            (row as Device).tokenExpiresAt ? formatTime((row as Device).tokenExpiresAt) : 'never'
+          }}
+        </template>
         <template #state="{ row }">
           <span class="tag">{{ (row as Device).state }}</span>
         </template>
