@@ -97,7 +97,9 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 	}
 
 	authService := auth.NewService(db, time.Now).WithPolicy(auth.Policy{
-		DeviceTokenTTL: cfg.DeviceTokenTTL,
+		DeviceTokenTTL:  cfg.DeviceTokenTTL,
+		AccessTokenTTL:  cfg.AccessTokenTTL,
+		RefreshTokenTTL: cfg.RefreshTokenTTL,
 	})
 
 	// Hooks: one optional webhook sink. Without a URL this is a no-op emitter

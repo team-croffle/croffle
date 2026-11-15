@@ -23,6 +23,9 @@ type fakeAuth struct {
 	gotLogin    auth.LoginRequest
 	gotToken    string
 
+	pairResult auth.PairResult
+	pairErr    error
+
 	account  *store.Account
 	checkErr error
 	gotCheck [3]string
@@ -31,6 +34,16 @@ type fakeAuth struct {
 func (f *fakeAuth) Login(_ context.Context, req auth.LoginRequest) (auth.LoginResult, error) {
 	f.gotLogin = req
 	return f.loginResult, f.loginErr
+}
+
+func (f *fakeAuth) IssuePair(_ context.Context, req auth.LoginRequest) (auth.PairResult, error) {
+	f.gotLogin = req
+	return f.pairResult, f.pairErr
+}
+
+func (f *fakeAuth) Refresh(_ context.Context, token string) (auth.PairResult, error) {
+	f.gotToken = token
+	return f.pairResult, f.pairErr
 }
 
 func (f *fakeAuth) Authenticate(_ context.Context, token string) (auth.Identity, error) {

@@ -42,7 +42,9 @@ const (
 
 	EnvDashTrustedOrigins = "CROFFLE_DASH_TRUSTED_ORIGINS"
 
-	EnvDeviceTokenTTL = "CROFFLE_DEVICE_TOKEN_TTL"
+	EnvDeviceTokenTTL  = "CROFFLE_DEVICE_TOKEN_TTL"
+	EnvAccessTokenTTL  = "CROFFLE_ACCESS_TOKEN_TTL"
+	EnvRefreshTokenTTL = "CROFFLE_REFRESH_TOKEN_TTL"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -103,6 +105,10 @@ type Config struct {
 	// now on. Zero (the default) means they never expire, which is what
 	// desktop 1.3.0 needs: it cannot renew a token without the password.
 	DeviceTokenTTL time.Duration
+	// AccessTokenTTL and RefreshTokenTTL are the lifetimes of the pairs
+	// POST /auth/token issues (default 15 minutes and 30 days).
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
 // Load parses args (without the program name) and the environment.
@@ -166,6 +172,17 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 
 	if cfg.DeviceTokenTTL, err = ParseTokenTTL(EnvDeviceTokenTTL, getenv(EnvDeviceTokenTTL)); err != nil {
 		return nil, err
+	}
+
+	if cfg.AccessTokenTTL, err = parsePositiveDuration(EnvAccessTokenTTL, getenv(EnvAccessTokenTTL), DefaultAccessTokenTTL); err != nil {
+		return nil, err
+	}
+	if cfg.RefreshTokenTTL, err = parsePositiveDuration(EnvRefreshTokenTTL, getenv(EnvRefreshTokenTTL), DefaultRefreshTokenTTL); err != nil {
+		return nil, err
+	}
+	if cfg.AccessTokenTTL >= cfg.RefreshTokenTTL {
+		return nil, fmt.Errorf("%s (%s) must be shorter than %s (%s)",
+			EnvAccessTokenTTL, cfg.AccessTokenTTL, EnvRefreshTokenTTL, cfg.RefreshTokenTTL)
 	}
 
 	if cfg.DashTrustedOrigins, err = parseOrigins(EnvDashTrustedOrigins, getenv(EnvDashTrustedOrigins)); err != nil {
@@ -321,4 +338,23 @@ func ParseTokenTTL(name, raw string) (time.Duration, error) {
 		return 0, fmt.Errorf("%s: must not be negative, got %q", name, raw)
 	}
 	return ttl, nil
+}
+
+// Token-pair defaults. They match auth.DefaultAccessTokenTTL and
+// auth.DefaultRefreshTokenTTL; config does not import auth.
+const (
+	DefaultAccessTokenTTL  = 15 * time.Minute
+	DefaultRefreshTokenTTL = 30 * 24 * time.Hour
+)
+
+func parsePositiveDuration(name, raw string, fallback time.Duration) (time.Duration, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return fallback, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil || d <= 0 {
+		return 0, fmt.Errorf("%s: want a positive duration such as 15m, got %q", name, raw)
+	}
+	return d, nil
 }

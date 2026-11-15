@@ -44,6 +44,14 @@ func (allowAnyToken) Authenticate(context.Context, string) (auth.Identity, error
 	return auth.Identity{AccountID: "acct-1", DeviceID: "client-1"}, nil
 }
 
+func (allowAnyToken) IssuePair(context.Context, auth.LoginRequest) (auth.PairResult, error) {
+	return auth.PairResult{}, auth.ErrInvalidCredentials
+}
+
+func (allowAnyToken) Refresh(context.Context, string) (auth.PairResult, error) {
+	return auth.PairResult{}, auth.ErrInvalidCredentials
+}
+
 func (allowAnyToken) CheckPassword(context.Context, string, string, string) (*store.Account, error) {
 	return nil, auth.ErrInvalidCredentials
 }
