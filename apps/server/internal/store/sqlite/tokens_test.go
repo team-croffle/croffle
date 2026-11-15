@@ -240,7 +240,7 @@ func TestMigrateFrom010(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, m := range migrations {
-		if m.version > 3 {
+		if m.version > 3 { // 0.1.0 shipped migrations 0001-0003
 			break
 		}
 		if err := legacy.applyMigration(ctx, m); err != nil {
@@ -267,7 +267,13 @@ func TestMigrateFrom010(t *testing.T) {
 	if device.TokenExpiresAt != nil || device.TokenExpired(time.Now()) {
 		t.Fatalf("0.1.0 token picked up an expiry: %+v", device)
 	}
-	if got := countRows(t, db, "auth_token"); got != 0 {
-		t.Fatalf("auth_token has %d rows after upgrade", got)
+	for _, table := range []string{"auth_token", "account_otp", "otp_recovery_code"} {
+		if got := countRows(t, db, table); got != 0 {
+			t.Fatalf("%s has %d rows after upgrade", table, got)
+		}
+	}
+	// An upgraded account has no one-time codes, so its password alone works.
+	if _, err := db.FindOTP(ctx, "acct-1"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("upgraded account has an enrolment: %v", err)
 	}
 }

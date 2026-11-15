@@ -26,6 +26,13 @@ type fakeAuth struct {
 	pairResult auth.PairResult
 	pairErr    error
 
+	otpState  string
+	enrolment auth.OTPEnrollment
+	recovery  []string
+	otpErr    error
+	gotCode   string
+	gotOTP    string
+
 	account  *store.Account
 	checkErr error
 	gotCheck [3]string
@@ -51,8 +58,30 @@ func (f *fakeAuth) Authenticate(_ context.Context, token string) (auth.Identity,
 	return f.identity, f.authErr
 }
 
-func (f *fakeAuth) CheckPassword(_ context.Context, username, password, remoteIP string) (*store.Account, error) {
+func (f *fakeAuth) OTPState(context.Context, string) (string, error) {
+	if f.otpState == "" {
+		return "off", nil
+	}
+	return f.otpState, nil
+}
+
+func (f *fakeAuth) BeginOTP(_ context.Context, _, _ string) (auth.OTPEnrollment, error) {
+	return f.enrolment, f.otpErr
+}
+
+func (f *fakeAuth) ConfirmOTP(_ context.Context, _, code string) ([]string, error) {
+	f.gotCode = code
+	return f.recovery, f.otpErr
+}
+
+func (f *fakeAuth) DisableOTP(_ context.Context, _, password, code, _ string) error {
+	f.gotCode = code
+	return f.otpErr
+}
+
+func (f *fakeAuth) CheckPassword(_ context.Context, username, password, otp, remoteIP string) (*store.Account, error) {
 	f.gotCheck = [3]string{username, password, remoteIP}
+	f.gotOTP = otp
 	if f.checkErr != nil {
 		return nil, f.checkErr
 	}

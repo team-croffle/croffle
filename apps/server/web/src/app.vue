@@ -14,8 +14,9 @@
   } from './api';
   import DataTable from './components/data-table.vue';
   import LoginForm from './components/login-form.vue';
+  import SecurityPanel from './components/security-panel.vue';
 
-  type Tab = 'devices' | 'teams' | 'rows' | 'commits';
+  type Tab = 'devices' | 'teams' | 'rows' | 'commits' | 'security';
 
   const me = ref<Me | null>(null);
   const health = ref<Health | null>(null);
@@ -65,6 +66,9 @@
           commitCursor.value = page.serverSeq;
           break;
         }
+        case 'security':
+          me.value = await api.me();
+          break;
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -165,6 +169,7 @@
         <button :aria-current="tab === 'teams'" @click="select('teams')">Teams</button>
         <button :aria-current="tab === 'rows'" @click="select('rows')">Rows</button>
         <button :aria-current="tab === 'commits'" @click="select('commits')">Commits</button>
+        <button :aria-current="tab === 'security'" @click="select('security')">Security</button>
       </nav>
 
       <p class="notice">
@@ -256,6 +261,8 @@
           <span>{{ rows.length }} shown</span>
         </div>
       </template>
+
+      <SecurityPanel v-else-if="tab === 'security'" :me="me" @changed="load" />
 
       <template v-else>
         <DataTable

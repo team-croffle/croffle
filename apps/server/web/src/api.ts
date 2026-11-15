@@ -5,6 +5,14 @@ export type Me = {
   accountId: string;
   username: string;
   teams: string[];
+  otpEnabled: boolean;
+};
+
+export type OtpEnrolment = {
+  secret: string;
+  otpauthUri: string;
+  /** data: URL of the QR code, rendered by the server. */
+  qrPng: string;
 };
 
 export type Device = {
@@ -94,13 +102,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<Health>('health'),
   me: () => request<Me>('dash/me'),
-  login: (username: string, password: string) =>
-    request<Me>('dash/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  login: (username: string, password: string, otp = '') =>
+    request<Me>('dash/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, otp: otp || undefined }),
+    }),
   logout: () => request<void>('dash/logout', { method: 'POST' }),
   devices: () => request<{ devices: Device[] }>('dash/devices'),
   revokeDevice: (id: string) =>
     request<void>(`dash/devices/${encodeURIComponent(id)}/revoke`, { method: 'POST' }),
   teams: () => request<{ teams: Team[] }>('dash/teams'),
+  otpEnroll: () => request<OtpEnrolment>('dash/otp/enroll', { method: 'POST', body: '{}' }),
+  otpConfirm: (code: string) =>
+    request<{ recoveryCodes: string[] }>('dash/otp/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  otpDisable: (password: string, code: string) =>
+    request<void>('dash/otp/disable', { method: 'POST', body: JSON.stringify({ password, code }) }),
   rows: (afterTable = '', afterRowId = '', limit = 50) =>
     request<{ rows: Row[]; hasMore: boolean; serverSeq: number }>(
       `dash/rows?limit=${limit}&afterTable=${encodeURIComponent(afterTable)}&afterRowId=${encodeURIComponent(afterRowId)}`,

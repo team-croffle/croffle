@@ -8,9 +8,9 @@ package protocol
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	// OTP is reserved: the desktop sends it after a 401 with code
-	// "otp_required". Server 0.1 has no way to enrol a secret, so nothing
-	// requires it yet.
+	// OTP is the six-digit code or a recovery code. The desktop sends it after
+	// a 401 with code "otp_required", which an account with one-time codes
+	// enabled (server 0.1.1) answers when it is missing.
 	OTP string `json:"otp,omitempty"`
 	// ClientID is the desktop's own clientId. It becomes the device id, which
 	// is the same value that appears in a row's lastWriterId.

@@ -149,6 +149,19 @@ type TokenPair struct {
 	Refresh AuthToken
 }
 
+// OTP is an account's one-time-code enrolment.
+type OTP struct {
+	AccountID string
+	Secret    string
+	// EnabledAt is nil while the enrolment waits for its first code.
+	EnabledAt *time.Time
+	LastStep  int64
+	CreatedAt time.Time
+}
+
+// Enabled reports whether sign-in requires a code.
+func (o OTP) Enabled() bool { return o.EnabledAt != nil }
+
 // ErrTokenUsed means a refresh token was exchanged a second time.
 var ErrTokenUsed = errors.New("store: refresh token already used")
 
@@ -480,6 +493,24 @@ type Store interface {
 	RotateRefresh(ctx context.Context, oldHash []byte, at time.Time, next TokenPair) error
 	// RevokeTokenFamily revokes every token of one family.
 	RevokeTokenFamily(ctx context.Context, familyID string, at time.Time) error
+
+	// FindOTP returns ErrNotFound when the account has no enrolment.
+	FindOTP(ctx context.Context, accountID string) (*OTP, error)
+	// StartOTP stores a pending enrolment, replacing an earlier pending one.
+	// It returns ErrDuplicate when the account already has one enabled.
+	StartOTP(ctx context.Context, accountID, secret string, at time.Time) error
+	// EnableOTP turns a pending enrolment on at step, and stores the recovery
+	// code hashes, replacing any earlier ones. ErrNotFound when nothing is
+	// pending.
+	EnableOTP(ctx context.Context, accountID string, step int64, recoveryHashes [][]byte, at time.Time) error
+	// AdvanceOTPStep records that a code for step was accepted. It reports
+	// false when step is not after the last accepted one (a replay).
+	AdvanceOTPStep(ctx context.Context, accountID string, step int64) (bool, error)
+	// UseRecoveryCode spends one recovery code. It reports false when the
+	// code is unknown or already used.
+	UseRecoveryCode(ctx context.Context, accountID string, codeHash []byte, at time.Time) (bool, error)
+	// DeleteOTP removes the enrolment and every recovery code of the account.
+	DeleteOTP(ctx context.Context, accountID string) error
 
 	// FindDeviceByTokenHash resolves a bearer token to its device. Revoked
 	// devices and disabled accounts are the caller's business to reject.

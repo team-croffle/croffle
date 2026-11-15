@@ -157,6 +157,9 @@ type fakeStore struct {
 
 	registered []store.Device
 	tokens     map[string]*store.AuthToken
+
+	otp      *store.OTP
+	recovery map[string]bool // hash -> used
 }
 
 func (f *fakeStore) FindAccountByUsername(_ context.Context, username string) (*store.Account, error) {
@@ -249,6 +252,58 @@ func (f *fakeStore) RevokeTokenFamily(_ context.Context, family string, at time.
 			token.RevokedAt = &at
 		}
 	}
+	return nil
+}
+
+func (f *fakeStore) FindOTP(_ context.Context, _ string) (*store.OTP, error) {
+	if f.otp == nil {
+		return nil, store.ErrNotFound
+	}
+	copied := *f.otp
+	return &copied, nil
+}
+
+func (f *fakeStore) StartOTP(_ context.Context, accountID, secret string, at time.Time) error {
+	if f.otp != nil && f.otp.Enabled() {
+		return store.ErrDuplicate
+	}
+	f.otp = &store.OTP{AccountID: accountID, Secret: secret, CreatedAt: at}
+	return nil
+}
+
+func (f *fakeStore) EnableOTP(_ context.Context, _ string, step int64, hashes [][]byte, at time.Time) error {
+	if f.otp == nil || f.otp.Enabled() {
+		return store.ErrNotFound
+	}
+	f.otp.EnabledAt = &at
+	f.otp.LastStep = step
+	f.recovery = map[string]bool{}
+	for _, h := range hashes {
+		f.recovery[string(h)] = false
+	}
+	return nil
+}
+
+func (f *fakeStore) AdvanceOTPStep(_ context.Context, _ string, step int64) (bool, error) {
+	if f.otp == nil || step <= f.otp.LastStep {
+		return false, nil
+	}
+	f.otp.LastStep = step
+	return true, nil
+}
+
+func (f *fakeStore) UseRecoveryCode(_ context.Context, _ string, hash []byte, _ time.Time) (bool, error) {
+	used, ok := f.recovery[string(hash)]
+	if !ok || used {
+		return false, nil
+	}
+	f.recovery[string(hash)] = true
+	return true, nil
+}
+
+func (f *fakeStore) DeleteOTP(context.Context, string) error {
+	f.otp = nil
+	f.recovery = nil
 	return nil
 }
 

@@ -56,8 +56,9 @@ type Identity struct {
 type LoginRequest struct {
 	Username string
 	Password string
-	// OTP is accepted now so the desktop's flow exists end to end; 0.1 has no
-	// way to enrol a TOTP secret, so it is only validated once that lands.
+	// OTP is the six-digit code, or a recovery code, for an account with
+	// one-time codes enabled (0.1.1). Without one such an account gets
+	// ErrOTPRequired, which desktop 1.3.0 answers by asking for the code.
 	OTP string
 	// ClientID is the desktop's own clientId and becomes the device id, which
 	// is also what appears in a row's lastWriterId.
@@ -137,7 +138,11 @@ func (s *Service) WithPolicy(p Policy) *Service {
 // The dashboard uses it: a browser login must not create a device or a sync
 // token. Rate limiting and the equal-time failure path are shared with Login,
 // because an attacker should not be able to pick the cheaper door.
-func (s *Service) CheckPassword(ctx context.Context, username, password, remoteIP string) (*store.Account, error) {
+//
+// otp is the one-time code (or recovery code) for an account that has them
+// enabled; it is ignored otherwise. A correct password without a code is
+// ErrOTPRequired. A wrong code costs a rate-limit attempt like a wrong password.
+func (s *Service) CheckPassword(ctx context.Context, username, password, otp, remoteIP string) (*store.Account, error) {
 	username = strings.TrimSpace(username)
 	if username == "" || password == "" {
 		return nil, ErrInvalidCredentials
@@ -171,6 +176,9 @@ func (s *Service) CheckPassword(ctx context.Context, username, password, remoteI
 	if account.Disabled() {
 		return nil, ErrAccountDisabled
 	}
+	if err := s.verifyOTP(ctx, account.ID, otp); err != nil {
+		return nil, err
+	}
 
 	s.limiter.Reset(limitKey)
 	return account, nil
@@ -187,7 +195,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, err
 		return LoginResult{}, ErrMissingClientID
 	}
 
-	account, err := s.CheckPassword(ctx, req.Username, req.Password, req.RemoteIP)
+	account, err := s.CheckPassword(ctx, req.Username, req.Password, req.OTP, req.RemoteIP)
 	if err != nil {
 		return LoginResult{}, err
 	}
@@ -243,7 +251,7 @@ func (s *Service) IssuePair(ctx context.Context, req LoginRequest) (PairResult, 
 		return PairResult{}, ErrMissingClientID
 	}
 
-	account, err := s.CheckPassword(ctx, req.Username, req.Password, req.RemoteIP)
+	account, err := s.CheckPassword(ctx, req.Username, req.Password, req.OTP, req.RemoteIP)
 	if err != nil {
 		return PairResult{}, err
 	}
