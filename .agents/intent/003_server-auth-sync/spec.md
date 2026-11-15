@@ -113,16 +113,16 @@ CSRF 는 Go 1.25 부터 표준인 `net/http.CrossOriginProtection` 을 쓰므로
 ## 작업 단위
 각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트(`make -C apps/server check`, 대시보드를 고치면 `pnpm --dir apps/server/web build`, 공통 게이트)를 통과합니다.
 
-- [ ] W-1 `--password-stdin` 터미널 입력 + README 안내 — S-1
-- [ ] W-2 rate limit 을 `x/time/rate` 로 교체 + 의존성 원칙(AGENTS.md · README) — S-2, S-12
-- [ ] W-3 대시보드 CSRF(`http.CrossOriginProtection`) + 대시보드 기기 회수 — S-2, S-7
-- [ ] W-4 마이그레이션 0004 + 토큰 store 메서드 + sweep — S-3, S-6
-- [ ] W-5 기기 토큰 만료 설정 + CLI `--expires-in` / `--no-expiry` + 만료 표시 — S-5. 의존: W-4
-- [ ] W-6 `POST /auth/token`(password · refresh, 회전 · 재사용 감지) + access token 인증 + `/health` `features` — S-6, S-7, S-10. 의존: W-4
-- [ ] W-7 TOTP: 마이그레이션 0005 + 로그인 검증 + 대시보드 등록/해제 · 복구 코드 + CLI — S-4. 의존: W-3(CSRF), W-6(`/auth/token` 의 OTP 규칙)
-- [ ] W-8 충돌 `differentFields` + 픽스처 13 — S-8, S-10
-- [ ] W-9 metrics — S-9. W-6 · W-7 뒤에 두어 인증 지표를 한 번에 붙입니다
-- [ ] W-10 README(en · ko) · 호환 표 · 릴리스 노트 0.1.1 — S-13
+- [x] W-1 (f3a67f4) `--password-stdin` 터미널 입력 + README 안내 — S-1
+- [x] W-2 (305f488) rate limit 을 `x/time/rate` 로 교체 + 의존성 원칙(AGENTS.md · README) — S-2, S-12
+- [x] W-3 (17bff1e) 대시보드 CSRF(`http.CrossOriginProtection`) + 대시보드 기기 회수 — S-2, S-7
+- [x] W-4 (601ac72) 마이그레이션 0004 + 토큰 store 메서드 + sweep — S-3, S-6
+- [x] W-5 (1e0c685) 기기 토큰 만료 설정 + CLI `--expires-in` / `--no-expiry` + 만료 표시 — S-5. 의존: W-4
+- [x] W-6 (158c9a9) `POST /auth/token`(password · refresh, 회전 · 재사용 감지) + access token 인증 + `/health` `features` — S-6, S-7, S-10. 의존: W-4
+- [x] W-7 (7fb8d9a) TOTP: 마이그레이션 0005 + 로그인 검증 + 대시보드 등록/해제 · 복구 코드 + CLI — S-4. 의존: W-3(CSRF), W-6(`/auth/token` 의 OTP 규칙)
+- [x] W-8 (63b8477) 충돌 `differentFields` + 픽스처 13 — S-8, S-10
+- [x] W-9 (ee4775b) metrics — S-9. W-6 · W-7 뒤에 두어 인증 지표를 한 번에 붙입니다
+- [x] W-10 (93c3bd2) README(en · ko) · 호환 표 · 릴리스 노트 0.1.1 — S-13
 
 intent 계획과 다른 점: 계획 3(토큰 발급)을 저장소(W-4) · 기기 토큰 만료(W-5) · access/refresh(W-6) 셋으로 나눴습니다. 만료 설정과 새 엔드포인트를 따로 되돌릴 수 있게 하려는 것입니다. 계획 2의 TOTP(W-7)는 대시보드 CSRF(W-3)와 `/auth/token`(W-6) 뒤로 옮겼습니다. 등록 화면은 CSRF 보호가 먼저 있어야 하고, OTP 규칙을 세 로그인 입구에 한 번에 붙이기 위해서입니다.
 
