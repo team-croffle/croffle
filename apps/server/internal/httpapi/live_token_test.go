@@ -222,3 +222,27 @@ func TestLiveConflictDifferentFields(t *testing.T) {
 		t.Errorf("server row title = %q after conflicts, want moved", title)
 	}
 }
+
+func TestLoginRateLimitPerUsername(t *testing.T) {
+	srv := startServer(t)
+	wrong := protocol.LoginRequest{Username: testUsername, Password: "nope", ClientID: testClientID}
+
+	for i := 1; i <= 5; i++ {
+		res, body := srv.post(t, "/auth/login", wrong, "")
+		if res.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("attempt %d: %d %s, want 401 inside the burst", i, res.StatusCode, body)
+		}
+	}
+	res, body := srv.post(t, "/auth/login", wrong, "")
+	if res.StatusCode != http.StatusTooManyRequests || !strings.Contains(string(body), `"too_many_attempts"`) {
+		t.Fatalf("sixth attempt: %d %s, want 429 too_many_attempts", res.StatusCode, body)
+	}
+	if got := res.Header.Get("Retry-After"); got != "30" {
+		t.Errorf("Retry-After = %q, want 30", got)
+	}
+	// Another username from the same address has its own bucket.
+	other := protocol.LoginRequest{Username: "bob", Password: "nope", ClientID: testClientID}
+	if res, _ := srv.post(t, "/auth/login", other, ""); res.StatusCode != http.StatusUnauthorized {
+		t.Errorf("another username: %d, want 401", res.StatusCode)
+	}
+}
