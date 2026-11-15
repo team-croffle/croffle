@@ -164,6 +164,29 @@ server {
 `--password`보다 `--password-stdin`을 쓰세요. 플래그로 넘긴 비밀번호는 쉘 히스토리와
 프로세스 목록에 남습니다.
 
+`--password-stdin` 은 stdin 이 무엇이냐에 따라 다르게 읽습니다.
+
+- **터미널** — `Password: ` 를 띄우고, 입력을 화면에 보이지 않게 한 줄 읽고, Enter 에서
+  끝납니다. `docker compose exec` 는 기본으로 터미널을 붙여 줍니다. `docker exec` 를
+  쓸 때는 `-it` 를 붙입니다.
+
+  ```bash
+  docker exec -it croffle-server croffle-server user create alice --password-stdin
+  ```
+
+  Windows Git Bash(MinTTY)에서는 `winpty` 로 감싸야 컨테이너에 터미널이 붙습니다.
+
+  ```bash
+  winpty docker exec -it croffle-server croffle-server user create alice --password-stdin
+  ```
+
+- **파이프나 파일** — 끝까지 읽고 마지막 줄바꿈만 뗍니다. 스크립트용입니다. `-t` 없이
+  `-i` 만 붙입니다.
+
+  ```bash
+  printf '%s' "$PW" | docker exec -i croffle-server croffle-server user create alice --password-stdin
+  ```
+
 ### revoke 와 disable 의 차이
 
 같지 않고, 그 차이가 중요합니다.

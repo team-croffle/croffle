@@ -169,6 +169,30 @@ Every command takes `--db` to point at the database file, and the listings take
 Prefer `--password-stdin` over `--password`: a password in a flag ends up in the
 shell history and in the process list.
 
+`--password-stdin` reads differently depending on what stdin is:
+
+- **A terminal** — it prints `Password: `, reads one line without echoing it, and
+  stops at Enter. `docker compose exec` gives the command a terminal by default;
+  with plain `docker exec`, pass `-it`:
+
+  ```bash
+  docker exec -it croffle-server croffle-server user create alice --password-stdin
+  ```
+
+  In Windows Git Bash (MinTTY), wrap it in `winpty`, or the container does not
+  get a terminal:
+
+  ```bash
+  winpty docker exec -it croffle-server croffle-server user create alice --password-stdin
+  ```
+
+- **A pipe or a file** — it reads to the end and drops the trailing newline, for
+  scripts. Use `-i` without `-t`:
+
+  ```bash
+  printf '%s' "$PW" | docker exec -i croffle-server croffle-server user create alice --password-stdin
+  ```
+
 ### Revoking versus disabling
 
 They are not the same, and the difference matters:

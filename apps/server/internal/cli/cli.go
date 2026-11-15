@@ -7,7 +7,7 @@
 //
 // In a container the usual form is:
 //
-//	docker exec <container> croffle-server user create alice --password-stdin
+//	docker exec -it <container> croffle-server user create alice --password-stdin
 package cli
 
 import (
