@@ -2,9 +2,10 @@
 id: "003"
 slug: server-auth-sync
 version: "server-0.1.1"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "응. TOTP도 넣으면 좋지. intent 승인", rev: "ce8d577" }
 waivers: []
 supersedes: null
 ---
@@ -35,7 +36,7 @@ supersedes: null
 
 ## 계획
 1. **`--password-stdin` 수정** — 입력이 터미널이면 한 줄을 echo 없이 읽고, 파이프면 지금처럼 읽습니다. README(en · ko)의 계정 생성 안내를 고칩니다. 독립된 작은 단위라 먼저 합니다.
-2. **인증 라이브러리 도입** — 지금 구조(argon2id 해시 + 기기당 opaque 토큰)는 유지하고, 손으로 짠 부분을 검증된 라이브러리로 바꿉니다: 로그인 rate limit `golang.org/x/time/rate`, 대시보드 세션 · CSRF, (넣는다면) TOTP `pquerna/otp`. 기존 해시 · 토큰은 그대로 검증되어야 합니다(마이그레이션 없이 로그인 유지).
+2. **인증 라이브러리 도입** — 지금 구조(argon2id 해시 + 기기당 opaque 토큰)는 유지하고, 손으로 짠 부분을 검증된 라이브러리로 바꿉니다: 로그인 rate limit `golang.org/x/time/rate`, 대시보드 세션 · CSRF, TOTP 등록 · 검증 · 복구 코드 `pquerna/otp`. 기존 해시 · 토큰은 그대로 검증되어야 합니다(마이그레이션 없이 로그인 유지).
 3. **토큰 발급** — opaque access token + refresh token(회전, 재사용 감지 시 그 기기의 토큰 전체 회수), 갱신 엔드포인트, 대시보드 · CLI 의 기기 목록과 회수. 만료 없는 기기 토큰은 계속 받고, 새로 발급할 수도 있습니다. 운영자가 설정으로 만료를 켤 수 있습니다.
 4. **changeset 비교** — 충돌 응답(`Conflict`)에 서버 행과 보낸 행이 다른 필드 목록을 선택 필드로 더합니다. 판정과 적용은 지금처럼 데스크톱의 `settle` 이 합니다. 공유 픽스처(`packages/sync-fixtures`)에 비교 시나리오를 더해 서버 `go test` 가 읽게 합니다.
 5. **metrics** — Prometheus 형식 `/metrics` 를 `prometheus/client_golang` 으로 둡니다. 기본은 꺼짐이고, 켜면 `CROFFLE_METRICS_LISTEN` 에 지정한 별도 주소에서만 열립니다.
@@ -60,7 +61,7 @@ supersedes: null
 - 서버만 앞서는 버전입니다. 데스크톱이 새 토큰 체계를 쓰는 작업은 이 intent 에 넣지 않습니다.
 
 ## 열린 질문
-1. **TOTP 등록을 0.1.1 에 넣습니까?** 0.1 설계에서 0.2 로 미룬 것입니다. 넣으면 계획 2에서 `pquerna/otp` 로 등록 · 검증 · 복구 코드를 만들고, 빼면 지금처럼 요청 필드만 남깁니다.
+—
 
 ## 질의서 기록
 2026-11-16, 사용자 답:
@@ -72,6 +73,7 @@ supersedes: null
 | 3. 만료 없는 기존 기기 토큰 | "A3. 그렇게 해. 이후로도 만료없는 토큰 가능하게 하고 싶은데" | 계속 받고, 만료는 운영자 설정으로 켭니다. 만료 없는 토큰은 이후 버전에서도 없애지 않습니다(계획 3). |
 | 4. metrics | "A4. ㅇㅇ." | 기본 꺼짐, 켜면 `CROFFLE_METRICS_LISTEN` 에서만(계획 5). |
 | 5. 의존성 원칙 | "A5. 바꿔도 됨." | "검증된 소수 라이브러리 허용", AGENTS.md 수정(계획 6). |
+| 6. TOTP 등록을 0.1.1 에 넣는지 | "응. TOTP도 넣으면 좋지." | `pquerna/otp` 로 등록 · 검증 · 복구 코드를 만듭니다(계획 2). |
 
 PM 해석: A3 의 "이후로도 만료없는 토큰 가능하게"는 ① 1.3.0 이 지금 쓰는 토큰을 계속 받는 것, ② 운영자가 만료를 켠 서버에서도 CLI · 대시보드로 만료 없는 토큰을 따로 발급할 수 있는 것, 두 가지로 읽었습니다.
 
