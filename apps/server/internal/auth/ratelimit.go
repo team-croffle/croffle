@@ -3,11 +3,14 @@ package auth
 import (
 	"sync"
 	"time"
+
+	"golang.org/x/time/rate"
 )
 
-// Rate limiting is deliberately small: an in-memory token bucket per
-// (ip, username). It makes password guessing expensive without pulling in a
-// store, and a restart forgetting the counters is acceptable for 0.1.
+// Rate limiting is per (ip, username): a burst of attempts, then one per
+// refill interval. The bucket itself is golang.org/x/time/rate; this file only
+// keeps one limiter per key and forgets the idle ones. Counters live in memory,
+// so a restart forgets them, which is acceptable for a single self-hosted box.
 const (
 	loginBurst       = 5
 	loginRefill      = 30 * time.Second
@@ -15,15 +18,15 @@ const (
 	limiterMaxKeys   = 10_000
 )
 
-type bucket struct {
-	tokens   float64
+type entry struct {
+	limiter  *rate.Limiter
 	lastSeen time.Time
 }
 
 // Limiter allows a burst of attempts and then one attempt per refill interval.
 type Limiter struct {
 	mu      sync.Mutex
-	buckets map[string]*bucket
+	entries map[string]*entry
 	now     func() time.Time
 }
 
@@ -31,7 +34,7 @@ func NewLimiter(now func() time.Time) *Limiter {
 	if now == nil {
 		now = time.Now
 	}
-	return &Limiter{buckets: map[string]*bucket{}, now: now}
+	return &Limiter{entries: map[string]*entry{}, now: now}
 }
 
 // Allow consumes one attempt for key and reports whether it was permitted.
@@ -40,28 +43,20 @@ func (l *Limiter) Allow(key string) bool {
 	defer l.mu.Unlock()
 
 	now := l.now()
-	b, ok := l.buckets[key]
+	e, ok := l.entries[key]
 	if !ok {
 		// A full map means something is hammering with varying keys; dropping
 		// the idle entries is cheaper than growing without bound.
-		if len(l.buckets) >= limiterMaxKeys {
+		if len(l.entries) >= limiterMaxKeys {
 			l.evictLocked(now)
 		}
-		b = &bucket{tokens: loginBurst, lastSeen: now}
-		l.buckets[key] = b
+		e = &entry{limiter: rate.NewLimiter(rate.Every(loginRefill), loginBurst)}
+		l.entries[key] = e
 	}
-
-	b.tokens += now.Sub(b.lastSeen).Seconds() / loginRefill.Seconds()
-	if b.tokens > loginBurst {
-		b.tokens = loginBurst
-	}
-	b.lastSeen = now
-
-	if b.tokens < 1 {
-		return false
-	}
-	b.tokens--
-	return true
+	e.lastSeen = now
+	// AllowN with an explicit time, so tests drive the clock instead of
+	// sleeping.
+	return e.limiter.AllowN(now, 1)
 }
 
 // Reset clears the bucket for key; called after a successful login so a user
@@ -69,13 +64,20 @@ func (l *Limiter) Allow(key string) bool {
 func (l *Limiter) Reset(key string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	delete(l.buckets, key)
+	delete(l.entries, key)
 }
 
 func (l *Limiter) evictLocked(now time.Time) {
-	for key, b := range l.buckets {
-		if now.Sub(b.lastSeen) > limiterEvictIdle {
-			delete(l.buckets, key)
+	for key, e := range l.entries {
+		if now.Sub(e.lastSeen) > limiterEvictIdle {
+			delete(l.entries, key)
 		}
 	}
+}
+
+// size reports how many keys are tracked; tests use it to check eviction.
+func (l *Limiter) size() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.entries)
 }

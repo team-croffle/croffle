@@ -11,7 +11,7 @@
 ## Project
 
 - Purpose: **Croffle** — a calendar-first, extensible desktop productivity app (Electron; Windows / macOS / Linux, MIT). Local-first: no cloud is required. Features are added through **extensions**. An optional self-hosted Go server (`croffle-server`) adds sync between devices and team sharing.
-- Stack: Electron, Vue 3, Vite (electron-vite), Tailwind CSS, TypeScript · SQLite (`better-sqlite3`) + **Drizzle** (README still mentions TypeORM; the code is the truth) · FullCalendar, rrule, Pinia, vue-i18n, electron-updater · pnpm workspaces, Changesets, oxlint, oxfmt, husky · server: Go stdlib + `modernc.org/sqlite`, Vue dashboard.
+- Stack: Electron, Vue 3, Vite (electron-vite), Tailwind CSS, TypeScript · SQLite (`better-sqlite3`) + **Drizzle** (README still mentions TypeORM; the code is the truth) · FullCalendar, rrule, Pinia, vue-i18n, electron-updater · pnpm workspaces, Changesets, oxlint, oxfmt, husky · server: Go (stdlib first, a few vetted libraries) + `modernc.org/sqlite`, Vue dashboard.
 - Requirements: Node ≥ 24, pnpm 12 (`packageManager`, Corepack), Go (version in `apps/server/go.mod`) for the server.
 
 ## Goals and scope
@@ -44,7 +44,7 @@ Root, unless noted. The gates in `.agents/harness/gates.yaml` are the ones CI ru
 | `packages/cli`           | `@croffledev/croffle-cli`   | npm                                   |
 | `packages/sync-fixtures` | —                           | not published (shared test data)      |
 
-- `apps/server` is Go (stdlib only + `modernc.org/sqlite` + `x/crypto`), outside the pnpm workspace: tasks live in its `Makefile` (`make check`, `make build`, `make build-all`). Its dashboard (`apps/server/web`) is a Vue app with **its own pnpm root and lockfile**, embedded into the binary with `go:embed`.
+- `apps/server` is Go — stdlib first, plus a few vetted libraries listed in `apps/server/README.md` → Dependencies (each new one is justified in its spec) — outside the pnpm workspace: tasks live in its `Makefile` (`make check`, `make build`, `make build-all`). Its dashboard (`apps/server/web`) is a Vue app with **its own pnpm root and lockfile**, embedded into the binary with `go:embed`.
 - Desktop is split into `src/main` (Node: DB, IPC, extensions, reminders, tray), `src/preload` (contextBridge → `window.croffle`), `src/renderer` (Vue, sandboxed) and `src/common` (shared code, alias `@croffledev/common`).
 - Host API is **domain-flat**: `croffle.window`, `croffle.calendar.schedules`, `croffle.extensions.info`, `croffle.event`, … Adding an API: IPC handler (`main/ipc/*.handler.ts`) → preload (`preload/api/**`) → public types (`packages/types`).
 - Public types live in `packages/types`; runtime enums used by the app live in `apps/desktop/src/common`.
