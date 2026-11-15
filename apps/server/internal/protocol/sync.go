@@ -97,6 +97,84 @@ type Conflict struct {
 	ServerUpdatedAtMs   int64  `json:"serverUpdatedAtMs"`
 	ServerLastWriterID  string `json:"serverLastWriterId,omitempty"`
 	ServerRowWasDeleted bool   `json:"serverRowDeleted,omitempty"`
+	// DifferentFields names the row fields whose values differ between the
+	// commit and the server row, sorted (server 0.1.1). It is information for
+	// the client; the server still applies nothing on a conflict, and the
+	// winner is still the client's last-writer-wins decision. Bookkeeping
+	// fields (version, updatedAtMs, lastWriterId, ownerId) are never listed.
+	// Empty means the two rows hold the same data.
+	DifferentFields []string `json:"differentFields"`
+}
+
+// bookkeepingFields differ on every conflict by construction, so listing them
+// would say nothing. ownerId is also overwritten by the server.
+var bookkeepingFields = []string{FieldVersion, FieldUpdatedAtMs, FieldLastWriterID, FieldOwnerID}
+
+// DifferentFields compares the row a commit sent with the server's row, key by
+// key, by value: key order and number spelling do not matter, and a missing
+// key equals null. When the commit carried no row (a delete may omit it), only
+// deletedAt is compared: deleting says the row is gone, and sentDeletedAt, if
+// known, says when.
+func DifferentFields(sent Row, deleting bool, sentDeletedAt *int64, server Row) []string {
+	if sent == nil {
+		serverDeleted := server[FieldDeletedAt] != nil
+		switch {
+		case deleting && !serverDeleted, !deleting && serverDeleted:
+			return []string{FieldDeletedAt}
+		case deleting && sentDeletedAt != nil && !sameValue(*sentDeletedAt, server[FieldDeletedAt]):
+			return []string{FieldDeletedAt}
+		default:
+			return []string{}
+		}
+	}
+
+	keys := map[string]struct{}{}
+	for key := range sent {
+		keys[key] = struct{}{}
+	}
+	for key := range server {
+		keys[key] = struct{}{}
+	}
+
+	different := []string{}
+	for key := range keys {
+		if slices.Contains(bookkeepingFields, key) {
+			continue
+		}
+		if !sameValue(sent[key], server[key]) {
+			different = append(different, key)
+		}
+	}
+	slices.Sort(different)
+	return different
+}
+
+// sameValue compares two wire values by their JSON meaning. Both sides are
+// normalised through encoding/json, so 1 and 1.0, or an int64 and the float64
+// that decoding produces, compare equal.
+func sameValue(a, b any) bool {
+	return normalise(a) == normalise(b)
+}
+
+func normalise(v any) string {
+	if v == nil {
+		return "null"
+	}
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf("%#v", v)
+	}
+	var decoded any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		return string(raw)
+	}
+	// Re-marshalling a decoded value sorts object keys and prints numbers one
+	// way, which is what makes the comparison independent of spelling.
+	canonical, err := json.Marshal(decoded)
+	if err != nil {
+		return string(raw)
+	}
+	return string(canonical)
 }
 
 // PushResponse is the push result. A batch is routinely part accepted and part

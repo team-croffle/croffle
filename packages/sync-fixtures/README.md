@@ -66,6 +66,16 @@ not break every scenario:
 | --------------------- | ------------------------------------------------- |
 | `setPurgedThroughSeq` | pretend retention has deleted up to that sequence |
 
+### Server-only additions
+
+Some scenarios pin down what a newer server adds without changing protocol 1.
+They still say `"protocol": 1` and both runners read them, but only the server
+runner checks the steps; the desktop runner reads `rowCodec` only.
+
+| scenario                                 | since server | what it pins down                                                                                                                        |
+| ---------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `13-push-conflict-different-fields.json` | 0.1.1        | `differentFields` on a push conflict: sorted, no bookkeeping fields, `[]` for the same data, `deletedAt` for a delete against a live row |
+
 ## Adding a scenario
 
 Keep one scenario about one thing, and write the `description` as the sentence

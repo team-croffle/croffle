@@ -288,3 +288,52 @@ func TestFeaturesAreSortedAndUnique(t *testing.T) {
 		}
 	}
 }
+
+func TestDifferentFields(t *testing.T) {
+	server := Row{
+		"id": "row-1", "title": "standup", "startDate": float64(1700000000000), "allDay": int64(0),
+		"version": int64(3), "updatedAtMs": int64(1700000009000), "lastWriterId": "device:b",
+		"ownerId": "acct-1", "teamId": nil, "deletedAt": nil,
+	}
+	cases := []struct {
+		name string
+		sent Row
+		want []string
+	}{
+		{"payload fields differ", Row{
+			"id": "row-1", "title": "retro", "startDate": 1700000600000, "allDay": 0,
+			"version": 2, "updatedAtMs": 1, "lastWriterId": "device:a", "ownerId": "x",
+		}, []string{"startDate", "title"}},
+		{"only bookkeeping differs, numbers spelled differently, missing equals null", Row{
+			"title": "standup", "id": "row-1", "startDate": 1.7e12, "allDay": 0.0,
+			"version": 9, "updatedAtMs": 9, "lastWriterId": "device:a", "ownerId": "someone-else",
+		}, []string{}},
+		{"tombstone and team", Row{
+			"id": "row-1", "title": "standup", "startDate": 1700000000000, "allDay": 0,
+			"deletedAt": 1700000005000, "teamId": "team-default",
+		}, []string{"deletedAt", "teamId"}},
+		{"a key only one side has", Row{
+			"id": "row-1", "title": "standup", "startDate": 1700000000000, "allDay": 0, "location": "room 1",
+		}, []string{"location"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := DifferentFields(tc.sent, false, nil, server)
+			if strings.Join(got, ",") != strings.Join(tc.want, ",") || got == nil {
+				t.Fatalf("got %#v, want %#v", got, tc.want)
+			}
+		})
+	}
+
+	deletedAt := int64(1700000005000)
+	if got := DifferentFields(nil, true, &deletedAt, server); strings.Join(got, ",") != "deletedAt" {
+		t.Errorf("row-less delete of a live row: %v", got)
+	}
+	tomb := Row{"deletedAt": int64(1700000005000)}
+	if got := DifferentFields(nil, true, &deletedAt, tomb); len(got) != 0 {
+		t.Errorf("row-less delete of the same tombstone: %v", got)
+	}
+	if got := DifferentFields(nil, true, nil, tomb); len(got) != 0 {
+		t.Errorf("row-less delete of a tombstone, no timestamp: %v", got)
+	}
+}

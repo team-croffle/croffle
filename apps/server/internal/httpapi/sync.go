@@ -69,12 +69,27 @@ func (s *server) push(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// What each commit sent, for comparing against the server row. The first
+	// commit with an opId wins, as in the store.
+	sent := make(map[string]int, len(req.Commits))
+	for i, wire := range req.Commits {
+		if _, seen := sent[wire.OpID]; !seen {
+			sent[wire.OpID] = i
+		}
+	}
+
 	conflicts := make([]protocol.Conflict, 0, len(result.Conflicts))
 	for _, conflict := range result.Conflicts {
 		mapped, err := toWireConflict(conflict)
 		if err != nil {
 			s.writeSyncError(w, r, err)
 			return
+		}
+		if i, ok := sent[conflict.OpID]; ok && mapped.ServerRow != nil {
+			mapped.DifferentFields = protocol.DifferentFields(req.Commits[i].Row,
+				req.Commits[i].Op == protocol.OpDelete, commits[i].DeletedAt, mapped.ServerRow)
+		} else {
+			mapped.DifferentFields = []string{}
 		}
 		conflicts = append(conflicts, mapped)
 	}
