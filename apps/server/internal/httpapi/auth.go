@@ -60,11 +60,16 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 
 	// The token is in the body and nowhere else: not in the log, not in a
 	// header, and in the database only as a hash.
-	writeJSON(w, http.StatusOK, protocol.LoginResponse{
+	response := protocol.LoginResponse{
 		Token:     result.Token,
 		AccountID: result.Identity.AccountID,
 		TeamID:    firstTeam(result.Identity.TeamIDs),
-	})
+	}
+	if result.ExpiresAt != nil {
+		ms := result.ExpiresAt.UnixMilli()
+		response.ExpiresAt = &ms
+	}
+	writeJSON(w, http.StatusOK, response)
 
 	s.logger.InfoContext(r.Context(), "login succeeded",
 		slog.String("account_id", result.Identity.AccountID),

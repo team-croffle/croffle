@@ -32,7 +32,10 @@ type healthResponse struct {
 	Server   string        `json:"server"`
 	Commit   string        `json:"commit,omitempty"`
 	Protocol protocolRange `json:"protocol"`
-	DB       string        `json:"db"`
+	// Features are optional capabilities beyond the protocol range; see
+	// protocol.Features. Older clients ignore the field.
+	Features []string `json:"features"`
+	DB       string   `json:"db"`
 	// Retention is what explains a 410 to an operator: a cursor below
 	// purgedThroughSeq can no longer be served.
 	Retention *retentionStatus `json:"retention,omitempty"`
@@ -65,6 +68,7 @@ func (s *server) health(w http.ResponseWriter, r *http.Request) {
 		Server:   s.version,
 		Commit:   s.commit,
 		Protocol: protocolRange{Min: protocol.Min, Max: protocol.Max},
+		Features: protocol.Features,
 		DB:       dbStatus,
 		Time:     s.now().UnixMilli(),
 	}

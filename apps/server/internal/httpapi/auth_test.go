@@ -263,3 +263,30 @@ func TestLoginDoesNotLogCredentials(t *testing.T) {
 		t.Errorf("no login line in the log: %s", out)
 	}
 }
+
+func TestLoginReportsDeviceTokenExpiry(t *testing.T) {
+	expires := time.UnixMilli(1_800_000_000_000)
+	fake := &fakeAuth{loginResult: auth.LoginResult{
+		Token: "tok", Identity: auth.Identity{AccountID: "acct-1", DeviceID: "client-1"}, ExpiresAt: &expires,
+	}}
+	rec := postJSON(t, authHandler(t, fake), "/auth/login",
+		`{"username":"alice","password":"x","clientId":"client-1"}`, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var body protocol.LoginResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ExpiresAt == nil || *body.ExpiresAt != expires.UnixMilli() {
+		t.Fatalf("expiresAt = %v", body.ExpiresAt)
+	}
+
+	// Without an expiry the field stays absent, exactly as in 0.1.0.
+	fake.loginResult.ExpiresAt = nil
+	rec = postJSON(t, authHandler(t, fake), "/auth/login",
+		`{"username":"alice","password":"x","clientId":"client-1"}`, "")
+	if strings.Contains(rec.Body.String(), "expiresAt") {
+		t.Fatalf("expiresAt present without an expiry: %s", rec.Body.String())
+	}
+}

@@ -97,6 +97,22 @@ func (d Device) TokenExpired(now time.Time) bool {
 	return d.TokenExpiresAt != nil && !now.Before(*d.TokenExpiresAt)
 }
 
+// State is the one-word status shown by the CLI and the dashboard:
+// revoked, expired (the device token's expiry has passed), pending (issued but
+// never used) or active.
+func (d Device) State(now time.Time) string {
+	switch {
+	case d.Revoked():
+		return "revoked"
+	case d.TokenExpired(now):
+		return "expired"
+	case d.LastSeenAt == nil:
+		return "pending"
+	default:
+		return "active"
+	}
+}
+
 // TokenKind tells an access token from a refresh token.
 type TokenKind string
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
+	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
@@ -374,5 +375,18 @@ func TestAccessLogDoesNotRecordHeadersOrBody(t *testing.T) {
 	// A planned-but-unbuilt endpoint is not a server failure.
 	if strings.Contains(out, `"level":"ERROR"`) {
 		t.Errorf("501 was logged at error level: %s", out)
+	}
+}
+
+func TestHealthReportsFeatures(t *testing.T) {
+	rec := doRequest(t, testHandler(t, nil), http.MethodGet, "/health", nil)
+	var body struct {
+		Features []string `json:"features"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(body.Features, ",") != strings.Join(protocol.Features, ",") {
+		t.Fatalf("features = %v, want %v", body.Features, protocol.Features)
 	}
 }

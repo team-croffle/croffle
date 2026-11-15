@@ -173,7 +173,9 @@ func (s *server) dashDevices(w http.ResponseWriter, r *http.Request) {
 		Name       string `json:"name"`
 		CreatedAt  int64  `json:"createdAt"`
 		LastSeenAt *int64 `json:"lastSeenAt,omitempty"`
-		State      string `json:"state"`
+		// TokenExpiresAt is absent for a device token that never expires.
+		TokenExpiresAt *int64 `json:"tokenExpiresAt,omitempty"`
+		State          string `json:"state"`
 	}
 
 	out := make([]row, 0, len(devices))
@@ -182,9 +184,10 @@ func (s *server) dashDevices(w http.ResponseWriter, r *http.Request) {
 		// for it.
 		out = append(out, row{
 			ID: device.ID, Name: device.Name,
-			CreatedAt:  device.CreatedAt.UnixMilli(),
-			LastSeenAt: millisPtr(device.LastSeenAt),
-			State:      deviceState(device),
+			CreatedAt:      device.CreatedAt.UnixMilli(),
+			LastSeenAt:     millisPtr(device.LastSeenAt),
+			TokenExpiresAt: millisPtr(device.TokenExpiresAt),
+			State:          device.State(s.now()),
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"devices": out})
@@ -396,17 +399,6 @@ func (s *server) requestIsHTTPS(r *http.Request) bool {
 		return true
 	}
 	return false
-}
-
-func deviceState(device store.Device) string {
-	switch {
-	case device.Revoked():
-		return "revoked"
-	case device.LastSeenAt == nil:
-		return "pending"
-	default:
-		return "active"
-	}
 }
 
 func intQuery(r *http.Request, name string, fallback int) int {

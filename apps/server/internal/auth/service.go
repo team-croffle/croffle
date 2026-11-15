@@ -59,6 +59,16 @@ type LoginRequest struct {
 type LoginResult struct {
 	Token    string
 	Identity Identity
+	// ExpiresAt is nil for a token that never expires.
+	ExpiresAt *time.Time
+}
+
+// Policy holds the token lifetimes. The zero value is server 0.1.0's
+// behaviour: device tokens that never expire.
+type Policy struct {
+	// DeviceTokenTTL is the lifetime of a device token issued by Login. Zero
+	// means no expiry.
+	DeviceTokenTTL time.Duration
 }
 
 // Service implements login and token authentication over a store.
@@ -66,6 +76,7 @@ type Service struct {
 	store   store.Store
 	now     func() time.Time
 	limiter *Limiter
+	policy  Policy
 }
 
 func NewService(st store.Store, now func() time.Time) *Service {
@@ -73,6 +84,12 @@ func NewService(st store.Store, now func() time.Time) *Service {
 		now = time.Now
 	}
 	return &Service{store: st, now: now, limiter: NewLimiter(now)}
+}
+
+// WithPolicy sets the token lifetimes and returns the service for chaining.
+func (s *Service) WithPolicy(p Policy) *Service {
+	s.policy = p
+	return s
 }
 
 // CheckPassword verifies a username and password without issuing anything.
@@ -149,6 +166,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, err
 		CreatedAt:  now,
 		LastSeenAt: &now,
 	}
+	if s.policy.DeviceTokenTTL > 0 {
+		// Only tokens issued from now on carry an expiry; the operator turning
+		// the setting on does not cut off devices that are already signed in.
+		expires := now.Add(s.policy.DeviceTokenTTL)
+		device.TokenExpiresAt = &expires
+	}
 	if err := s.store.UpsertDevice(ctx, device); err != nil {
 		return LoginResult{}, fmt.Errorf("upsert device: %w", err)
 	}
@@ -165,6 +188,7 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, err
 			DeviceID:  device.ID,
 			TeamIDs:   teams,
 		},
+		ExpiresAt: device.TokenExpiresAt,
 	}, nil
 }
 
@@ -182,9 +206,9 @@ func (s *Service) Authenticate(ctx context.Context, token string) (Identity, err
 	if err != nil {
 		return Identity{}, fmt.Errorf("find device: %w", err)
 	}
-	if device.Revoked() {
-		// Revoked and unknown are the same answer to the client; the log line
-		// is where the two are distinguishable.
+	if device.Revoked() || device.TokenExpired(s.now()) {
+		// Revoked, expired and unknown are the same answer to the client: it
+		// has to sign in again either way.
 		return Identity{}, ErrInvalidCredentials
 	}
 

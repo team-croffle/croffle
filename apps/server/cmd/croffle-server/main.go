@@ -96,7 +96,9 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		logger.Info("schema migrated", slog.Int("applied", db.AppliedMigrations))
 	}
 
-	authService := auth.NewService(db, time.Now)
+	authService := auth.NewService(db, time.Now).WithPolicy(auth.Policy{
+		DeviceTokenTTL: cfg.DeviceTokenTTL,
+	})
 
 	// Hooks: one optional webhook sink. Without a URL this is a no-op emitter
 	// and nothing is queued at all.

@@ -437,3 +437,35 @@ func TestLimiterEvictsIdleKeysWhenFull(t *testing.T) {
 		t.Fatalf("idle keys not evicted: %d tracked", got)
 	}
 }
+
+func TestDeviceTokenTTL(t *testing.T) {
+	ctx := context.Background()
+
+	// Default policy: no expiry, as in 0.1.0.
+	svc, st, now := newFixture(t, "hunter2")
+	result, err := svc.Login(ctx, validLogin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ExpiresAt != nil || st.device.TokenExpiresAt != nil {
+		t.Fatalf("default policy set an expiry: %v", result.ExpiresAt)
+	}
+
+	// With a TTL, a sign-in token expires and is then refused.
+	clock := now
+	svc = NewService(st, func() time.Time { return clock }).WithPolicy(Policy{DeviceTokenTTL: 2 * time.Second})
+	result, err = svc.Login(ctx, validLogin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ExpiresAt == nil || !result.ExpiresAt.Equal(now.Add(2*time.Second)) {
+		t.Fatalf("ExpiresAt = %v", result.ExpiresAt)
+	}
+	if _, err := svc.Authenticate(ctx, result.Token); err != nil {
+		t.Fatalf("fresh token refused: %v", err)
+	}
+	clock = now.Add(3 * time.Second)
+	if _, err := svc.Authenticate(ctx, result.Token); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("expired token: %v, want ErrInvalidCredentials", err)
+	}
+}
