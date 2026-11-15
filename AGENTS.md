@@ -17,7 +17,7 @@
 ## Goals and scope
 
 - The roadmap is `docs/ROADMAP.md` (public, Korean; settled items only). Ideas and the working plan are in `.loctx/ROADMAP.local.md`.
-- Current line: desktop **1.3** (optional sync beta, sharing, To-Do) paired with server **0.1 beta**; then server 0.2–0.4 and desktop 1.3.5 ↔ server 0.5.
+- Current line: desktop **1.3** (optional sync beta, sharing, To-Do) paired with server **0.1 beta**; then server 0.1.1–0.2.1 and desktop 1.3.5 ↔ server 0.3.
 - Out of scope unless the roadmap says otherwise: a server-side plugin system (server extensibility is hooks + a signed webhook), team management UI inside the desktop shell, a sync framework (the protocol is our own row-level LWW changeset).
 - Work items migrated from the previous harness are listed in `.agents/intent/000_migrated` (draft); each version gets its own intent and spec before work starts.
 
