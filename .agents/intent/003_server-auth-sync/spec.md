@@ -1,7 +1,8 @@
 ---
 intent: "003"
-status: draft
-approvals: []
+status: accepted
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "- TOTP 암호화는 바로 다음버전으로 넣자. - 만료는 어쩔 수 없고, 바이너리는 수용 진행", rev: "0d4a243", kind: summary }
 summary_for_user: |
   서버 0.1.1 을 작업 단위 10개로 나눴습니다: `--password-stdin` → rate limit 교체 · 의존성 원칙 → 대시보드 CSRF · 기기 회수 → 토큰 저장소(마이그레이션 0004) → 기기 토큰 만료 설정 → `/auth/token`(access · refresh) → TOTP(0005) → 충돌 `differentFields` · 픽스처 13 → metrics → 문서.
   intent 와 다른 점: 계획 3(토큰)을 셋(W-4~W-6)으로 나눴고, TOTP 는 CSRF 와 `/auth/token` 뒤(W-7)로 옮겼습니다. 대시보드는 본인 계정에 한해 쓰기(기기 회수 · TOTP)가 생깁니다.
@@ -356,9 +357,9 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 
 
 ## 우려
-1. **TOTP secret 평문 저장.** DB 파일을 가져간 사람은 OTP 를 만들 수 있습니다. 다만 비밀번호 해시도 함께 있어야 로그인할 수 있고, 0.1 은 이미 "DB 파일에 접근할 수 있으면 운영자"를 전제로 합니다(CLI). 암호화하려면 운영자가 관리할 키(`CROFFLE_SECRET_KEY`)가 새로 필요해 이번에는 넣지 않았습니다. 0.2 이후 후보로 로컬 로드맵에 적겠습니다.
-2. **`CROFFLE_DEVICE_TOKEN_TTL` 을 켜면 데스크톱 1.3.0 은 만료 때마다 다시 로그인해야 합니다.** 1.3.0 은 refresh 를 쓰지 않기 때문입니다. 기본은 꺼짐이고 README 에 이 점을 적습니다.
-3. **`client_golang` 의 전이 의존성**(protobuf, procfs 등)으로 바이너리가 커집니다(수 MB 예상). metrics 를 끈 서버에도 코드는 들어갑니다. 빌드 태그로 빼는 방법은 복잡도에 비해 이득이 작아 쓰지 않습니다. 구현 때 크기 차이를 재서 노트에 적겠습니다.
+1. **TOTP secret 평문 저장.** DB 파일을 가져간 사람은 OTP 를 만들 수 있습니다. 다만 비밀번호 해시도 함께 있어야 로그인할 수 있고, 0.1 은 이미 "DB 파일에 접근할 수 있으면 운영자"를 전제로 합니다(CLI). 암호화하려면 운영자가 관리할 키(`CROFFLE_SECRET_KEY`)가 새로 필요해 이번에는 넣지 않았습니다. 사용자 결정(2026-11-16): "TOTP 암호화는 바로 다음버전으로 넣자." — 서버 0.2.0 으로 로컬 로드맵에 적었습니다.
+2. **`CROFFLE_DEVICE_TOKEN_TTL` 을 켜면 데스크톱 1.3.0 은 만료 때마다 다시 로그인해야 합니다.** 1.3.0 은 refresh 를 쓰지 않기 때문입니다. 기본은 꺼짐이고 README 에 이 점을 적습니다. 사용자: "만료는 어쩔 수 없고" — 수용.
+3. **`client_golang` 의 전이 의존성**(protobuf, procfs 등)으로 바이너리가 커집니다(수 MB 예상). metrics 를 끈 서버에도 코드는 들어갑니다. 빌드 태그로 빼는 방법은 복잡도에 비해 이득이 작아 쓰지 않습니다. 구현 때 크기 차이를 재서 노트에 적겠습니다. 사용자: "바이너리는 수용".
 4. **대시보드가 읽기 전용이 아니게 됩니다.** 0.1 설계 기록의 "anything that changes state is a CLI command" 를 "본인 계정에 한한 쓰기는 대시보드에서"로 넓힙니다. intent 계획 3("대시보드 · CLI 의 기기 목록과 회수")과 질의서 6(TOTP)에서 나온 것입니다. 관련 코드 주석을 함께 고칩니다.
 5. **`differentFields` 는 데스크톱의 행 인코딩에 기댑니다.** 데스크톱이 보낸 행에 없는 키는 `null` 과 같다고 보므로, 클라이언트가 필드를 빼고 보내면 "다르다"고 나오지 않을 수 있습니다. 판정은 데스크톱이 하므로 정보용 필드로만 문서화합니다.
 6. **`CrossOriginProtection` 은 `Origin` 을 요청의 `Host` 와 비교합니다.** 앞단 프록시가 `Host` 를 바꿔 넘기면 대시보드의 쓰기 요청이 403 이 됩니다. README 의 프록시 예시(이미 `Host` 를 넘김)를 확인하고, 필요하면 신뢰할 출처를 `CROFFLE_DASH_TRUSTED_ORIGINS`(쉼표 구분, 기본 빈 값)로 더할 수 있게 합니다. 이 변수는 W-3 에 포함합니다.
@@ -366,6 +367,6 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 ## 범위 밖
 - 데스크톱이 `/auth/token` · refresh · `differentFields` 를 쓰는 작업(이후 데스크톱 패치).
 - 서버 쪽 승자 판정 · 필드 단위 병합(A2), JWT · OAuth2 인가 서버(A1).
-- TOTP secret 암호화, WebAuthn, 외부 로그인(GitHub OIDC).
+- TOTP secret 암호화(서버 0.2.0), WebAuthn, 외부 로그인(GitHub OIDC).
 - 다중 팀 · 팀 관리 · 공유 취소(서버 0.2.0 · 0.2.1).
 - metrics 의 인증 · TLS(별도 주소를 내부망에만 두는 것으로 대신함).
