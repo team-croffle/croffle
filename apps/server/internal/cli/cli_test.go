@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -377,5 +379,62 @@ func TestDatabasePathComesFromEnvWhenFlagIsAbsent(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), path) {
 		t.Errorf("output = %q, want the env path", out.String())
+	}
+}
+
+func TestReadPasswordFromPipe(t *testing.T) {
+	cases := []struct {
+		name, input, want string
+	}{
+		{"trailing newline", "secret-pass-1\n", "secret-pass-1"},
+		{"trailing crlf", "secret-pass-1\r\n", "secret-pass-1"},
+		{"no newline", "secret-pass-1", "secret-pass-1"},
+		{"inner spaces kept", "a b c\n", "a b c"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var prompt strings.Builder
+			got, err := readPassword("", true, strings.NewReader(tc.input), &prompt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+			// A pipe is not a terminal: nothing is prompted.
+			if prompt.Len() != 0 {
+				t.Fatalf("prompted on a pipe: %q", prompt.String())
+			}
+		})
+	}
+}
+
+func TestReadPasswordRejectsEmptyPipe(t *testing.T) {
+	if _, err := readPassword("", true, strings.NewReader("\r\n"), io.Discard); err == nil {
+		t.Fatal("an empty password was accepted")
+	}
+}
+
+func TestReadPasswordFromNonTerminalFile(t *testing.T) {
+	// An *os.File that is not a terminal (a redirected file) takes the pipe
+	// path, not the terminal one.
+	f, err := os.CreateTemp(t.TempDir(), "pw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("from-file\n"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	got, err := readPassword("", true, f, io.Discard)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "from-file" {
+		t.Fatalf("got %q", got)
 	}
 }

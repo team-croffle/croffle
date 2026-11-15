@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/term"
 
 	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
@@ -55,7 +58,7 @@ func (c *command) userCreate() error {
 		return errors.New("usage: croffle-server user create <username> --password-stdin")
 	}
 
-	secret, err := readPassword(*password, *fromStdin, c.in)
+	secret, err := readPassword(*password, *fromStdin, c.in, c.errOut)
 	if err != nil {
 		return err
 	}
@@ -168,7 +171,7 @@ func (c *command) userSetPassword() error {
 		return err
 	}
 
-	secret, err := readPassword(*password, *fromStdin, c.in)
+	secret, err := readPassword(*password, *fromStdin, c.in, c.errOut)
 	if err != nil {
 		return err
 	}
@@ -540,8 +543,16 @@ func (c *command) writeJSON(v any) error {
 
 // readPassword prefers stdin: a password passed as a flag ends up in the shell
 // history and in the process list.
-func readPassword(flagValue string, fromStdin bool, stdin io.Reader) (string, error) {
+//
+// When stdin is a terminal it reads one line with echo off and stops at Enter.
+// Reading to EOF there would wait for Ctrl+D, which some terminals (Windows Git
+// Bash without winpty) never send. A pipe is still read to the end, so
+// `printf '%s' "$PW" | croffle-server … --password-stdin` keeps working.
+func readPassword(flagValue string, fromStdin bool, stdin io.Reader, prompt io.Writer) (string, error) {
 	if fromStdin {
+		if file, ok := stdin.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
+			return readPasswordFromTerminal(int(file.Fd()), prompt)
+		}
 		data, err := io.ReadAll(io.LimitReader(stdin, maxPasswordStdin))
 		if err != nil {
 			return "", fmt.Errorf("read password from stdin: %w", err)
@@ -557,6 +568,25 @@ func readPassword(flagValue string, fromStdin bool, stdin io.Reader) (string, er
 		return "", errors.New("a password is required: pass --password-stdin (preferred) or --password")
 	}
 	return flagValue, nil
+}
+
+func readPasswordFromTerminal(fd int, prompt io.Writer) (string, error) {
+	fmt.Fprint(prompt, "Password: ")
+	data, err := term.ReadPassword(fd)
+	// The terminal swallowed the Enter along with the echo; end the prompt line
+	// so the next output does not start after "Password: ".
+	fmt.Fprintln(prompt)
+	if err != nil {
+		return "", fmt.Errorf("read password from terminal: %w", err)
+	}
+	if len(data) > maxPasswordStdin {
+		return "", fmt.Errorf("password longer than %d bytes", maxPasswordStdin)
+	}
+	secret := strings.TrimRight(string(data), "\r\n")
+	if secret == "" {
+		return "", errors.New("empty password")
+	}
+	return secret, nil
 }
 
 func newID(prefix string) string {
