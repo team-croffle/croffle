@@ -47,31 +47,38 @@ In the desktop app: **Settings → Sync**, enter the server URL, then either sig
 in with the username and password or paste the token. Internally both end up as
 the same thing — a token — so the two screens are one mechanism.
 
-Open the server URL in a browser for the dashboard. It is read-only: everything
-that changes state is a command above.
+Open the server URL in a browser for the dashboard. It shows the signed-in
+account's own data, and lets that account revoke its own devices and turn on
+one-time codes ([Authentication](#authentication)). Everything else that changes
+state is a command above.
 
 ---
 
 ## Configuration
 
-Environment variables. Every setting except the webhook ones also exists as a
-flag with the same name (`CROFFLE_DB_PATH` → `--db-path`), and the flag wins
-when both are given. The webhook settings are environment-only on purpose: an
+Environment variables. The first seven settings also exist as a flag with the
+same name (`CROFFLE_DB_PATH` → `--db-path`), and the flag wins when both are
+given. The rest are environment-only. For the webhook that is on purpose: an
 operator configures where events go, so there is no flag — and no endpoint —
 that could redirect them.
 
-| Variable                      | Default                      | Meaning                                                                                                                                  |
-| ----------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `CROFFLE_LISTEN`              | `:8787`                      | Address to listen on. Keep `:8787` in a container so the port mapping works.                                                             |
-| `CROFFLE_DB_PATH`             | `/var/lib/croffle/server.db` | The SQLite file. Its directory must exist and be writable.                                                                               |
-| `CROFFLE_LOG_LEVEL`           | `info`                       | `debug`, `info`, `warn`, `error`. Logs are JSON on stdout.                                                                               |
-| `CROFFLE_TRUST_PROXY`         | `false`                      | Honour `X-Forwarded-For` and `X-Forwarded-Proto`. **Only turn this on behind a proxy** — otherwise any client can forge its own address. |
-| `CROFFLE_BASE_PATH`           | `/`                          | Mount point, e.g. `/croffle`, when a proxy forwards a subpath without stripping it.                                                      |
-| `CROFFLE_RETAIN_COMMITS_DAYS` | `90`                         | How long the change history is kept. Minimum 7.                                                                                          |
-| `CROFFLE_RETAIN_OPS_DAYS`     | `30`                         | How long retry keys are kept. Minimum 7.                                                                                                 |
-| `CROFFLE_WEBHOOK_URL`         | —                            | Optional: where to POST events. Requires a secret.                                                                                       |
-| `CROFFLE_WEBHOOK_SECRET`      | —                            | HMAC key the receiver verifies with.                                                                                                     |
-| `CROFFLE_WEBHOOK_EVENTS`      | `commits_applied,row_shared` | Comma-separated event list.                                                                                                              |
+| Variable                       | Default                      | Meaning                                                                                                                                                                                     |
+| ------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CROFFLE_LISTEN`               | `:8787`                      | Address to listen on. Keep `:8787` in a container so the port mapping works.                                                                                                                |
+| `CROFFLE_DB_PATH`              | `/var/lib/croffle/server.db` | The SQLite file. Its directory must exist and be writable.                                                                                                                                  |
+| `CROFFLE_LOG_LEVEL`            | `info`                       | `debug`, `info`, `warn`, `error`. Logs are JSON on stdout.                                                                                                                                  |
+| `CROFFLE_TRUST_PROXY`          | `false`                      | Honour `X-Forwarded-For` and `X-Forwarded-Proto`. **Only turn this on behind a proxy** — otherwise any client can forge its own address.                                                    |
+| `CROFFLE_BASE_PATH`            | `/`                          | Mount point, e.g. `/croffle`, when a proxy forwards a subpath without stripping it.                                                                                                         |
+| `CROFFLE_RETAIN_COMMITS_DAYS`  | `90`                         | How long the change history is kept. Minimum 7.                                                                                                                                             |
+| `CROFFLE_RETAIN_OPS_DAYS`      | `30`                         | How long retry keys are kept. Minimum 7.                                                                                                                                                    |
+| `CROFFLE_WEBHOOK_URL`          | —                            | Optional: where to POST events. Requires a secret.                                                                                                                                          |
+| `CROFFLE_WEBHOOK_SECRET`       | —                            | HMAC key the receiver verifies with.                                                                                                                                                        |
+| `CROFFLE_WEBHOOK_EVENTS`       | `commits_applied,row_shared` | Comma-separated event list.                                                                                                                                                                 |
+| `CROFFLE_DEVICE_TOKEN_TTL`     | `0` (never)                  | Lifetime of device tokens issued by a sign-in from now on, as a Go duration (`720h`). **Desktop 1.3.0 has to sign in again each time one expires** — see [Authentication](#authentication). |
+| `CROFFLE_ACCESS_TOKEN_TTL`     | `15m`                        | Lifetime of access tokens from `POST /auth/token`.                                                                                                                                          |
+| `CROFFLE_REFRESH_TOKEN_TTL`    | `720h`                       | Lifetime of refresh tokens; it restarts at every refresh. Must be longer than the access lifetime.                                                                                          |
+| `CROFFLE_METRICS_LISTEN`       | — (off)                      | `host:port` for Prometheus metrics on a separate listener, e.g. `127.0.0.1:9090`. Empty opens no port. See [Metrics](#metrics).                                                             |
+| `CROFFLE_DASH_TRUSTED_ORIGINS` | —                            | Comma-separated extra origins (`https://croffle.example.com`) allowed to send dashboard requests that change state, for a proxy that rewrites `Host`.                                       |
 
 Invalid values fail at startup rather than being defaulted: a server listening
 on the wrong port or writing to the wrong file is worse than one that refuses to
@@ -153,18 +160,19 @@ until you turn it on.
 Every command takes `--db` to point at the database file, and the listings take
 `--json`.
 
-| Command                                                     | What it does                                                                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `user create <username> --password-stdin`                   | Creates a login and adds it to the team.                                                                     |
-| `user list`                                                 | Lists logins and whether they are disabled.                                                                  |
-| `user disable <username>` / `user enable <username>`        | Blocks or restores authentication.                                                                           |
-| `user set-password <username> --password-stdin`             | Changes a password. Existing device tokens keep working.                                                     |
-| `token issue <username> [--device-name N] [--client-id ID]` | Issues a device token. **Printed once.**                                                                     |
-| `token list [username]`                                     | Lists devices: created, last seen, and `pending` / `active` / `revoked`.                                     |
-| `token revoke <device-id>`                                  | Withdraws that device's token.                                                                               |
-| `team list` · `team add-member <team-id> <username>`        | Teams and membership.                                                                                        |
-| `db migrate` · `db info` · `db vacuum`                      | Apply migrations, show counts, reclaim space.                                                                |
-| `log dump [--since-seq N] [--limit N]`                      | Prints the change log as JSON lines. **The first thing to reach for when a client and the server disagree.** |
+| Command                                                                                     | What it does                                                                                                 |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `user create <username> --password-stdin`                                                   | Creates a login and adds it to the team.                                                                     |
+| `user list`                                                                                 | Lists logins and whether they are disabled.                                                                  |
+| `user disable <username>` / `user enable <username>`                                        | Blocks or restores authentication.                                                                           |
+| `user set-password <username> --password-stdin`                                             | Changes a password. Existing device tokens keep working.                                                     |
+| `token issue <username> [--device-name N] [--client-id ID] [--expires-in D \| --no-expiry]` | Issues a device token. **Printed once.** Follows `CROFFLE_DEVICE_TOKEN_TTL` unless a flag says otherwise.    |
+| `token list [username]`                                                                     | Lists devices: created, last seen, token expiry (`never`), and `pending` / `active` / `expired` / `revoked`. |
+| `user otp status <username>` · `user otp disable <username>`                                | Shows (`off` / `pending` / `enabled`) or removes an account's one-time codes.                                |
+| `token revoke <device-id>`                                                                  | Withdraws that device's token.                                                                               |
+| `team list` · `team add-member <team-id> <username>`                                        | Teams and membership.                                                                                        |
+| `db migrate` · `db info` · `db vacuum`                                                      | Apply migrations, show counts, reclaim space.                                                                |
+| `log dump [--since-seq N] [--limit N]`                                                      | Prints the change log as JSON lines. **The first thing to reach for when a client and the server disagree.** |
 
 Prefer `--password-stdin` over `--password`: a password in a flag ends up in the
 shell history and in the process list.
@@ -201,6 +209,56 @@ They are not the same, and the difference matters:
   and get a new one. Use it for a lost laptop.
 - **`user disable`** stops the account. Every existing token stops working
   immediately and no new one can be obtained.
+
+Revoking a device withdraws every token it holds: its device token and any
+access and refresh tokens. An account can also revoke its own devices from the
+dashboard.
+
+---
+
+## Authentication
+
+Every sync request carries a bearer token. There are three kinds:
+
+| Token         | From                              | Lifetime                                 | Used by                 |
+| ------------- | --------------------------------- | ---------------------------------------- | ----------------------- |
+| Device token  | `POST /auth/login`, `token issue` | never, unless `CROFFLE_DEVICE_TOKEN_TTL` | desktop 1.3.0           |
+| Access token  | `POST /auth/token`                | `CROFFLE_ACCESS_TOKEN_TTL` (15 minutes)  | sync requests           |
+| Refresh token | `POST /auth/token`                | `CROFFLE_REFRESH_TOKEN_TTL` (30 days)    | `POST /auth/token` only |
+
+**Device tokens.** Never expiring is the default, and stays possible: the
+desktop does not keep your password, so it cannot renew a token silently.
+Setting `CROFFLE_DEVICE_TOKEN_TTL` gives tokens issued by a sign-in from then on
+an expiry (tokens issued earlier are not touched). Desktop 1.3.0 then asks you to
+sign in again whenever one expires, because it does not use refresh tokens yet.
+`token issue --no-expiry` still issues a token that never expires, whatever the
+setting says.
+
+**Access and refresh tokens.** `POST /auth/token` with
+`{"grantType": "password", "username", "password", "otp"?, "clientId", "deviceName"?}`
+returns `accessToken`, `refreshToken` and their expiries (unix ms). Exchange the
+refresh token for the next pair with `{"grantType": "refresh_token", "refreshToken"}`
+before the access token runs out. Each refresh token works **once**: presenting a
+spent one again revokes every token descended from the same sign-in, because only
+a stolen copy is ever replayed. A refresh token is never accepted by a sync
+endpoint. Signing in this way leaves the device's device token alone, so a 1.3.0
+sign-in on the same machine keeps working. The desktop does not use this
+endpoint yet.
+
+**One-time codes (TOTP).** An account turns them on itself, in the dashboard
+under **Security**: scan the QR code with an authenticator app, confirm with a
+code, and keep the ten recovery codes it shows once. From then on every sign-in —
+desktop, `POST /auth/token` and the dashboard — needs a six-digit code or a
+recovery code. Without one the answer is `401 otp_required`, which desktop 1.3.0
+already handles by asking for the code. A code is accepted once (a code for a
+time step already used is refused), recovery codes work once each, and wrong
+codes count towards the login rate limit like wrong passwords. To turn codes off,
+the account confirms with its password and a code; an operator can remove them
+with `user otp disable` for someone who has lost both. `token issue` is an
+operator command and does not ask for a code.
+
+The login rate limit is five attempts per address and username, then one per 30
+seconds. A sign-in that stops at `otp_required` counts as one attempt.
 
 ---
 
@@ -311,18 +369,57 @@ sender has to trust anyone who learns the URL.
 
 ---
 
+## Metrics
+
+Off by default. Set `CROFFLE_METRICS_LISTEN` (for example `127.0.0.1:9090`) and
+the server opens a **second listener** that serves `GET /metrics` in the
+Prometheus text format, and nothing else. The API listener never serves metrics.
+**Keep that address on a private network**: it has no authentication of its own.
+
+| Metric                                  | Labels                                                                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `croffle_http_requests_total`           | `route`, `method`, `code`                                                                                               |
+| `croffle_http_request_duration_seconds` | `route`, `method`                                                                                                       |
+| `croffle_sync_push_commits_total`       | `result`: `accepted`, `conflict`, `retry`                                                                               |
+| `croffle_sync_pull_changes_total`       | —                                                                                                                       |
+| `croffle_sync_bootstrap_rows_total`     | —                                                                                                                       |
+| `croffle_auth_attempts_total`           | `surface`: `sync`, `token`, `dashboard`; `result`: `ok`, `invalid`, `otp_required`, `disabled`, `rate_limited`, `error` |
+| `croffle_auth_refresh_reuse_total`      | —                                                                                                                       |
+
+plus the standard Go runtime and process metrics. `route` is the route pattern
+(`POST /sync/push`, `POST /dash/devices/{id}/revoke`); the dashboard's files and
+unknown paths are `other`. No label carries an account, a username, a device id
+or an address.
+
+```yaml
+# docker compose: publish it to the host only
+environment:
+  CROFFLE_METRICS_LISTEN: ':9090'
+ports:
+  - '127.0.0.1:9090:9090'
+```
+
+---
+
 ## Compatibility
 
 | Server | Sync protocol | Desktop |
 | ------ | ------------- | ------- |
-| 0.1.x  | 1             | 1.3.x   |
+| 0.1.0  | 1             | 1.3.x   |
+| 0.1.1  | 1             | 1.3.x   |
 
-`GET /health` reports the range this server speaks:
+0.1.1 adds features on top of protocol 1 without changing it, so desktop 1.3.0
+works with it unchanged. The desktop does not use the new ones yet (token pairs,
+`differentFields`); one-time codes work with 1.3.0 because it already answers
+`otp_required`.
+
+`GET /health` reports the range this server speaks, and the optional features:
 
 ```json
 {
-  "server": "0.1.0",
+  "server": "0.1.1",
   "protocol": { "min": 1, "max": 1 },
+  "features": ["conflict-fields", "device-token-ttl", "token-pair", "totp"],
   "db": "ok",
   "retention": { "oldestCommitSeq": 1041, "purgedThroughSeq": 1040 },
   "time": 1792000000000
@@ -338,6 +435,12 @@ one always wins or always loses.
 `/health` is public and answers 503 when the database is unreachable, which is
 what a container health check and a proxy both look at.
 
+A push conflict (`conflicts[]`) also names the fields that differ between what
+was sent and the server's row, in `differentFields` (sorted; without `version`,
+`updatedAtMs`, `lastWriterId` and `ownerId`; `[]` when the data is the same). It
+is information only: the server still applies nothing on a conflict, and the
+client still decides the winner by last-writer-wins.
+
 ---
 
 ## Security notes
@@ -347,9 +450,13 @@ what a container health check and a proxy both look at.
   into a working credential. The same is true of passwords (argon2id).
 - **The dashboard session is a different credential from a sync token**, and
   neither is accepted where the other belongs. A dashboard session cannot push.
-- The dashboard shows the signed-in account's own data. Looking at another
-  account means using the commands above, which already require access to the
-  file.
+- The dashboard shows the signed-in account's own data and changes only that
+  account's own state (its devices, its one-time codes). Requests that change
+  state are refused from another origin. Looking at another account means using
+  the commands above, which already require access to the file.
+- One-time code secrets are stored in the database as they are (recovery codes
+  only as hashes). Whoever has the database file could generate codes, though
+  they would still need the password. Encrypting the secrets is planned for 0.2.0.
 - The commands bypass authentication by design: whoever can run the binary
   against the database file is the operator.
 
@@ -361,9 +468,10 @@ what a container health check and a proxy both look at.
 - **Sharing cannot be undone** yet, and shared schedules cannot be managed
   remotely.
 - Tags and reminders are not shared along with a schedule.
-- Tokens do not expire, because the desktop does not store your password and so
-  could not renew one silently. Refresh tokens come with a later version.
-- The dashboard is read-only, and there are no metrics yet.
+- The desktop (1.3.0) uses device tokens only: it does not renew tokens with
+  `POST /auth/token` yet, so an expiring device token means signing in again.
+- The dashboard manages only the signed-in account's own devices and one-time
+  codes; accounts and teams are commands.
 - Disabling an account blocks it; it does not erase its data.
 
 ---
@@ -392,12 +500,14 @@ The server is mostly the Go standard library. A dependency is added only when it
 replaces security-sensitive or protocol code we would otherwise write by hand,
 and only from a well-established source:
 
-| Module                   | Used for                                   |
-| ------------------------ | ------------------------------------------ |
-| `modernc.org/sqlite`     | SQLite without cgo                         |
-| `golang.org/x/crypto`    | argon2id password hashing                  |
-| `golang.org/x/term`      | the hidden password prompt of the commands |
-| `golang.org/x/time/rate` | the login rate limit                       |
+| Module                                | Used for                                          |
+| ------------------------------------- | ------------------------------------------------- |
+| `modernc.org/sqlite`                  | SQLite without cgo                                |
+| `golang.org/x/crypto`                 | argon2id password hashing                         |
+| `golang.org/x/term`                   | the hidden password prompt of the commands        |
+| `golang.org/x/time/rate`              | the login rate limit                              |
+| `github.com/pquerna/otp`              | one-time codes (TOTP, RFC 6238) and their QR code |
+| `github.com/prometheus/client_golang` | the optional metrics endpoint                     |
 
 Still one binary and one SQLite file: nothing here needs another service.
 
