@@ -531,7 +531,7 @@ func TestUserOTPStatusAndDisable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.EnableOTP(context.Background(), account.ID, 1, [][]byte{[]byte("h")}, now); err != nil {
+	if err := db.EnableOTP(context.Background(), account.ID, "SECRET", 1, [][]byte{[]byte("h")}, now); err != nil {
 		t.Fatal(err)
 	}
 	_ = db.Close()

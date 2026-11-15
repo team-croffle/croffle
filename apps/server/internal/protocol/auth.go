@@ -51,7 +51,7 @@ const (
 // It issues a short-lived access token and a refresh token instead of the
 // non-expiring device token of /auth/login. A refresh token is spent on use:
 // the response carries the next one, and presenting a spent token again
-// revokes every token descended from the same sign-in.
+// revokes every access and refresh token of that device.
 type TokenRequest struct {
 	GrantType string `json:"grantType"`
 	// For grantType "password": the same fields as LoginRequest.

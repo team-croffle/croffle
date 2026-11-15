@@ -2,11 +2,15 @@ package sqlite
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
@@ -220,6 +224,26 @@ func TestSweepExpiredAuthTokens(t *testing.T) {
 	}
 }
 
+// token010 and passwordHash010 stand for a token and an argon2id hash written
+// by server 0.1.0 (the hash format has not changed since).
+// token010 is made when the test runs, so no credential-like value is in the
+// source.
+var token010 = func() string {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		panic(err)
+	}
+	return base64.RawURLEncoding.EncodeToString(raw)
+}()
+
+var passwordHash010 = func() string {
+	h, err := auth.HashPassword("hunter2-010")
+	if err != nil {
+		panic(err)
+	}
+	return h
+}()
+
 // TestMigrateFrom010 opens a database built by the 0.1.0 migrations only, with
 // a 0.1.0 device token, and checks that 0.1.1 upgrades it in place and the
 // token keeps resolving.
@@ -248,10 +272,14 @@ func TestMigrateFrom010(t *testing.T) {
 		}
 	}
 	for _, q := range []string{
-		`INSERT INTO account (id, username, passwordHash, createdAt) VALUES ('acct-1', 'alice', 'hash', 1)`,
-		`INSERT INTO device (id, accountId, name, tokenHash, createdAt) VALUES ('dev-1', 'acct-1', 'laptop', X'0102', 1)`,
+		`INSERT INTO account (id, username, passwordHash, createdAt) VALUES ('acct-1', 'alice', ?, 1)`,
+		`INSERT INTO device (id, accountId, name, tokenHash, createdAt) VALUES ('dev-1', 'acct-1', 'laptop', ?, 1)`,
 	} {
-		if _, err := raw.Exec(q); err != nil {
+		arg := any(passwordHash010)
+		if strings.Contains(q, "device") {
+			arg = auth.HashToken(token010)
+		}
+		if _, err := raw.Exec(q, arg); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -260,7 +288,7 @@ func TestMigrateFrom010(t *testing.T) {
 	}
 
 	db := open(t, path)
-	device, err := db.FindDeviceByTokenHash(ctx, []byte{1, 2})
+	device, err := db.FindDeviceByTokenHash(ctx, auth.HashToken(token010))
 	if err != nil {
 		t.Fatalf("0.1.0 token no longer resolves: %v", err)
 	}
@@ -275,5 +303,76 @@ func TestMigrateFrom010(t *testing.T) {
 	// An upgraded account has no one-time codes, so its password alone works.
 	if _, err := db.FindOTP(ctx, "acct-1"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("upgraded account has an enrolment: %v", err)
+	}
+
+	// Through the real auth service: the 0.1.0 token authenticates, and the
+	// 0.1.0 password signs in without a code and without an expiry.
+	svc := auth.NewService(db, time.Now)
+	if identity, err := svc.Authenticate(ctx, token010); err != nil || identity.DeviceID != "dev-1" {
+		t.Fatalf("0.1.0 token: %+v, %v", identity, err)
+	}
+	result, err := svc.Login(ctx, auth.LoginRequest{
+		Username: "alice", Password: "hunter2-010", ClientID: "dev-new", RemoteIP: "192.0.2.1",
+	})
+	if err != nil || result.ExpiresAt != nil {
+		t.Fatalf("0.1.0 password: %+v, %v", result, err)
+	}
+}
+
+func TestTokenPairRefusedForARevokedDevice(t *testing.T) {
+	db := open(t, tempPath(t))
+	ctx := context.Background()
+	newAccount(t, db, "acct-1", "alice")
+	newDevice(t, db, "dev-1", "acct-1", []byte("dt"))
+	now := time.Now()
+	if err := db.CreateTokenPair(ctx, pair("dev-1", "fam-1", "1", now)); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := db.RevokeDevice(ctx, "dev-1"); err != nil {
+		t.Fatal(err)
+	}
+	// A sign-in that registered before the revoke and stores its pair after it.
+	if err := db.CreateTokenPair(ctx, pair("dev-1", "fam-2", "2", now)); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("pair stored for a revoked device: %v", err)
+	}
+	if err := db.CreateTokenPair(ctx, pair("no-such-device", "fam-3", "3", now)); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("pair stored for a missing device: %v", err)
+	}
+	// A later sign-in re-arms the device; nothing from across the revoke comes back.
+	if err := db.RegisterDevice(ctx, store.Device{ID: "dev-1", AccountID: "acct-1", Name: "d", CreatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.FindAuthToken(ctx, []byte("a2")); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("pair from across the revoke exists: %v", err)
+	}
+	if token, _ := db.FindAuthToken(ctx, []byte("a1")); token.Usable(now) {
+		t.Fatal("pair revoked with the device became usable after re-arming")
+	}
+}
+
+func TestRevokeDeviceTokensSpansFamilies(t *testing.T) {
+	db := open(t, tempPath(t))
+	ctx := context.Background()
+	newAccount(t, db, "acct-1", "alice")
+	newDevice(t, db, "dev-1", "acct-1", []byte("dt"))
+	newDevice(t, db, "dev-2", "acct-1", nil)
+	now := time.Now()
+	for i, p := range []store.TokenPair{pair("dev-1", "f1", "1", now), pair("dev-1", "f2", "2", now), pair("dev-2", "f3", "3", now)} {
+		if err := db.CreateTokenPair(ctx, p); err != nil {
+			t.Fatal(i, err)
+		}
+	}
+	if err := db.RevokeDeviceTokens(ctx, "dev-1", now); err != nil {
+		t.Fatal(err)
+	}
+	for hash, want := range map[string]bool{"a1": false, "r2": false, "a3": true} {
+		token, _ := db.FindAuthToken(ctx, []byte(hash))
+		if token.Usable(now) != want {
+			t.Errorf("%s usable = %v, want %v", hash, !want, want)
+		}
+	}
+	if _, err := db.FindDeviceByTokenHash(ctx, []byte("dt")); err != nil {
+		t.Fatalf("device token touched: %v", err)
 	}
 }

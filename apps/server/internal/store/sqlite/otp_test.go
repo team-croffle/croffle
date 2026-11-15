@@ -31,10 +31,14 @@ func TestOTPLifecycle(t *testing.T) {
 	}
 
 	hashes := [][]byte{[]byte("h1"), []byte("h2")}
-	if err := db.EnableOTP(ctx, "acct-1", 100, hashes, now); err != nil {
+	// The secret the code was checked against has to be the pending one.
+	if err := db.EnableOTP(ctx, "acct-1", "SECRET1", 100, hashes, now); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("enabling a replaced secret: %v", err)
+	}
+	if err := db.EnableOTP(ctx, "acct-1", "SECRET2", 100, hashes, now); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.EnableOTP(ctx, "acct-1", 101, hashes, now); !errors.Is(err, store.ErrNotFound) {
+	if err := db.EnableOTP(ctx, "acct-1", "SECRET2", 101, hashes, now); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("enabling twice: %v", err)
 	}
 	if err := db.StartOTP(ctx, "acct-1", "SECRET3", now); !errors.Is(err, store.ErrDuplicate) {

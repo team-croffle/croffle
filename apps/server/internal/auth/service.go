@@ -276,6 +276,10 @@ func (s *Service) IssuePair(ctx context.Context, req LoginRequest) (PairResult, 
 		return PairResult{}, err
 	}
 	if err := s.store.CreateTokenPair(ctx, pair); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			// The device was revoked between registering and storing.
+			return PairResult{}, ErrInvalidCredentials
+		}
 		return PairResult{}, fmt.Errorf("store token pair: %w", err)
 	}
 
@@ -288,8 +292,9 @@ func (s *Service) IssuePair(ctx context.Context, req LoginRequest) (PairResult, 
 }
 
 // Refresh exchanges a refresh token for a new pair. Each refresh token works
-// once; presenting it again revokes every token of its family and returns
-// ErrRefreshReused, because only a stolen copy is ever replayed.
+// once; presenting it again revokes every access and refresh token of the
+// device and returns ErrRefreshReused, because only a stolen copy is ever
+// replayed.
 func (s *Service) Refresh(ctx context.Context, refreshToken string) (PairResult, error) {
 	refreshToken = strings.TrimSpace(refreshToken)
 	if refreshToken == "" {
@@ -310,7 +315,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (PairResult,
 
 	now := s.now()
 	if token.UsedAt != nil && token.RevokedAt == nil {
-		return PairResult{}, s.reused(ctx, token.FamilyID, now)
+		return PairResult{}, s.reused(ctx, token.DeviceID, now)
 	}
 	if !token.Usable(now) {
 		return PairResult{}, ErrInvalidCredentials
@@ -330,7 +335,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (PairResult,
 	case errors.Is(err, store.ErrTokenUsed):
 		// Lost a race with another exchange of the same token: that is a
 		// replay as well.
-		return PairResult{}, s.reused(ctx, token.FamilyID, now)
+		return PairResult{}, s.reused(ctx, token.DeviceID, now)
 	case errors.Is(err, store.ErrNotFound):
 		return PairResult{}, ErrInvalidCredentials
 	case err != nil:
@@ -341,9 +346,13 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (PairResult,
 	return result, nil
 }
 
-func (s *Service) reused(ctx context.Context, family string, now time.Time) error {
-	if err := s.store.RevokeTokenFamily(ctx, family, now); err != nil {
-		return fmt.Errorf("revoke token family after reuse: %w", err)
+// reused handles a replayed refresh token. Every access and refresh token of
+// the device goes, not only the replayed family: a thief who had one refresh
+// token may well have the device's others. The device token stays, so a 1.3.0
+// sign-in on the same machine is not cut off by a token it never used.
+func (s *Service) reused(ctx context.Context, deviceID string, now time.Time) error {
+	if err := s.store.RevokeDeviceTokens(ctx, deviceID, now); err != nil {
+		return fmt.Errorf("revoke device tokens after reuse: %w", err)
 	}
 	return ErrRefreshReused
 }
