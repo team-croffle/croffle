@@ -17,6 +17,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -38,6 +39,8 @@ const (
 	EnvWebhookURL    = "CROFFLE_WEBHOOK_URL"
 	EnvWebhookSecret = "CROFFLE_WEBHOOK_SECRET"
 	EnvWebhookEvents = "CROFFLE_WEBHOOK_EVENTS"
+
+	EnvDashTrustedOrigins = "CROFFLE_DASH_TRUSTED_ORIGINS"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -90,6 +93,10 @@ type Config struct {
 	WebhookURL    string
 	WebhookSecret string
 	WebhookEvents []string
+	// DashTrustedOrigins are extra origins the dashboard accepts state-changing
+	// requests from, for a proxy that rewrites Host. Each is
+	// scheme://host[:port]. Empty is the normal case: same-origin only.
+	DashTrustedOrigins []string
 }
 
 // Load parses args (without the program name) and the environment.
@@ -150,6 +157,10 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 	cfg.WebhookURL = strings.TrimSpace(getenv(EnvWebhookURL))
 	cfg.WebhookSecret = getenv(EnvWebhookSecret)
 	cfg.WebhookEvents = splitList(getenv(EnvWebhookEvents))
+
+	if cfg.DashTrustedOrigins, err = parseOrigins(EnvDashTrustedOrigins, getenv(EnvDashTrustedOrigins)); err != nil {
+		return nil, err
+	}
 
 	return cfg, nil
 }
@@ -268,4 +279,18 @@ func parseBasePath(raw string) (string, error) {
 		return "", fmt.Errorf("%s %q: not a normalised path (did you mean %q?)", EnvBasePath, raw, cleaned)
 	}
 	return cleaned, nil
+}
+
+// parseOrigins validates a comma-separated origin list with the same check the
+// dashboard's cross-origin protection applies, so a typo fails at start-up
+// rather than as a 403 in the browser.
+func parseOrigins(name, raw string) ([]string, error) {
+	origins := splitList(raw)
+	probe := http.NewCrossOriginProtection()
+	for _, origin := range origins {
+		if err := probe.AddTrustedOrigin(origin); err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
+		}
+	}
+	return origins, nil
 }

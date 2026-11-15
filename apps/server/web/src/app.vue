@@ -92,6 +92,22 @@
     commitCursor.value = page.serverSeq;
   }
 
+  /** Revokes one of this account's own devices after an explicit confirmation. */
+  async function revoke(device: Device) {
+    const label = device.name ? `${device.name} (${device.id})` : device.id;
+    if (!window.confirm(`Revoke ${label}? It stops syncing until it signs in again.`)) {
+      return;
+    }
+    error.value = '';
+    try {
+      await api.revokeDevice(device.id);
+    } catch (err) {
+      error.value = (err as Error).message;
+      return;
+    }
+    await load();
+  }
+
   async function select(next: Tab) {
     tab.value = next;
     await load();
@@ -152,9 +168,9 @@
       </nav>
 
       <p class="notice">
-        Read-only, and scoped to this account: your own rows plus the rows shared with a team you
-        are in. Use the <code>croffle-server</code> commands to change anything, or to look at
-        another account.
+        Scoped to this account: your own rows plus the rows shared with a team you are in. You can
+        revoke your own devices here; use the <code>croffle-server</code> commands for anything
+        else, or to look at another account.
       </p>
 
       <p v-if="error" class="error">{{ error }}</p>
@@ -167,6 +183,7 @@
           { key: 'createdAt', label: 'Created' },
           { key: 'lastSeenAt', label: 'Last seen' },
           { key: 'state', label: 'State' },
+          { key: 'actions', label: '' },
         ]"
         :rows="devices"
         empty="No devices yet. Issue a token with `croffle-server token issue`."
@@ -175,6 +192,15 @@
         <template #lastSeenAt="{ row }">{{ formatTime((row as Device).lastSeenAt) }}</template>
         <template #state="{ row }">
           <span class="tag">{{ (row as Device).state }}</span>
+        </template>
+        <template #actions="{ row }">
+          <button
+            v-if="(row as Device).state !== 'revoked'"
+            class="link"
+            @click="revoke(row as Device)"
+          >
+            Revoke
+          </button>
         </template>
       </DataTable>
 

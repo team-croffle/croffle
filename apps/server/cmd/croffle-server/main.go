@@ -126,17 +126,18 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 	}
 
 	handler := httpapi.NewHandler(httpapi.Options{
-		Version:    version,
-		Commit:     commit,
-		BasePath:   cfg.BasePath,
-		TrustProxy: cfg.TrustProxy,
-		Logger:     logger,
-		Health:     db.Ping,
-		Auth:       authService,
-		Sync:       db,
-		Dash:       db,
-		Assets:     assets,
-		Hooks:      emitter,
+		Version:            version,
+		Commit:             commit,
+		BasePath:           cfg.BasePath,
+		TrustProxy:         cfg.TrustProxy,
+		Logger:             logger,
+		Health:             db.Ping,
+		Auth:               authService,
+		Sync:               db,
+		Dash:               db,
+		Assets:             assets,
+		Hooks:              emitter,
+		DashTrustedOrigins: cfg.DashTrustedOrigins,
 		Retention: func(ctx context.Context) (int64, int64, error) {
 			oldest, err := db.OldestCommitSeq(ctx)
 			if err != nil {

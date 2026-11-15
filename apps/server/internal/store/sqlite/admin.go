@@ -69,6 +69,15 @@ func (db *DB) RevokeDevice(ctx context.Context, deviceID string) error {
 		toMillis(timeNow()), deviceID)
 }
 
+// RevokeAccountDevice revokes a device only if it belongs to accountID. A
+// device of another account is reported as ErrNotFound, the same as one that
+// does not exist, so the dashboard cannot be used to probe device ids.
+func (db *DB) RevokeAccountDevice(ctx context.Context, accountID, deviceID string) error {
+	return db.updateOne(ctx, "device", deviceID,
+		`UPDATE device SET revokedAt = ?, tokenHash = NULL WHERE id = ? AND accountId = ?`,
+		toMillis(timeNow()), deviceID, accountID)
+}
+
 // updateOne runs a single-row update and turns "no such row" into ErrNotFound,
 // so a CLI typo reports a missing account instead of silently succeeding.
 func (db *DB) updateOne(ctx context.Context, what, id, query string, args ...any) error {
