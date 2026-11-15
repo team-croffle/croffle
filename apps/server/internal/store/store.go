@@ -476,10 +476,15 @@ type Store interface {
 	// bookkeeping and must not become a write per request.
 	TouchDevice(ctx context.Context, deviceID string, at time.Time) error
 	// RegisterDevice creates or renames a device without touching its device
-	// token, and re-arms it if it was revoked. The token-pair sign-in uses it,
-	// so a device that also holds a 0.1 device token keeps that token working.
-	// The same ownership rule as UpsertDevice applies.
+	// token, and re-arms it if it was revoked. The same ownership rule as
+	// UpsertDevice applies.
 	RegisterDevice(ctx context.Context, device Device) error
+	// RegisterDeviceWithPair is RegisterDevice and CreateTokenPair in one
+	// transaction. The token-pair sign-in uses it, so a revocation is ordered
+	// either before the whole sign-in (which then re-arms the device, as any
+	// sign-in does) or after it (which then revokes the new pair): never in
+	// between, where another sign-in's re-arming could let this pair through.
+	RegisterDeviceWithPair(ctx context.Context, device Device, pair TokenPair) error
 	// FindDeviceByID returns ErrNotFound when there is no such device.
 	FindDeviceByID(ctx context.Context, id string) (*Device, error)
 	// CreateTokenPair stores a fresh access/refresh pair. It returns

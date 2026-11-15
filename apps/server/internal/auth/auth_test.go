@@ -203,6 +203,13 @@ func (f *fakeStore) RegisterDevice(_ context.Context, d store.Device) error {
 	return nil
 }
 
+func (f *fakeStore) RegisterDeviceWithPair(ctx context.Context, d store.Device, pair store.TokenPair) error {
+	if err := f.RegisterDevice(ctx, d); err != nil {
+		return err
+	}
+	return f.CreateTokenPair(ctx, pair)
+}
+
 func (f *fakeStore) FindDeviceByID(_ context.Context, id string) (*store.Device, error) {
 	if f.device == nil || f.device.ID != id {
 		return nil, store.ErrNotFound

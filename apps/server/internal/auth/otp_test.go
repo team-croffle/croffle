@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base32"
 	"errors"
 	"strings"
@@ -234,25 +235,52 @@ func TestOTPFailuresCountTowardsTheRateLimit(t *testing.T) {
 	}
 }
 
+// racingStore swaps the pending secret right after confirmation has read it,
+// the interleaving a concurrent "set up again" in another tab produces.
+type racingStore struct {
+	*fakeStore
+	swapTo string
+}
+
+func (r *racingStore) FindOTP(ctx context.Context, accountID string) (*store.OTP, error) {
+	enrolment, err := r.fakeStore.FindOTP(ctx, accountID)
+	if err == nil && r.swapTo != "" {
+		_ = r.fakeStore.StartOTP(ctx, accountID, r.swapTo, time.Time{})
+		r.swapTo = ""
+	}
+	return enrolment, err
+}
+
 func TestConfirmIsBoundToTheSecretItChecked(t *testing.T) {
 	_, st, now := newFixture(t, "hunter2")
-	svc := NewService(st, func() time.Time { return now })
+	// Two fresh secrets, made while the test runs, whose codes differ at the
+	// fixture time (two random secrets collide one time in a million).
+	secretA, secretB := newTestSecret(t), newTestSecret(t)
+	for codeAt(t, secretA, now) == codeAt(t, secretB, now) {
+		secretB = newTestSecret(t)
+	}
+	racing := &racingStore{fakeStore: st, swapTo: secretB}
+	svc := NewService(racing, func() time.Time { return now })
 	ctx := context.Background()
 
-	first, err := svc.BeginOTP(ctx, "acct-1", "alice")
-	if err != nil {
+	if err := st.StartOTP(ctx, "acct-1", secretA, now); err != nil {
 		t.Fatal(err)
 	}
-	code := codeAt(t, first.Secret, now)
-	// The enrolment is restarted with a new secret before the confirmation
-	// lands; the store must refuse to enable the new one with the old code.
-	if err := st.EnableOTP(ctx, "acct-1", "SOME-OTHER-SECRET", 1, nil, now); !errors.Is(err, store.ErrNotFound) {
-		t.Fatalf("enable with a secret that is not pending: %v", err)
+	// The code is right for A, which confirmation read; B replaced it before
+	// the enable. B must not be switched on with A's code.
+	if _, err := svc.ConfirmOTP(ctx, "acct-1", codeAt(t, secretA, now)); !errors.Is(err, ErrOTPNotPending) {
+		t.Fatalf("confirm across a swap: %v, want ErrOTPNotPending", err)
 	}
-	if _, err := svc.BeginOTP(ctx, "acct-1", "alice"); err != nil {
+	if st.otp.Secret != secretB || st.otp.Enabled() {
+		t.Fatalf("enrolment = %+v, want B still pending", st.otp)
+	}
+}
+
+func newTestSecret(t *testing.T) string {
+	t.Helper()
+	raw := make([]byte, 20)
+	if _, err := rand.Read(raw); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.ConfirmOTP(ctx, "acct-1", code); !errors.Is(err, ErrInvalidCode) {
-		t.Fatalf("old secret's code confirmed the new enrolment: %v", err)
-	}
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(raw)
 }
