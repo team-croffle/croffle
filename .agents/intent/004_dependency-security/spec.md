@@ -195,7 +195,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 실행 방법:
     1) `pnpm --filter @croffledev/desktop postinstall`(`electron-builder install-app-deps`)을 실행해 네이티브 모듈이 Electron 43.8.10 헤더/ABI에 맞춰 빌드되는지 확인합니다.
     2) Electron 43.8.10 바이너리 자체의 Node 런타임(`ELECTRON_RUN_AS_NODE=1`)으로 `better-sqlite3`를 직접 로드해 인메모리 DB 쿼리를 수행합니다:
-       `ELECTRON_RUN_AS_NODE=1 ./apps/desktop/node_modules/.bin/electron -e 'const Database = require("./apps/desktop/node_modules/better-sqlite3"); const pkg = require("./apps/desktop/node_modules/better-sqlite3/package.json"); const db = new Database(":memory:"); db.exec("CREATE TABLE t(id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t(v) VALUES ('ok');"); const row = db.prepare("SELECT v, sqlite_version() AS sqlite FROM t").get(); console.log(JSON.stringify({ electron: process.versions.electron, abi: process.versions.modules, betterSqlite3: pkg.version, row })); db.close();'`
+       `ELECTRON_RUN_AS_NODE=1 ./apps/desktop/node_modules/.bin/electron -e "const Database = require('./apps/desktop/node_modules/better-sqlite3'); const pkg = require('./apps/desktop/node_modules/better-sqlite3/package.json'); const db = new Database(':memory:'); db.exec(\"CREATE TABLE t(id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t(v) VALUES ('ok');\"); const row = db.prepare('SELECT v, sqlite_version() AS sqlite FROM t').get(); console.log(JSON.stringify({ electron: process.versions.electron, abi: process.versions.modules, betterSqlite3: pkg.version, row })); db.close();"`
   - (2026-11-16 변경, 사전 실행 · 사용자 "승인": 처음 명령은 SQL 문자열을 큰따옴표 `\"ok\"` 로 써서 SQLite 가 컬럼 이름으로 읽고 실패했습니다. 문자열은 작은따옴표 `'ok'` 입니다. 셸에서 `-e` 인자를 큰따옴표로 감싸 넘깁니다.)
   - 기대 결과:
     1) `postinstall`과 Electron 런타임 실행이 모두 종료 코드 `0`으로 통과합니다.
