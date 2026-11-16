@@ -3,6 +3,7 @@ intent: "004"
 status: accepted
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-16", words: "승인", rev: "rc 전 감사 A-1 · A-2/C-1: V-1 의 govulncheck 0건 출력 문구, V-4 의 없는 테스트 이름 삭제 · 데스크톱 러너 문구", kind: change }
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "1, 2 수용함. 이후 진행도 하네스 따라 진행.", rev: "V-7: override 위치를 pnpm-workspace.yaml 로(pnpm 12)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "진행", rev: "3b658e2", kind: summary }
 summary_for_user: |
   보안 패치를 작업 단위 8개로 나눴습니다. 서버(W-1~W-4: Go 모듈 · Alpine 3.23 · 대시보드 npm · 노트)를 먼저 병합하고 감사 보완 뒤 `server-v0.1.1-rc.1`, 그다음 데스크톱 1.3.1(W-5~W-8: Electron 43.8.10 · 같은 메이저 안 전체 업데이트 · 남는 전이 의존성 override · 노트)입니다.
@@ -152,20 +153,20 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 실패 판정: `.loctx/history/server-0.1.1.md`에 현재 PR `$head` SHA가 없거나, 리뷰 파일의 첫 줄이 `$head`를 가리키지 않거나(리뷰 뒤 추가 커밋·재작성 발생), 증적 원본 로그가 병합 전에 저장되지 않으면 실패입니다(병합 중단).
   - 증적 경로: `.loctx/reports/sec-004/v06-server-premerge-sha.log`
 
-- V-7 **[2단계 · 데스크톱 1.3.1 병합 전] 저장소 루트 · 데스크톱 및 서버 대시보드 `pnpm audit --json` 취약점 0건 · `pnpm.overrides` 사유 표 대조**
+- V-7 **[2단계 · 데스크톱 1.3.1 병합 전] 저장소 루트 · 데스크톱 및 서버 대시보드 `pnpm audit --json` 취약점 0건 · override(`pnpm-workspace.yaml`) 사유 표 대조**
   - 검증 대상: S-3, S-6, W-6, W-7
   - 실행 방법:
     1) 데스크톱 병합 전 저장소 루트와 `apps/server/web` 양쪽에서 `pnpm audit --json`을 실행합니다:
        - `pnpm audit --json`
        - `pnpm --dir apps/server/web audit --json`
-    2) 루트 `package.json`(및 `apps/server/web/package.json`)의 `pnpm.overrides` 항목을 추출합니다:
-       - `jq -r '.pnpm.overrides // {} | to_entries[] | "\(.key)\t\(.value)"' package.json`
-    3) 추출한 모든 `pnpm.overrides` 항목을 `.agents/intent/004_dependency-security/spec.md`의 `### override 표`와 1:1로 대조합니다.
+    2) 루트 `pnpm-workspace.yaml`(및 `apps/server/web/pnpm-workspace.yaml`)의 `overrides:` 항목을 추출합니다(2026-11-16 변경: pnpm 12 는 override 를 `package.json` 이 아니라 이 파일에 둡니다. 사용자 "1, 2 수용함"):
+       - `sed -n '/^overrides:/,/^[^ ]/p' pnpm-workspace.yaml apps/server/web/pnpm-workspace.yaml`
+    3) 추출한 모든 `overrides:` 항목을 `.agents/intent/004_dependency-security/spec.md`의 `### override 표`와 1:1로 대조합니다.
   - 기대 결과:
     1) 루트 `pnpm audit --json`과 `pnpm --dir apps/server/web audit --json` 모두 종료 코드 `0`으로 끝나고, 각 출력의 `.metadata.vulnerabilities`가 `{"info":0,"low":0,"moderate":0,"high":0,"critical":0}`이며 `.advisories`가 `{}`입니다(기존 루트의 critical 2 · high 7 · moderate 9 · low 2건 전량 해소).
-    2) `package.json`의 `pnpm.overrides`에 들어간 모든 패키지 키와 버전이 `.agents/intent/004_dependency-security/spec.md`의 `### override 표`에 빠짐없이 등재되어 있고, 각 행마다 `패키지`, `버전`, `경유`, `이유`(같은 메이저 내 직접 의존성 업데이트만으로 해결되지 않는 사유와 최소 패치 버전 근거)가 빈칸이나 `—` 없이 채워져 있습니다.
+    2) 두 `pnpm-workspace.yaml` 의 `overrides:` 에 들어간 모든 패키지 키와 버전이 `.agents/intent/004_dependency-security/spec.md`의 `### override 표`에 빠짐없이 등재되어 있고, 각 행마다 `패키지`, `버전`, `경유`, `이유`(같은 메이저 내 직접 의존성 업데이트만으로 해결되지 않는 사유와 최소 패치 버전 근거)가 빈칸이나 `—` 없이 채워져 있습니다.
     3) 직접 의존성의 같은 메이저 업데이트만으로 해소되는 패키지(예: `oxfmt` 업데이트로 해결되는 경우의 `tinypool`)는 불필요하게 `pnpm.overrides`에 들어가지 않습니다.
-  - 실패 판정: 루트 또는 `apps/server/web`의 `pnpm audit --json`에서 어느 등급이든 취약점 수가 `1` 이상이거나, `pnpm.overrides`에 있는 항목 중 하나라도 `spec.md`의 override 표에 없거나 사유가 비어 있으면 실패입니다.
+  - 실패 판정: 루트 또는 `apps/server/web`의 `pnpm audit --json`에서 어느 등급이든 취약점 수가 `1` 이상이거나, 두 `pnpm-workspace.yaml` 의 `overrides:` 에 있는 항목 중 하나라도 `spec.md`의 override 표에 없거나 사유가 비어 있으면 실패입니다.
   - 증적 경로: `.loctx/reports/sec-004/v07-root-pnpm-audit-and-overrides.log`
 
 - V-8 **[2단계 · 데스크톱 1.3.1 병합 전] Electron 43.8.10 버전 · 전체 패키지 메이저 버전 불변 · lockfile 동기화 확인**
