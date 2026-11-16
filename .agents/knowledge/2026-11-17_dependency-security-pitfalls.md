@@ -17,7 +17,7 @@ approved: { by: user, at: 2026-11-17, words: "P-4. 인용" }
 - **테스트에 credential 처럼 생긴 고정값(토큰, 해시, TOTP secret)을 넣지 않습니다.** 실행 중에 만듭니다. Gitleaks 는 전체 이력을 보므로, 한 번 커밋되면 이력을 다시 써야 지워집니다(서버 0.1.1 에서 실제로 force-push 함). 예전 형식이 필요하면 그 형식을 테스트 안에서 직접 만듭니다(예: argon2id 인코딩을 `x/crypto/argon2` 로).
 - 0.x 도구(oxfmt)는 마이너가 포맷을 바꿀 수 있어, 취약점을 고치는 가장 낮은 버전으로 올리고 포맷 차이가 생기면 `pnpm format` 만 한 커밋으로 따로 둡니다.
 ## 이유
-intent 004(서버 0.1.1 보안 패치 · 데스크톱 1.3.1)에서 하나씩 겪었습니다. libc 짝은 리뷰가 잡았고(P1), override 위치와 오래된 고정값은 구현 중에, Gitleaks 는 PR CI 에서 드러났습니다.
+하나씩 겪었습니다. Gitleaks 는 intent 003(서버 0.1.1 기능, PR #129)의 CI 에서 드러나 이력을 다시 썼습니다. 나머지는 intent 004(서버 0.1.1 보안 패치 · 데스크톱 1.3.1)에서: libc 짝은 리뷰가 잡았고(P1), override 위치와 오래된 고정값은 구현 중에 드러났습니다.
 ## 적용
 - 다음 보안 패치: `pnpm-workspace.yaml` 두 곳의 overrides 전부를 audit 결과와 대조, `go mod tidy` 뒤 libc 짝 확인.
 ## 바뀌면
