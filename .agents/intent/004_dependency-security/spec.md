@@ -1,7 +1,8 @@
 ---
 intent: "004"
-status: draft
-approvals: []
+status: accepted
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "진행", rev: "3b658e2", kind: summary }
 summary_for_user: |
   보안 패치를 작업 단위 8개로 나눴습니다. 서버(W-1~W-4: Go 모듈 · Alpine 3.23 · 대시보드 npm · 노트)를 먼저 병합하고 감사 보완 뒤 `server-v0.1.1-rc.1`, 그다음 데스크톱 1.3.1(W-5~W-8: Electron 43.8.10 · 같은 메이저 안 전체 업데이트 · 남는 전이 의존성 override · 노트)입니다.
   메이저 업데이트는 하지 않습니다. 예외는 두 가지입니다: oxfmt(0.x)는 tinypool 을 고치는 버전까지 올리고 포맷 변화는 커밋 하나로 따로 두며, 패치가 상위 메이저에만 있는 전이 의존성(예: minimatch 11)은 override 로 넘깁니다.
