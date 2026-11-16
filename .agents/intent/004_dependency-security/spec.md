@@ -2,6 +2,7 @@
 intent: "004"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "1. 승인", rev: "사전 실행: V-9 SQL 따옴표, V-10 better-sqlite3 미리 빌드 경로", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "승인", rev: "rc 전 감사 A-1 · A-2/C-1: V-1 의 govulncheck 0건 출력 문구, V-4 의 없는 테스트 이름 삭제 · 데스크톱 러너 문구", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "1, 2 수용함. 이후 진행도 하네스 따라 진행.", rev: "V-7: override 위치를 pnpm-workspace.yaml 로(pnpm 12)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "진행", rev: "3b658e2", kind: summary }
@@ -194,7 +195,8 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 실행 방법:
     1) `pnpm --filter @croffledev/desktop postinstall`(`electron-builder install-app-deps`)을 실행해 네이티브 모듈이 Electron 43.8.10 헤더/ABI에 맞춰 빌드되는지 확인합니다.
     2) Electron 43.8.10 바이너리 자체의 Node 런타임(`ELECTRON_RUN_AS_NODE=1`)으로 `better-sqlite3`를 직접 로드해 인메모리 DB 쿼리를 수행합니다:
-       `ELECTRON_RUN_AS_NODE=1 ./apps/desktop/node_modules/.bin/electron -e 'const Database = require("./apps/desktop/node_modules/better-sqlite3"); const pkg = require("./apps/desktop/node_modules/better-sqlite3/package.json"); const db = new Database(":memory:"); db.exec("CREATE TABLE t(id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t(v) VALUES (\"ok\");"); const row = db.prepare("SELECT v, sqlite_version() AS sqlite FROM t").get(); console.log(JSON.stringify({ electron: process.versions.electron, abi: process.versions.modules, betterSqlite3: pkg.version, row })); db.close();'`
+       `ELECTRON_RUN_AS_NODE=1 ./apps/desktop/node_modules/.bin/electron -e 'const Database = require("./apps/desktop/node_modules/better-sqlite3"); const pkg = require("./apps/desktop/node_modules/better-sqlite3/package.json"); const db = new Database(":memory:"); db.exec("CREATE TABLE t(id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t(v) VALUES ('ok');"); const row = db.prepare("SELECT v, sqlite_version() AS sqlite FROM t").get(); console.log(JSON.stringify({ electron: process.versions.electron, abi: process.versions.modules, betterSqlite3: pkg.version, row })); db.close();'`
+  - (2026-11-16 변경, 사전 실행 · 사용자 "승인": 처음 명령은 SQL 문자열을 큰따옴표 `\"ok\"` 로 써서 SQLite 가 컬럼 이름으로 읽고 실패했습니다. 문자열은 작은따옴표 `'ok'` 입니다. 셸에서 `-e` 인자를 큰따옴표로 감싸 넘깁니다.)
   - 기대 결과:
     1) `postinstall`과 Electron 런타임 실행이 모두 종료 코드 `0`으로 통과합니다.
     2) 표준출력 JSON에 `"electron":"43.8.10"`, `"betterSqlite3":"13.2.0"`(또는 `13.x` 최신 패치/마이너), `"row":{"v":"ok","sqlite":"..."}`가 출력되며 `NODE_MODULE_VERSION` 불일치나 `ERR_DLOPEN_FAILED` 예외가 발생하지 않습니다.
@@ -206,10 +208,10 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 실행 방법:
     1) 저장소 루트에서 `.agents/harness/gates.yaml`의 8개 게이트 명령을 순서대로 실행합니다:
        `pnpm typecheck && pnpm lint && pnpm exec oxfmt --check && pnpm -r test && pnpm build && pnpm --filter @croffledev/croffle-cli build && pnpm --dir apps/server/web build && make -C apps/server check`
-    2) `pnpm build:unpack`(또는 `pnpm build:linux`)을 실행하여 `electron-builder` 26.x와 `pnpm.overrides` 적용 상태에서 데스크톱 앱이 실제로 패키징되는지 확인하고, 산출물 `apps/desktop/dist/linux-unpacked/croffle` 및 `apps/desktop/dist/linux-unpacked/resources/app.asar.unpacked` 내 `better_sqlite3.node` 파일 존재를 확인합니다.
+    2) `pnpm build:unpack`(또는 `pnpm build:linux`)을 실행하여 `electron-builder` 26.x와 `pnpm.overrides` 적용 상태에서 데스크톱 앱이 실제로 패키징되는지 확인하고, 산출물 `apps/desktop/dist/linux-unpacked/croffle` 및 `apps/desktop/dist/linux-unpacked/resources/app.asar.unpacked/node_modules/better-sqlite3/prebuilds/linux-x64.node` 파일 존재를 확인합니다(2026-11-16 변경, 사전 실행 · 사용자 "승인": better-sqlite3 13 은 `build/Release/better_sqlite3.node` 가 아니라 플랫폼별 N-API 미리 빌드를 `prebuilds/<platform>.node` 로 싣습니다).
   - 기대 결과:
     1) 8개 게이트 명령이 모두 종료 코드 `0`으로 통과합니다.
-    2) `pnpm build:unpack`(또는 `pnpm build:linux`)이 종료 코드 `0`으로 완료되고, `apps/desktop/dist/linux-unpacked/croffle` 실행 파일과 언팩된 `better_sqlite3.node` 바이너리가 정상 생성됩니다.
+    2) `pnpm build:unpack`(또는 `pnpm build:linux`)이 종료 코드 `0`으로 완료되고, `apps/desktop/dist/linux-unpacked/croffle` 실행 파일과 `app.asar.unpacked/node_modules/better-sqlite3/prebuilds/linux-x64.node` 가 있습니다.
   - 실패 판정: 8개 게이트 또는 `pnpm build:unpack`(`build:linux`) 중 어느 하나라도 종료 코드가 `0`이 아니거나, `apps/desktop/dist/linux-unpacked/croffle`이 생성되지 않으면 실패입니다.
   - 증적 경로: `.loctx/reports/sec-004/v10-desktop-gates-and-unpack.log`
 
