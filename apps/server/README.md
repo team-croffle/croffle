@@ -9,7 +9,7 @@ first; this server exists so several devices of one account can exchange
 changes, and so a schedule can be shared with a team. If you only use one
 machine, you do not need this.
 
-Status: **0.1 beta.** One Go binary, one SQLite file, a read-only dashboard.
+Status: **0.1 beta.** One Go binary, one SQLite file, a dashboard for your own account.
 
 ---
 
@@ -427,7 +427,7 @@ works with it unchanged. The desktop does not use the new ones yet (token pairs,
 ```
 
 The desktop checks it when you connect and tells you which side needs updating.
-`retention` is what explains a re-bootstrap (see below), and `time` is the
+`retention` is what explains a re-bootstrap (see [Retention](#retention) above), and `time` is the
 server clock in milliseconds, which the desktop compares with its own to warn
 about a badly skewed machine — conflicts are resolved by wall clock, so a wrong
 one always wins or always loses.
