@@ -2,6 +2,7 @@
 intent: "003"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "승인", rev: "V-5: 코드에 없는 테스트 이름 TestLegacyDeviceTokenAndPasswordAfterMigration 삭제 · V-10 데스크톱 러너 문구 (server 0.1.1 rc 전 감사 C-1)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "F1. ㅇㅇ / F2. ㅇㅇ 고쳐.", rev: "감사 A-3-1 · A-3-2: V-1 · V-10 의 12번 SKIP 허용, V-4 · V-6~V-9 오류 응답 예시를 실제 모양으로", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "V-3는 전에 확인 했고, V-14는 (가)", rev: "V-14 기대 결과 · 실패 판정 변경(의도된 401 두 가지 허용, favicon 404 제거)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "- TOTP 암호화는 바로 다음버전으로 넣자. - 만료는 어쩔 수 없고, 바이너리는 수용 진행", rev: "0d4a243", kind: summary }
@@ -184,7 +185,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 - V-5 **0.1.0 DB 마이그레이션(0004 · 0005) 적용 후 기존 비밀번호 해시 · 기기 토큰 무중단 동작 (음성 확인)**
   - 검증 대상: S-3, S-10, W-4, W-7
   - 실행 방법:
-    1) 자동 테스트: `go test -v ./internal/store/sqlite ./internal/httpapi -run 'TestMigrateFrom010|TestLegacyDeviceTokenAndPasswordAfterMigration'`을 실행합니다(0001~0003만 적용된 0.1.0 스키마 DB에 계정·기기 토큰·동기화 행을 생성한 뒤 0004·0005 마이그레이션을 적용하고 기존 자격증명을 검증하는 테스트).
+    1) 자동 테스트: `go test -v ./internal/store/sqlite -run 'TestMigrateFrom010'`을 실행합니다(2026-11-16 변경 · 사용자 "승인": 처음 문구의 `TestLegacyDeviceTokenAndPasswordAfterMigration` 은 코드에 없는 이름이었고, 같은 확인은 아래 2) · 3) 의 live 단계가 합니다. `no tests to run` 은 실패)(0001~0003만 적용된 0.1.0 스키마 DB에 계정·기기 토큰·동기화 행을 생성한 뒤 0004·0005 마이그레이션을 적용하고 기존 자격증명을 검증하는 테스트).
     2) 0.1.0 스키마(버전 3)로 생성되어 계정 `alice`와 기기 토큰 `T_010`, 일정 1건이 들어 있는 SQLite DB 파일에 `./apps/server/bin/croffle-server db migrate --db "$DB010"` 및 `./apps/server/bin/croffle-server db info --json --db "$DB010"`을 실행한 뒤 0.1.1 서버를 기동합니다.
     3) 마이그레이션 전에 발급된 기존 토큰 `T_010`으로 `POST /auth/whoami`, `POST /sync/pull`, `POST /sync/push`를 호출하고, 0.1.0에서 만든 `alice`의 비밀번호로 `POST /auth/login`을 호출합니다.
   - 기대 결과:
@@ -282,7 +283,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
        - (c) 한쪽이 삭제(`deletedAt` 변경)하거나 `teamId`를 바꾼 충돌 → `"deletedAt"` 또는 `"teamId"`가 `differentFields`에 포함됨
        - (d) 충돌 시 서버 행(`sync_row`)과 `applied_op`는 바뀌지 않으며, 클라이언트가 `baseVersion = serverVersion`, `version = serverVersion + 1`로 재전송하면 `accepted`됨
   - 기대 결과:
-    1) `go test ./internal/conformance`에서 `12-row-codec`(데스크톱 전용, SKIP)을 뺀 `01`~`13`번 시나리오가 모두 PASS하고(V-1 과 같은 2026-11-16 변경), 데스크톱 `sync-protocol.test.ts`도 13개 시나리오를 모두 읽고 PASS합니다.
+    1) `go test ./internal/conformance`에서 `12-row-codec`(데스크톱 전용, SKIP)을 뺀 `01`~`13`번 시나리오가 모두 PASS하고(V-1 과 같은 2026-11-16 변경), 데스크톱 `sync-protocol.test.ts`는 13개 파일을 읽는 테스트를 포함해 전부 `fail 0` 으로 통과합니다(러너는 테스트 케이스 단위로 결과를 찍습니다, 2026-11-16 변경).
     2) 모든 충돌 응답 원소에 `differentFields` 배열(차이가 없을 때는 `[]`)이 포함되며, 장부 필드 4종(`version`, `updatedAtMs`, `lastWriterId`, `ownerId`)은 어떤 경우에도 `differentFields`에 나타나지 않습니다.
     3) `packages/sync-fixtures/README.md`에 `"desktop: work item 1.3.0#15"` 문장이 유지된 채 13번 시나리오 설명이 추가되어 있습니다.
   - 실패 판정: `differentFields`가 사전순 정렬되지 않았거나, 차이가 없을 때 `[]` 대신 `null`/생략되거나, `version`·`updatedAtMs`·`lastWriterId`·`ownerId`가 포함되거나, 없는 키와 `null`을 다르게 판정하거나, 충돌한 커밋이 서버 행을 덮어쓰면 실패입니다.

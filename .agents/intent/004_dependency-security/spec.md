@@ -2,6 +2,7 @@
 intent: "004"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "승인", rev: "rc 전 감사 A-1 · A-2/C-1: V-1 의 govulncheck 0건 출력 문구, V-4 의 없는 테스트 이름 삭제 · 데스크톱 러너 문구", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "진행", rev: "3b658e2", kind: summary }
 summary_for_user: |
   보안 패치를 작업 단위 8개로 나눴습니다. 서버(W-1~W-4: Go 모듈 · Alpine 3.23 · 대시보드 npm · 노트)를 먼저 병합하고 감사 보완 뒤 `server-v0.1.1-rc.1`, 그다음 데스크톱 1.3.1(W-5~W-8: Electron 43.8.10 · 같은 메이저 안 전체 업데이트 · 남는 전이 의존성 override · 노트)입니다.
@@ -70,7 +71,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 기대 결과:
     1) `apps/server/go.mod`의 Go 지시어는 `go 1.26.0` 그대로이고, 직접 의존성은 기존 6개 모듈(`github.com/pquerna/otp` `v1.x`, `github.com/prometheus/client_golang` `v1.x`, `golang.org/x/crypto` `v0.x` [`v0.59.0` 이상], `golang.org/x/term` `v0.x`, `golang.org/x/time` `v0.x`, `modernc.org/sqlite` `v1.x`)뿐이며 모든 모듈의 메이저 버전이 바뀌지 않았습니다.
     2) `go list -m -u all` 출력에서 직접 의존성 6개에 대해 같은 메이저 내 미적용 업데이트(`[v...]`)가 `0`건입니다.
-    3) `govulncheck -show verbose ./...`가 종료 코드 `0`으로 끝나고, `=== Symbol Results ===` 아래 `No vulnerabilities found.`, `=== Package Results ===` 아래 `No other vulnerabilities found.`, `=== Module Results ===` 아래 `No other vulnerabilities found.`(기존 `GO-2026-5932`를 포함해 `Vulnerability #` 항목 `0`건)가 출력되며, 마지막 요약에 `Your code is affected by 0 vulnerabilities.`가 표시됩니다.
+    3) `govulncheck -show verbose ./...`가 종료 코드 `0`으로 끝나고, 출력에 `Vulnerability #` 항목이 `0`건이며(기존 `GO-2026-5932` 포함), 마지막 줄이 `No vulnerabilities found.` 입니다. (2026-11-16 변경, rc 전 감사 A-1 · 사용자 "승인": govulncheck v1.9.0 은 취약점이 하나도 없으면 절별 제목 없이 이 한 줄만 출력합니다. 처음 문구의 `=== Symbol Results ===` · `Your code is affected by 0 vulnerabilities.` 는 보고가 있을 때의 형식이었습니다.)
   - 실패 판정: `go 1.26.0` 지시어가 바뀌었거나, 직접 의존성이 6개에서 가감되었거나, 어느 한 모듈이라도 메이저 버전이 바뀌었거나, `govulncheck`의 Symbol · Package · Module Results 중 한 곳이라도 취약점이 `1`건 이상 보고되거나 종료 코드가 `0`이 아니면 실패입니다.
   - 증적 경로: `.loctx/reports/sec-004/v01-server-go-deps-govulncheck.log`
 
@@ -112,13 +113,13 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
        - `pnpm typecheck && pnpm lint && pnpm exec oxfmt --check && pnpm -r test && pnpm build && pnpm --filter @croffledev/croffle-cli build && pnpm --dir apps/server/web build && make -C apps/server check`
        - `make -C apps/server build-all && ./apps/server/bin/croffle-server --version`
     2) **spec 003 V-5 재실행 (0.1.0 DB 마이그레이션 0004·0005 후 기존 비밀번호 해시·기기 토큰 무중단 동작)**:
-       - `go test -v ./internal/store/sqlite ./internal/httpapi -run 'TestMigrateFrom010|TestLegacyDeviceTokenAndPasswordAfterMigration'` (디렉터리: `apps/server`)
+       - `go test -v ./internal/store/sqlite -run 'TestMigrateFrom010'` (디렉터리: `apps/server`). 실행된 테스트가 `--- PASS: TestMigrateFrom010` 로 출력에 있어야 하며, `no tests to run` 은 실패입니다. (2026-11-16 변경, rc 전 감사 C-1 · 사용자 "승인": spec 003 V-5 에서 넘어온 `TestLegacyDeviceTokenAndPasswordAfterMigration` 은 코드에 없는 이름이라 뺐고, 그 확인은 아래 live 단계가 합니다.)
        - 0.1.0 스키마(버전 3, 계정 `alice` · 기기 토큰 `T_010` · 일정 1건) DB에 `./apps/server/bin/croffle-server db migrate --db "$DB010"` 및 `db info --json --db "$DB010"` 실행 후 0.1.1 서버를 기동하여 기존 토큰 `T_010`으로 `POST /auth/whoami`, `POST /sync/pull`, `POST /sync/push`와 기존 비밀번호로 `POST /auth/login`을 호출합니다.
     3) **spec 003 V-12 재실행 (`GET /health` 프로토콜 범위 및 `features` 목록 확인)**:
        - `go test -v ./internal/httpapi -run TestHealth` (디렉터리: `apps/server`)
        - 기동된 서버에 `curl -sf http://127.0.0.1:18787/health`를 호출해 JSON 응답을 검증합니다.
   - 기대 결과:
-    1) spec 003 V-1: 8개 게이트와 `make -C apps/server build-all`이 모두 종료 코드 `0`으로 통과하고, 픽스처 13개에 대해 데스크톱 러너 13개 PASS · 서버 컨포먼스 러너 `12-row-codec` SKIP 외 12개 PASS하며, `--version`이 `sync protocol 1-1`을 출력합니다.
+    1) spec 003 V-1: 8개 게이트와 `make -C apps/server build-all`이 모두 종료 코드 `0`으로 통과하고, 데스크톱 러너는 `packages/sync-fixtures/scenarios` 의 13개 파일(목록을 원본에 남김)을 읽는 테스트를 포함해 테스트 전부가 `fail 0` 으로 통과하고(러너는 시나리오가 아니라 테스트 케이스 단위로 결과를 찍습니다, 2026-11-16 변경 · 사용자 "승인"), 서버 컨포먼스 러너는 `12-row-codec` SKIP 외 12개 PASS하며, `--version`이 `sync protocol 1-1`을 출력합니다.
     2) spec 003 V-5: `schemaVersion`이 `5`, 기존 `device.tokenExpiresAt`이 `NULL`, 기존 데이터(`accounts: 1`, `devices: 1`, `rows: 1`, `commits: 1`)가 보존되며, 기존 토큰 `T_010`으로 호출한 `/auth/whoami`·`/sync/pull`·`/sync/push`와 기존 비밀번호로 호출한 `/auth/login`이 모두 HTTP `200`을 반환합니다.
     3) spec 003 V-12: `GET /health`가 HTTP `200`으로 `protocol: {"min": 1, "max": 1}`, `db: "ok"`, `server`, `time`, `retention`, 그리고 `features: ["conflict-fields", "device-token-ttl", "token-pair", "totp"]`(정확히 이 순서 4개)를 반환합니다.
   - 실패 판정: spec 003의 `V-1`, `V-5`, `V-12` 중 어느 하나라도 해당 검사의 실패 판정 조건에 걸리면 실패입니다.
