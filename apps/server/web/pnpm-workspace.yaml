@@ -9,3 +9,8 @@ packages: []
 # the root workspace.
 allowBuilds:
   esbuild: true
+
+# Security overrides (spec 004). minimatch < 11.0.1 has a ReDoS advisory and
+# vue-tsc 2.x (newest 2.2.12) still asks for 9.x; the patched line is 11.x.
+overrides:
+  minimatch@<11.0.1: 11.0.8
