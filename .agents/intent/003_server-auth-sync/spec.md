@@ -2,6 +2,7 @@
 intent: "003"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "F1. ㅇㅇ / F2. ㅇㅇ 고쳐.", rev: "감사 A-3-1 · A-3-2: V-1 · V-10 의 12번 SKIP 허용, V-4 · V-6~V-9 오류 응답 예시를 실제 모양으로", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "V-3는 전에 확인 했고, V-14는 (가)", rev: "V-14 기대 결과 · 실패 판정 변경(의도된 401 두 가지 허용, favicon 404 제거)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "- TOTP 암호화는 바로 다음버전으로 넣자. - 만료는 어쩔 수 없고, 바이너리는 수용 진행", rev: "0d4a243", kind: summary }
 summary_for_user: |
@@ -128,6 +129,8 @@ CSRF 는 Go 1.25 부터 표준인 `net/http.CrossOriginProtection` 을 쓰므로
 intent 계획과 다른 점: 계획 3(토큰 발급)을 저장소(W-4) · 기기 토큰 만료(W-5) · access/refresh(W-6) 셋으로 나눴습니다. 만료 설정과 새 엔드포인트를 따로 되돌릴 수 있게 하려는 것입니다. 계획 2의 TOTP(W-7)는 대시보드 CSRF(W-3)와 `/auth/token`(W-6) 뒤로 옮겼습니다. 등록 화면은 CSRF 보호가 먼저 있어야 하고, OTP 규칙을 세 로그인 입구에 한 번에 붙이기 위해서입니다.
 
 ## 검증 기준
+> 2026-11-16 변경(감사 A-3-2 · 사용자 "F2. ㅇㅇ 고쳐."): V-4 · V-6~V-9 의 오류 응답 예시를 실제 모양(0.1.0 부터 최상위 `code` · `message`)으로 고쳤습니다. 처음 문구의 `{"error":{…}}` 는 qa-designer 가 쓴 예시로, 프로토콜과 맞지 않았습니다.
+
 qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정했습니다. qa-designer 가 짚은 모호한 점 5개(features 목록, 대시보드 새 엔드포인트의 응답, 삭제 충돌의 비교 기준, 만료 필드 이름, 새 변수 목록)는 설계에 정해 넣었습니다. PM 수정: V-2 대시보드 `package.json` 의 `version` 줄 허용, V-4 의 30초 리필은 단위 테스트로 판정, V-8 회수 응답을 `204` 로 고정, V-9 응답 필드 이름, V-11 catch-all 라벨, V-12 `features` 정확한 값.
 
 - V-1 **프로젝트 정적 게이트 · 서버 및 대시보드 통합 빌드(`build-all`) · 공유 픽스처 러너**
@@ -135,8 +138,8 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 실행 방법:
     1) 저장소 루트에서 `.agents/harness/gates.yaml`의 8개 게이트 명령을 순서대로 실행합니다: `pnpm typecheck && pnpm lint && pnpm exec oxfmt --check && pnpm -r test && pnpm build && pnpm --filter @croffledev/croffle-cli build && pnpm --dir apps/server/web build && make -C apps/server check`
     2) `make -C apps/server build-all`을 실행한 뒤 생성된 단일 바이너리 `apps/server/bin/croffle-server`의 존재 확인 및 `./apps/server/bin/croffle-server --version`을 실행합니다.
-  - 기대 결과: 8개 게이트 명령과 `make -C apps/server build-all`이 모두 종료 코드 `0`으로 통과합니다. `pnpm -r test`(`apps/desktop/test/sync-protocol.test.ts`)와 `make -C apps/server check`(`go test ./internal/conformance`) 양쪽 모두 새 시나리오 `13-push-conflict-different-fields.json`을 포함한 `packages/sync-fixtures/scenarios/*.json` 13개 시나리오 전체를 읽고(`protocol: 1` 확인) fail `0`으로 통과하며, `./apps/server/bin/croffle-server --version`은 `sync protocol 1-1`을 출력합니다.
-  - 실패 판정: 어느 한 단계라도 종료 코드가 `0`이 아니거나, `gofmt`·`go vet`·`go test`·`oxlint`·`oxfmt`·`typecheck` 오류가 1건이라도 출력되거나, 데스크톱/서버 테스트 러너 중 한쪽이라도 13개 픽스처를 모두 실행하지 않거나, `apps/server/bin/croffle-server`가 생성되지 않으면 실패입니다.
+  - 기대 결과: 8개 게이트 명령과 `make -C apps/server build-all`이 모두 종료 코드 `0`으로 통과합니다. `pnpm -r test`(`apps/desktop/test/sync-protocol.test.ts`)와 `make -C apps/server check`(`go test ./internal/conformance`) 양쪽 모두 새 시나리오 `13-push-conflict-different-fields.json`을 포함한 `packages/sync-fixtures/scenarios/*.json` 13개 시나리오 전체를 읽고(`protocol: 1` 확인) fail `0`으로 통과하며(서버 러너는 `12-row-codec` 을 SKIP),  `./apps/server/bin/croffle-server --version`은 `sync protocol 1-1`을 출력합니다. (2026-11-16 변경, 감사 A-3-1 · 사용자 "F1. ㅇㅇ": `12-row-codec.json` 은 `rowCodec` 만 있는 데스크톱 전용 픽스처라 서버 러너는 0.1.0 부터 SKIP 합니다. 서버 러너는 12번을 SKIP, 나머지 12개를 PASS 하면 통과입니다.)
+  - 실패 판정: 어느 한 단계라도 종료 코드가 `0`이 아니거나, `gofmt`·`go vet`·`go test`·`oxlint`·`oxfmt`·`typecheck` 오류가 1건이라도 출력되거나, 데스크톱 러너가 13개 픽스처를 모두 읽지 않거나, 서버 러너가 `12-row-codec` 밖의 시나리오를 하나라도 SKIP 하거나 실행하지 않거나, `apps/server/bin/croffle-server`가 생성되지 않으면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v01-gates-and-build.log`
 
 - V-2 **커밋된 마이그레이션(0001~0003) · 데스크톱/패키지 소스 불변 및 서버 의존성 원칙 검증 (음성 확인)**
@@ -174,7 +177,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
     3) 로컬 서버를 띄우고 같은 IP · 같은 `username`(`"alice"`)으로 틀린 비밀번호를 연속 6회 `POST /auth/login`에 전송한 뒤, 같은 IP에서 다른 `username`(`"bob"`)으로 1회 전송합니다.
   - 기대 결과:
     1) `apps/server/internal/auth/ratelimit.go`가 직접 짠 토큰 버킷 대신 `golang.org/x/time/rate`(`rate.Every(30 * time.Second)`, burst `5`)를 사용합니다.
-    2~3) `"alice"`에 대한 처음 5회 실패는 HTTP `401` (`{"error":{"code":"unauthorized","message":"invalid credentials"}}`)을 반환하고, 6번째 요청은 HTTP `429` (`{"error":{"code":"too_many_attempts",...}}`)와 `Retry-After: 30` 헤더를 반환합니다. 직후 `"bob"`에 대한 요청은 차단되지 않고 HTTP `401`을 반환합니다. 30초 리필(주입한 시계로 30초를 넘기면 1회 다시 허용)과 성공 시 `Reset` 초기화는 1)의 단위 테스트가 PASS 하는 것으로 판정합니다.
+    2~3) `"alice"`에 대한 처음 5회 실패는 HTTP `401` (`{"code":"unauthorized","message":"invalid credentials"}`)을 반환하고, 6번째 요청은 HTTP `429` (`{"code":"too_many_attempts",...}`)와 `Retry-After: 30` 헤더를 반환합니다. 직후 `"bob"`에 대한 요청은 차단되지 않고 HTTP `401`을 반환합니다. 30초 리필(주입한 시계로 30초를 넘기면 1회 다시 허용)과 성공 시 `Reset` 초기화는 1)의 단위 테스트가 PASS 하는 것으로 판정합니다.
   - 실패 판정: `golang.org/x/time/rate`를 사용하지 않거나, 5회 이내에 429가 반환되거나, 6번째 시도에 429 및 `Retry-After: 30`이 반환되지 않거나, 다른 사용자명까지 함께 차단되면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v04-rate-limiter.log`
 
@@ -202,7 +205,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
        - (d) `./apps/server/bin/croffle-server token list alice --db "$TMP_DB"`, `token list alice --json --db "$TMP_DB"`, 대시보드 `GET /dash/devices` 출력을 확인합니다.
   - 기대 결과:
     1) 기본값(`0`)에서 `/auth/login` 응답에는 `expiresAt` 필드가 생략(또는 null)되고 만료되지 않습니다.
-    2) `CROFFLE_DEVICE_TOKEN_TTL=2s`에서 새로 로그인한 응답에는 `expiresAt`(약 `now + 2000` unix ms)이 실리며, 만료 전에는 HTTP `200`, 3초 경과 후에는 `/auth/whoami`와 `/sync/pull` 모두 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)을 반환합니다.
+    2) `CROFFLE_DEVICE_TOKEN_TTL=2s`에서 새로 로그인한 응답에는 `expiresAt`(약 `now + 2000` unix ms)이 실리며, 만료 전에는 HTTP `200`, 3초 경과 후에는 `/auth/whoami`와 `/sync/pull` 모두 HTTP `401` (`{"code":"unauthorized",...}`)을 반환합니다.
     3) 반면 TTL을 켜기 전에 발급된 `T_noexp_login`, TTL이 켜진 상태에서도 `--no-expiry`로 발급한 `T_perm_cli`, 아직 만료 전인 `T_1h_cli`는 3초 후에도 모두 HTTP `200`으로 통과합니다.
     4) CLI `token list`(표 및 `--json`)와 `GET /dash/devices`에 각 기기의 만료 시각(또는 만료 없음)이 표시됩니다.
   - 실패 판정: `CROFFLE_DEVICE_TOKEN_TTL` 설정이 기존 토큰까지 만료시키거나, 만료 시각이 지난 기기 토큰이 `200`을 반환하거나, `--no-expiry`로 발급한 토큰에 만료가 붙거나, `token list`·대시보드에 만료 정보가 표시되지 않으면 실패입니다.
@@ -220,9 +223,9 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 기대 결과:
     1) `POST /auth/token` password 응답은 HTTP `200`이며 `accessToken`, `accessExpiresAt`(기본 약 `now + 15m` unix ms), `refreshToken`, `refreshExpiresAt`(기본 약 `now + 30d` unix ms), `accountId`, `teamId` 필드를 모두 반환합니다.
     2) 같은 `clientId`로 `/auth/token`을 호출해도 `device.tokenHash`는 바뀌지 않아 기존 기기 토큰 `D1`과 새 `A1` 모두 HTTP `200`으로 동작합니다.
-    3) 4)에서 refresh token `R1`을 Bearer로 보낸 `/auth/whoami`, `/sync/push`, `/sync/pull`, `/sync/bootstrap` 요청은 4건 모두 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)로 거부됩니다.
+    3) 4)에서 refresh token `R1`을 Bearer로 보낸 `/auth/whoami`, `/sync/push`, `/sync/pull`, `/sync/bootstrap` 요청은 4건 모두 HTTP `401` (`{"code":"unauthorized",...}`)로 거부됩니다.
     4) 5)에서 `R1` 회전은 HTTP `200`으로 새로운 `A2` · `R2`(`A2 != A1`, `R2 != R1`)를 발급하고 `A2`는 정상 인증됩니다.
-    5) 6)에서 이미 쓴 `R1`을 다시 제출하면 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)을 반환하고 그 기기의 access · refresh 토큰 전체(다른 family 포함)가 회수되어, `A2`를 쓴 `/auth/whoami`·`/sync/pull`과 `R2`를 쓴 `/auth/token`이 모두 HTTP `401`로 즉시 거부되며, 서버 로그에 `refresh reuse` 경고가 기록됩니다.
+    5) 6)에서 이미 쓴 `R1`을 다시 제출하면 HTTP `401` (`{"code":"unauthorized",...}`)을 반환하고 그 기기의 access · refresh 토큰 전체(다른 family 포함)가 회수되어, `A2`를 쓴 `/auth/whoami`·`/sync/pull`과 `R2`를 쓴 `/auth/token`이 모두 HTTP `401`로 즉시 거부되며, 서버 로그에 `refresh reuse` 경고가 기록됩니다.
     6) retention `Sweep` 실행 시 만료된 `auth_token` 행이 삭제됩니다.
   - 실패 판정: `/auth/token`이 같은 기기의 기존 기기 토큰 `D1`을 끊거나, refresh token으로 동기화 엔드포인트가 `200`을 주거나, 이미 사용한 refresh token 재전송 시 `200`이 나거나 그 기기의 `A2`·`R2`(또는 다른 family 의 토큰)가 계속 유효하면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v07-token-pair-rotation-reuse.log`
@@ -240,7 +243,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
     1) 3)에서 대시보드 세션 쿠키로 보낸 `/sync/pull`, `/sync/push`는 HTTP `401`로 거부됩니다.
     2) 4)에서 교차 출처 헤더가 붙은 모든 `/dash/*` POST 요청은 HTTP `403`으로 거부되며 `dev-alice`는 회수되지 않습니다.
     3) 5)에서 타 계정 기기 `dev-bob`과 없는 기기 ID에 대한 회수 요청은 둘 다 HTTP `404`를 반환하고, `bob`의 기기 토큰 `D_b`는 여전히 HTTP `200`으로 정상 동작합니다.
-    4) 6)에서 본인 기기 `dev-alice` 회수는 HTTP `204`를 반환하고 `GET /dash/devices`에서 `state: "revoked"`가 되며, 그 즉시 `D_a`, `A_a`, `R_a` 세 토큰 모두 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)로 거부됩니다.
+    4) 6)에서 본인 기기 `dev-alice` 회수는 HTTP `204`를 반환하고 `GET /dash/devices`에서 `state: "revoked"`가 되며, 그 즉시 `D_a`, `A_a`, `R_a` 세 토큰 모두 HTTP `401` (`{"code":"unauthorized",...}`)로 거부됩니다.
   - 실패 판정: 교차 출처 `/dash/*` POST가 `403`이 아닌 상태 코드로 통과하거나, 타 계정 기기 회수가 `404`가 아니거나 실제로 남의 기기를 회수하거나, 기기 회수 후에도 기기 토큰·access·refresh 중 하나라도 계속 동작하면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v08-dash-csrf-and-device-revoke.log`
 
@@ -261,7 +264,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 기대 결과:
     1) `enroll`은 HTTP `200`으로 base32 `secret`, `otpauthUri`(`otpauth://totp/...`), `qrPng`(PNG data URL)를 반환하며, `confirm` 전(`enabledAt IS NULL`)에는 비밀번호만으로 로그인됩니다.
     2) `confirm`은 HTTP `200`과 `recoveryCodes`(16자 base32 10개)를 반환하고 `GET /dash/me`의 `otpEnabled`가 `true`, CLI `user otp status alice`가 활성 상태를 출력하며, DB에는 SHA-256 해시만 저장됩니다.
-    3) 4a)에서 `/auth/login`, `/auth/token`, `/dash/login` 세 곳 모두 빈 `otp`에 대해 HTTP `401`과 `{"error":{"code":"otp_required",...}}`를 반환합니다. 4b)에서 틀린 코드는 HTTP `401` (`{"error":{"code":"unauthorized",...}}`)을 반환하며 rate limit 시도로 집계됩니다.
+    3) 4a)에서 `/auth/login`, `/auth/token`, `/dash/login` 세 곳 모두 빈 `otp`에 대해 HTTP `401`과 `{"code":"otp_required",...}`를 반환합니다. 4b)에서 틀린 코드는 HTTP `401` (`{"code":"unauthorized",...}`)을 반환하며 rate limit 시도로 집계됩니다.
     4) 5)에서 코드 $C_2$의 첫 번째 로그인은 HTTP `200`이고 `lastStep`이 갱신되며, 같은 스텝의 $C_2$ 또는 이전 스텝 $C_1$을 재사용한 두 번째 요청은 HTTP `401` (`unauthorized`)로 거부됩니다.
     5) 6)에서 복구 코드 $R_1$의 첫 사용은 HTTP `200`이고 `usedAt`이 기록되며, $R_1$을 다시 쓰면 HTTP `401` (`unauthorized`)로 거부되고 미사용 $R_2$는 HTTP `200`으로 통과합니다.
     6) 7)에서 대시보드 `disable`과 CLI `user otp disable` 모두 TOTP를 해제하여 이후 OTP 없이 로그인이 성공합니다.
@@ -279,7 +282,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
        - (c) 한쪽이 삭제(`deletedAt` 변경)하거나 `teamId`를 바꾼 충돌 → `"deletedAt"` 또는 `"teamId"`가 `differentFields`에 포함됨
        - (d) 충돌 시 서버 행(`sync_row`)과 `applied_op`는 바뀌지 않으며, 클라이언트가 `baseVersion = serverVersion`, `version = serverVersion + 1`로 재전송하면 `accepted`됨
   - 기대 결과:
-    1) `go test ./internal/conformance`에서 `01`~`13`번 시나리오가 모두 PASS하고, 데스크톱 `sync-protocol.test.ts`도 13개 시나리오를 모두 읽고 PASS합니다.
+    1) `go test ./internal/conformance`에서 `12-row-codec`(데스크톱 전용, SKIP)을 뺀 `01`~`13`번 시나리오가 모두 PASS하고(V-1 과 같은 2026-11-16 변경), 데스크톱 `sync-protocol.test.ts`도 13개 시나리오를 모두 읽고 PASS합니다.
     2) 모든 충돌 응답 원소에 `differentFields` 배열(차이가 없을 때는 `[]`)이 포함되며, 장부 필드 4종(`version`, `updatedAtMs`, `lastWriterId`, `ownerId`)은 어떤 경우에도 `differentFields`에 나타나지 않습니다.
     3) `packages/sync-fixtures/README.md`에 `"desktop: work item 1.3.0#15"` 문장이 유지된 채 13번 시나리오 설명이 추가되어 있습니다.
   - 실패 판정: `differentFields`가 사전순 정렬되지 않았거나, 차이가 없을 때 `[]` 대신 `null`/생략되거나, `version`·`updatedAtMs`·`lastWriterId`·`ownerId`가 포함되거나, 없는 키와 `null`을 다르게 판정하거나, 충돌한 커밋이 서버 행을 덮어쓰면 실패입니다.
