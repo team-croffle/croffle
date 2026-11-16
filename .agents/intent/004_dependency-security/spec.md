@@ -44,7 +44,11 @@ summary_for_user: |
 | 패키지 | 버전 | 경유 | 이유 |
 |---|---|---|---|
 | `minimatch@<11.0.1` → `11.0.8` | 11.0.8 | `apps/server/web`: vue-tsc 2.2.12 → @vue/language-core 2.2.12 | ReDoS 권고(< 11.0.1). vue-tsc 2.x 최신(2.2.12)이 9.x 를 요구해 같은 메이저 업데이트로 해결 안 됨. 쓰는 곳은 `minimatch(name, pattern)` 하나(이름 내보내기, 11 에도 있음). 대시보드 빌드(vue-tsc 포함) 통과로 확인 |
-| (데스크톱 쪽은 W-7 때 채움) | | | |
+| `fast-uri@^3` | 3.1.8 → **3.1.9** | 루트: electron-builder → app-builder-lib → ajv | 기존 고정값(aac6a3c, 2026-08)이 지금은 취약 버전(< 3.1.9). 같은 메이저 안 패치 |
+| `undici@^6` | 6.29.0 → **6.29.1** | 루트: electron-builder → @electron/rebuild → node-gyp | 기존 고정값이 취약 버전(< 6.29.1). 같은 메이저 안 패치 |
+| `undici@^7` | 7.30.0 → **7.30.2** | 루트: @electron-toolkit/utils → electron → @electron/get | 기존 고정값이 취약 버전(< 7.30.1). 같은 메이저 안 최신 패치 |
+| `minimatch@>=7.0.0 <11.0.1` | **11.0.8** | 루트: electron-builder → app-builder-lib, eslint 계열 (9.x · 10.x) | ReDoS 권고(< 11.0.1), 고친 버전은 11 에만 있음 → 메이저를 넘는 override(설계 허용). lint · build · build:unpack 통과로 확인. 3.x · 5.x 는 권고 범위(≥ 7) 밖이라 그대로 |
+| `nanoid@^3` 3.3.18, `brace-expansion@^1/^2/^5` 1.1.21 · 2.1.7 · 5.0.12, `js-yaml@^3/^4` 3.15.2 · 4.3.2, `esbuild` 0.28.2, `@xmldom/xmldom@^0.8` 0.8.15 | 그대로 | 루트: 여러 전이 의존성 | 기존 보안 고정값(aac6a3c). 지금 audit 보고 없음, 바꾸지 않음 |
 
 > 구현 중 확인(2026-11-16): pnpm 12 에서 override 는 `package.json` 의 `pnpm` 필드가 아니라 각 루트의 `pnpm-workspace.yaml` `overrides:` 에 둡니다(저장소 루트에는 이미 이 블록이 있고, `fast-uri` 3.1.8 · `undici` 6.29.0 / 7.30.0 처럼 지금은 취약한 버전으로 고정된 항목이 있음). 위 표의 위치도 그 파일입니다. V-7 의 `jq … package.json` 명령은 이 위치에 맞춰 고쳐야 하며, 검사 문구 변경이라 사용자 승인을 받습니다.
 
@@ -55,10 +59,10 @@ summary_for_user: |
 - [x] W-2 (d5c789f) 서버 런타임 이미지 Alpine 3.23 — S-2
 - [x] W-3 (ce549ac) 서버 대시보드 npm 패치 — S-3
 - [x] W-4 (db1c112) 서버 릴리스 노트 · 바이너리 크기 — S-4
-- [ ] W-5 데스크톱 Electron 43.8.10 + 런타임 의존성(같은 메이저) — S-5, S-7
-- [ ] W-6 개발 · 빌드 도구(같은 메이저) + oxfmt — S-6
-- [ ] W-7 남은 전이 의존성 `pnpm.overrides` + override 표 — S-6
-- [ ] W-8 Changeset(필요할 때) · 데스크톱 릴리스 노트 초안 — S-8
+- [x] W-5 (b64b307) 데스크톱 Electron 43.8.10 + 런타임 의존성(같은 메이저) — S-5, S-7
+- [x] W-6 (cbf37b1) 개발 · 빌드 도구(같은 메이저) + oxfmt — S-6
+- [x] W-7 (97e2739) 남은 전이 의존성 `pnpm.overrides` + override 표 — S-6
+- [x] W-8 Changeset 불필요(`packages/*` 변경 없음) · 데스크톱 릴리스 노트 초안 `.loctx/release/1.3.1-rc.1_Pre-Release.md`(커밋하지 않음) — S-8
 
 ## 검증 기준
 qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정했습니다. qa-designer 가 짚은 모호한 점 5개(oxfmt 포맷 커밋과 무변경 검사의 충돌, 메이저를 넘는 override, 데스크톱 업데이트 범위, 빌드 이미지 확인 방법, history · 릴리스 노트 경로)는 설계에 정해 넣었습니다. PM 수정: V-8 의 메이저 목록을 손으로 적은 목록 대신 master 와 비교하는 스크립트로, V-10 기대 결과의 괄호 문장 삭제, V-11 에 포맷 커밋 처리.
