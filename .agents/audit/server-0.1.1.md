@@ -135,7 +135,7 @@ rebase 병합은 PR JSON과 선형 커밋·동일 트리로 확인됩니다. 부
 | 항목 | 사용자 | 처리 |
 |---|---|---|
 | A-1 | "A-1. 수용" | 수용. 병합된 이력은 다시 쓰지 않습니다. 이후 리뷰 반영은 기능별 커밋으로 나눕니다. |
-| A-2 | "A-2. 수용후 의견 확인" | 수용. 사후 리뷰 `.loctx/reports/server-0.1.1/review4-codex-postmerge.md`(대상 master `bc379e4..240ff7e` + `b42f330` fixture, 병합 뒤 실행, 결함 없음)와 병합된 master 에서의 실행(`postmerge-server-check.log`, V-14 run 4)으로 보완했습니다. 위원회(advisor/committee, claude-fable-5-2) 의견 `committee-a2.md`: 근본 원인은 규칙이 병합 때 읽는 문서 · 장치에 없어 기억에만 의존한 것, 권고는 skill 문구 반영 + 로컬 hook, 당장은 병합 직전 SHA 대조 확인. 이 기록 커밋의 PR 부터 병합 직전 SHA 대조(`premerge-review-check.log`)를 실행합니다. skill · hook 반영은 reins 관리 파일이라 사용자 결정을 기다립니다. |
+| A-2 | "A-2. 수용후 의견 확인" | 수용. 사후 리뷰 `.loctx/reports/server-0.1.1/review4-codex-postmerge.md`(대상 master `bc379e4..240ff7e` + `b42f330` fixture, 병합 뒤 실행, 결함 없음)와 병합된 master 에서의 실행(`postmerge-server-check.log`, V-14 run 4)으로 보완했습니다. 위원회(advisor/committee, claude-fable-5-2) 의견 `committee-a2.md`: 근본 원인은 규칙이 병합 때 읽는 문서 · 장치에 없어 기억에만 의존한 것, 권고는 skill 문구 반영 + 로컬 hook, 당장은 병합 직전 SHA 대조 확인. 이 기록 커밋의 PR 부터 병합 직전 SHA 대조(`premerge-review-check.log`)를 실행합니다. skill · hook 반영(위원회 권고 (나) · (다))은 사용자가 "둘 다 reins 0.3.2에서 적용되는 내용임. 004를 마치고 직접 업데이트 함."(2026-11-16)이라 하여, intent 004 뒤 reins 업데이트로 들어옵니다. 그때까지 PM 은 병합마다 SHA 대조 원본을 남깁니다. |
 | A-3-1 (V-1 · V-10 12번 SKIP) | "F1. ㅇㅇ" | 검사 문구를 고쳤습니다(spec approvals, `3a53e5b`). |
 | A-3-2 (오류 응답 모양) | "F2. ㅇㅇ 고쳐." | 검사 문구를 실제 모양으로 고쳤습니다(`3a53e5b`). |
 | A-3-3 (V-13 세부 조건) | "F3. 아, 그거. 내가 그냥 TOTP 뜨나 확인만 하고 끝거야. 정상 맞아" | 사용자 판정으로 정상. 이 기기 설치본의 outbox 0 · 동기화 요청 모두 2xx 를 확인했고(history), TOTP 재로그인 뒤 동기화가 없던 것은 1.3.0 의 로그아웃 동작(바인딩 초기화로 사용 스위치가 꺼짐)입니다. 다섯 테이블 전체는 이번에 확인하지 않았습니다. |
