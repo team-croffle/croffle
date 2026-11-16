@@ -2,9 +2,10 @@
 id: "004"
 slug: dependency-security
 version: "server-0.1.1 · 1.3.1"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "4. intent 004. 할일 미루고, 서버 보안 패치는 rc.1에 포함해라. 5. intent 004는 승인", rev: "e402290" }
 waivers: []
 supersedes: null
 ---
@@ -48,11 +49,15 @@ supersedes: null
 - 병합 전에 PR head 를 본 리뷰 기록이 history 에 있어야 합니다(`.agents/knowledge/2026-11-15_review-before-merge.md`, 감사 server-0.1.1 A-2).
 
 ## 열린 질문
-1. **할 일(To-Do) 의 버전** — 일정 공유를 1.3.2 로 미루면, 원래 1.3.2 였던 할 일은 1.3.3 으로 미뤄도 됩니까? PM 해석은 "순서 유지: 1.3.2 공유, 1.3.3 할 일"입니다.
-2. **서버 rc 의 범위** — 서버 보안 패치를 0.1.1 의 안정화 작업으로 넣고 `server-v0.1.1-rc.1` 을 그 뒤에 냅니다(PM 추천). 대안은 지금 상태로 rc.1 을 내고 패치를 rc.2 로 내는 것입니다.
+—
 
 ## 질의서 기록
-—
+2026-11-16, 사용자 답:
+
+| 질문 | 답 | 반영 |
+|---|---|---|
+| 1. 할 일(To-Do) 의 버전 | "할일 미루고" | 1.3.2 일정 공유, 1.3.3 할 일(로컬 로드맵). |
+| 2. 서버 rc 의 범위 | "서버 보안 패치는 rc.1에 포함해라." | 서버 패치를 0.1.1 의 안정화 작업으로 넣고 그 뒤 `server-v0.1.1-rc.1`(계획 4). |
 
 ### 에이전트가 정한 것
 - intent 하나에 두 제품을 둡니다. 사용자가 한 문장으로 요청했고 순서(서버 먼저)가 정해져 있기 때문입니다. spec 은 서버 · 데스크톱 단위를 나눠 따로 되돌릴 수 있게 합니다.
