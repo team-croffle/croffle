@@ -2,6 +2,7 @@
 intent: "003"
 status: accepted
 approvals:
+  - { role: user, by: bluenyang, at: "2026-11-16", words: "V-3는 전에 확인 했고, V-14는 (가)", rev: "V-14 기대 결과 · 실패 판정 변경(의도된 401 두 가지 허용, favicon 404 제거)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-16", words: "- TOTP 암호화는 바로 다음버전으로 넣자. - 만료는 어쩔 수 없고, 바이너리는 수용 진행", rev: "0d4a243", kind: summary }
 summary_for_user: |
   서버 0.1.1 을 작업 단위 10개로 나눴습니다: `--password-stdin` → rate limit 교체 · 의존성 원칙 → 대시보드 CSRF · 기기 회수 → 토큰 저장소(마이그레이션 0004) → 기기 토큰 만료 설정 → `/auth/token`(access · refresh) → TOTP(0005) → 충돌 `differentFields` · 픽스처 13 → metrics → 문서.
@@ -336,8 +337,8 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
     2) TOTP 등록 실행 → 서버가 반환한 PNG data URL QR 이미지와 secret 표시 확인 → 6자리 코드 입력 및 확인(`confirm`) → 복구 코드 10개가 화면에 1회 표시되는지 확인합니다.
     3) 로그아웃 후 다시 로그인 시도 → `otp_required`에 의해 OTP 코드 입력 칸이 나타나고 6자리 TOTP 코드(또는 복구 코드) 입력 시 로그인되는지 확인합니다.
     4) 대시보드에서 비밀번호와 유효한 코드를 입력해 TOTP를 해제(`otpEnabled: false`)합니다.
-  - 기대 결과: 외부 스크립트/폰트/QR 생성 네트워크 요청 없이 대시보드 안에서 기기 만료 확인, 확인 창을 거친 본인 기기 회수, TOTP QR 표시·확인·복구 코드 10개 안내·OTP 로그인·해제가 모두 정상 동작하며 브라우저 콘솔 오류가 `0`건입니다.
-  - 실패 판정: 대시보드에서 기기 만료 열이나 회수 확인 창이 누락되었거나, QR 이미지가 깨지거나, 복구 코드 10개가 표시되지 않거나, `otp_required` 시 로그인 폼에 코드 입력 칸이 나타나지 않으면 실패입니다.
+  - 기대 결과: 외부 스크립트/폰트/QR 생성 네트워크 요청 없이 대시보드 안에서 기기 만료 확인, 확인 창을 거친 본인 기기 회수, TOTP QR 표시·확인·복구 코드 10개 안내·OTP 로그인·해제가 모두 정상 동작하며, 페이지의 JS 예외(pageerror)가 `0`건이고, 브라우저 콘솔의 리소스 실패는 의도된 응답 두 가지(시작할 때 로그인 확인 `GET /dash/me` 401, 코드가 필요한 계정의 `POST /dash/login` 401 `otp_required`)뿐입니다(`favicon.ico` 404 없음). (2026-11-16 변경: 처음 문구 "콘솔 오류 0건"은 S-4 가 요구하는 `otp_required` 401 과 충돌해 사용자 결정 "V-14는 (가)"로 고침)
+  - 실패 판정: 대시보드에서 기기 만료 열이나 회수 확인 창이 누락되었거나, QR 이미지가 깨지거나, 복구 코드 10개가 표시되지 않거나, `otp_required` 시 로그인 폼에 코드 입력 칸이 나타나지 않거나, JS 예외가 1건이라도 있거나, 위 두 가지 밖의 리소스 실패가 콘솔에 남으면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.1.1/v14-dashboard-ui.log`
 
 - V-15 **영/한 `README` 대칭 · 호환 표 · 릴리스 노트(`docs/server/release/0.1.1.md`) 검증**

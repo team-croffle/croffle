@@ -6,6 +6,9 @@
     <!-- No external resources at all: a self-hosted server should work on a
          network with no internet access. -->
     <title>Croffle Server</title>
+    <!-- An empty inline icon: without one the browser asks for /favicon.ico,
+         which the server does not have. -->
+    <link rel="icon" href="data:," />
   </head>
   <body>
     <div id="app"></div>
