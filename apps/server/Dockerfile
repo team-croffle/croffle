@@ -38,7 +38,7 @@ RUN go build -trimpath -ldflags "-s -w -X main.version=${VERSION} -X main.commit
     -o /out/croffle-server ./cmd/croffle-server
 
 # --- runtime ---
-FROM alpine:3.21
+FROM alpine:3.23
 
 # wget is in busybox and is what HEALTHCHECK uses; ca-certificates lets an
 # operator's webhook target be an https URL.
