@@ -6,7 +6,8 @@ status: approved
 origin: user
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-16", words: "4. intent 004. 할일 미루고, 서버 보안 패치는 rc.1에 포함해라. 5. intent 004는 승인", rev: "e402290" }
-waivers: []
+waivers:
+  - { step: "release: desktop 1.3.1 의 rc(`desktop-v1.3.1-rc.1`) 없이 stable 로", words: "개인적으로 테스트해봤어. PR/CI/머지까지 하고, 감사 후에 둘 다 stable 릴리스해봐", at: "2026-11-16", scope: once }
 supersedes: null
 ---
 ## 문제
