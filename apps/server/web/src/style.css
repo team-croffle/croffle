@@ -1,5 +1,5 @@
-/* Plain CSS on purpose: four read-only tables do not need a design system, and
-   the dashboard has to stay small enough to embed in the binary. */
+/* Plain CSS on purpose: a handful of tables and forms do not need a design
+   system, and the dashboard has to stay small enough to embed in the binary. */
 
 :root {
   --bg: #fbfaf8;
@@ -235,4 +235,114 @@ form.stack {
 
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Operator screens (server 0.2.0). */
+
+nav .divider {
+  width: 1px;
+  margin: 0 6px;
+  background: var(--line);
+}
+
+.warning {
+  border: 1px solid var(--danger);
+  border-left-width: 3px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  color: var(--danger);
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.warning a {
+  color: inherit;
+}
+
+.admin h2 {
+  font-size: 14px;
+  margin: 24px 0 8px;
+}
+
+form.inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+form.inline input.short {
+  width: 80px;
+}
+
+label.check {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+dl.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 0 16px;
+}
+
+dl.facts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+dl.facts dd {
+  margin: 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, #000 40%, transparent);
+}
+
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.dialog h2 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+pre.token {
+  padding: 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
+
+.dialog .actions {
+  margin-top: 12px;
+  align-items: center;
 }

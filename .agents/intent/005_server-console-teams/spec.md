@@ -108,8 +108,8 @@ summary_for_user: |
 - [x] W-3 (97b82b1) 운영자 역할(0006) · CLI · `requireOperator` — S-4
 - [x] W-4 (4abd54b) 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
 - [x] W-5 (420f68a) 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
-- [x] W-6 운영 API `/dash/admin/*` — S-8, S-4
-- [ ] W-7 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
+- [x] W-6 (1b86743) 운영 API `/dash/admin/*` — S-8, S-4
+- [x] W-7 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
 - [ ] W-8 README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
 
 ## 검증 기준
