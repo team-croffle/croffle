@@ -416,6 +416,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 - A-12 (2026-11-18, W-5, 리뷰 2 G-1 · G-2) 스냅샷 덮음 판정을 가입 시각 비교(A-6)에서 계정별 멤버십 세대(`sync_meta` 의 `membershipGen:<계정>`, 실제 가입 · 탈퇴 때 같은 트랜잭션에서 +1)로 바꿈. 첫 페이지는 팀 목록과 세대를 한 읽기 트랜잭션에서 읽고 그 팀 목록으로 행을 고름 · 밀리초 시각은 탈퇴 후 재가입에서 겹칠 수 있고(G-1), 인증 때 읽은 팀과 커서에 담은 팀이 다를 수 있었음(G-2). 마이그레이션 없음
 - A-13 (2026-11-18, W-5, 리뷰 2 G-3, 0.1 부터의 결함) push 는 저장된 행으로 권한을 판정: 공유하지 않은 내 행이거나 지금 속한 팀의 행이어야 하고, 행의 팀을 바꾸는 것은 주인만. 아니면 버전 비교(충돌 응답) 전에 `403 foreign_team` · 팀에서 빠진 계정이 `teamId: null` 로 push 해 충돌 응답으로 팀 행을 읽거나 행을 팀에서 빼낼 수 있었음. 픽스처 15 에 두 경우(옛 버전 · 맞는 버전)를 더함
 - A-14 (2026-11-18, 리뷰 2 G-4) spec 본문(W-2 · W-5 설계, 우려 2 · 5)을 A-5 · A-9 · A-10 · A-12 에 맞춤. 조정 기록은 이력으로 남김
+- A-15 (2026-11-18, W-1, test) ① 다른 키로 잠긴 secret 이 있을 때의 시작 실패 문구를 spec W-1 · V-4 의 문구(`…(id X); run secret rotate`)와 같게 고침 — 구현이 `croffle-server secret rotate` 로 달랐음(V-4 실패). ② `internal/httpapi` 에 암호화된 secret 으로 HTTP 로그인하는 테스트(`TestOTPEncryptLiveLoginAfterSealing`)를 더함 — V-3 명령이 이 패키지에서 `no tests to run` 이었고, HTTP 경로를 덮는 Go 테스트가 실제로 없었음
 
 ## 우려
 1. **키를 잃으면 암호화된 OTP secret 을 되살릴 수 없습니다.** 서버는 뜨지 않고(S-2), 운영자는 키 없이 시작하려면 OTP 를 쓰는 계정의 OTP 를 CLI 로 해제해야 합니다(`user otp disable` 은 `DELETE FROM account_otp` 라 secret 을 읽지 않으므로 키 없이 됩니다 — `store/sqlite/otp.go:132`. 단 W-1 의 시작 검사보다 먼저 쓸 수 있어야 하므로, CLI 명령은 시작 검사를 거치지 않습니다). README 에 백업 주의를 둡니다.

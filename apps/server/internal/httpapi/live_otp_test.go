@@ -12,7 +12,10 @@ import (
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 
+	"github.com/team-croffle/croffle/apps/server/internal/auth"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
+	"github.com/team-croffle/croffle/apps/server/internal/secretbox"
+	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
 func (s *liveServer) postWithCookie(t *testing.T, path string, body any, cookie *http.Cookie, headers map[string]string) (*http.Response, []byte) {
@@ -231,5 +234,90 @@ func TestOTPDisableAndCrossOrigin(t *testing.T) {
 	}, "")
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("password alone after disable: %d", res.StatusCode)
+	}
+}
+
+// One-time codes through HTTP with a secret key (spec 005 S-1): a secret
+// enrolled in plain text is sealed when the server starts with a key, the
+// account signs in without enrolling again, and a new enrolment under the key
+// is stored sealed and works.
+func TestOTPEncryptLiveLoginAfterSealing(t *testing.T) {
+	srv := startServer(t)
+	en := srv.enrolOTP(t)
+
+	var stored string
+	if err := queryRow(t, srv.path, `SELECT secret FROM account_otp WHERE accountId = 'acct-1'`).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored != en.secret {
+		t.Fatalf("without a key the secret is stored as %q, want it plain", stored)
+	}
+
+	// What a start with CROFFLE_SECRET_KEY does.
+	key := make([]byte, secretbox.KeySize)
+	for i := range key {
+		key[i] = 9
+	}
+	box, err := secretbox.New(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report, err := srv.db.PrepareSecrets(context.Background(), box); err != nil || report.Sealed != 1 {
+		t.Fatalf("PrepareSecrets = %+v, %v", report, err)
+	}
+	if err := queryRow(t, srv.path, `SELECT secret FROM account_otp WHERE accountId = 'acct-1'`).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(stored, "v1:"+box.KeyID()+":") || strings.Contains(stored, en.secret) {
+		t.Fatalf("after the start with a key the secret is stored as %q", stored)
+	}
+
+	// The enrolment used this step's code; the next step's is accepted once.
+	res, body := srv.post(t, "/auth/login", protocol.LoginRequest{
+		Username: testUsername, Password: testPassword, ClientID: "client-sealed",
+		OTP: liveCode(t, en.secret, time.Now().Add(30*time.Second)),
+	}, "")
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("sign-in with a sealed secret: %d %s", res.StatusCode, body)
+	}
+
+	// A second account enrols under the key: the confirm compares the opened
+	// secret, so it works although the stored value changes with every nonce.
+	hash, err := auth.HashPassword("bob-pass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := srv.db.CreateAccount(context.Background(), store.Account{
+		ID: "acct-2", Username: "bob", PasswordHash: hash, CreatedAt: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	res, body = srv.postWithCookie(t, "/dash/login", map[string]string{"username": "bob", "password": "bob-pass"}, nil, nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("bob dashboard login: %d %s", res.StatusCode, body)
+	}
+	var bob *http.Cookie
+	for _, c := range res.Cookies() {
+		if c.Name == "croffle_dash" {
+			bob = c
+		}
+	}
+	res, body = srv.postWithCookie(t, "/dash/otp/enroll", map[string]string{}, bob, nil)
+	var enrolment struct {
+		Secret string `json:"secret"`
+	}
+	if err := json.Unmarshal(body, &enrolment); err != nil || res.StatusCode != http.StatusOK {
+		t.Fatalf("bob enroll: %d %s", res.StatusCode, body)
+	}
+	res, body = srv.postWithCookie(t, "/dash/otp/confirm",
+		map[string]string{"code": liveCode(t, enrolment.Secret, time.Now())}, bob, nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("bob confirm under the key: %d %s", res.StatusCode, body)
+	}
+	if err := queryRow(t, srv.path, `SELECT secret FROM account_otp WHERE accountId = 'acct-2'`).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(stored, "v1:"+box.KeyID()+":") {
+		t.Fatalf("bob's secret is stored as %q, want it sealed", stored)
 	}
 }
