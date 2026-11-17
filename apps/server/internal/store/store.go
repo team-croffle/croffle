@@ -60,8 +60,8 @@ const (
 	OpDelete Op = "delete"
 )
 
-// DefaultTeamID is the single team seeded by the first migration. Server 0.1
-// has exactly one team; multi-team arrives in 0.3.
+// DefaultTeamID is the team seeded by the first migration. Every account is
+// put in it when created; since server 0.2.0 operators can make more teams.
 const DefaultTeamID = "team-default"
 
 // Account is a login. Disabling blocks authentication without touching rows.
@@ -373,8 +373,8 @@ type SweepResult struct {
 	OldestCommitSeq int64
 }
 
-// Team is a sharing target. Server 0.1 has exactly one, seeded by the first
-// migration.
+// Team is a sharing target. team-default is seeded by the first migration;
+// operators create the others (server 0.2.0).
 type Team struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`

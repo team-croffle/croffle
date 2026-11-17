@@ -47,8 +47,8 @@ const (
 type Identity struct {
 	AccountID string
 	DeviceID  string
-	// TeamIDs is what makes shared rows visible. Server 0.1 seeds one team;
-	// the slice shape is already here for multi-team in 0.3.
+	// TeamIDs is what makes shared rows visible: every team the account is
+	// in (several since server 0.2.0).
 	TeamIDs []string
 }
 
