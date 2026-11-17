@@ -104,8 +104,8 @@ summary_for_user: |
 
 - [x] W-1 (678a6b8) TOTP secret 암호화 · 시작 시 이전 · 키 없음 경고 — S-1, S-2, S-10
 - [x] W-2 (1b690f0) `secret generate` · `secret rotate` — S-3
-- [x] W-3 운영자 역할(0006) · CLI · `requireOperator` — S-4
-- [ ] W-4 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
+- [x] W-3 (97b82b1) 운영자 역할(0006) · CLI · `requireOperator` — S-4
+- [x] W-4 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
 - [ ] W-5 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
 - [ ] W-6 운영 API `/dash/admin/*` — S-8, S-4
 - [ ] W-7 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
@@ -398,7 +398,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 증적 경로: `.loctx/reports/server-0.2.0/v13-docs-release-note-and-comments/`
 
 ## 조정 기록
-—
+- A-1 (2026-11-18, W-4) 운영자가 정하는 팀 id(`team create --id`)를 1–64자 `[a-z0-9-]` 로 제한 · 운영 API 경로(`/dash/admin/teams/{id}`)와 로그에 그대로 들어가므로. 없는 팀에 `add-member` 하면 외래 키 오류 대신 `ErrNotFound` · W-4 커밋
 
 ## 우려
 1. **키를 잃으면 암호화된 OTP secret 을 되살릴 수 없습니다.** 서버는 뜨지 않고(S-2), 운영자는 키 없이 시작하려면 OTP 를 쓰는 계정의 OTP 를 CLI 로 해제해야 합니다(`user otp disable` 은 `DELETE FROM account_otp` 라 secret 을 읽지 않으므로 키 없이 됩니다 — `store/sqlite/otp.go:132`. 단 W-1 의 시작 검사보다 먼저 쓸 수 있어야 하므로, CLI 명령은 시작 검사를 거치지 않습니다). README 에 백업 주의를 둡니다.

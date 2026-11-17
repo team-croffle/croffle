@@ -225,7 +225,11 @@ Commands:
   token list [username]                     list devices
   token revoke <device-id>                  withdraw a device token
   team list                                 list teams
+  team create <name> [--id ID]              make a team
+  team rename <team-id> <name>              change a team's name
+  team members <team-id>                    list a team's accounts
   team add-member <team-id> <username>      let an account see a team's rows
+  team remove-member <team-id> <username>   stop serving a team's rows to an account
   secret generate                           print a new secret key (base64)
   secret rotate --new-key-file <path>       re-seal one-time code secrets with a new key
   db migrate                                apply pending migrations and exit
