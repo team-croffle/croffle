@@ -2,15 +2,18 @@
 
 CLI for scaffolding, building, and packaging Croffle **extensions**.
 
-```bash
-pnpm dlx @croffledev/croffle-cli create my-extension
-# or
-pnpm dlx create-croffle-plugin my-extension
-```
+The package ships two names for the same command, `croffle-plugin` and `create-croffle-plugin`, so name one when you run it without installing:
 
 ```bash
-pnpm dlx @croffledev/croffle-cli build
-pnpm dlx @croffledev/croffle-cli pack
+pnpm --package=@croffledev/croffle-cli dlx croffle-plugin create my-extension
+# or: npx -p @croffledev/croffle-cli croffle-plugin create my-extension
+```
+
+Inside the extension project:
+
+```bash
+pnpm --package=@croffledev/croffle-cli dlx croffle-plugin build   # Vite or tsup
+pnpm --package=@croffledev/croffle-cli dlx croffle-plugin pack    # .zip to install in Croffle
 ```
 
 Extension types live in `@croffledev/croffle-types` (`ExtensionContext`, `ExtensionInfo`, …).  

@@ -3,7 +3,7 @@
 Protocol conformance scenarios for Croffle sync, read by **both** sides:
 
 - the server: `apps/server` → `go test ./internal/conformance`
-- the desktop: `apps/desktop` → the fixture reader in work item 1.3.0#15
+- the desktop: `apps/desktop` → `test/sync-protocol.test.ts` (`pnpm --filter @croffledev/desktop test`)
 
 A change to the wire protocol that lands on only one side fails here. The
 places that break first are not the obvious ones: second-versus-millisecond

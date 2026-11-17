@@ -91,9 +91,10 @@ Croffle은 기기 하나로 모든 기능을 쓸 수 있고 서버가 필요 없
 
 ```text
 apps/desktop          Electron 앱 (main / preload / renderer)
-apps/server           croffle-server, 선택적 동기화 백엔드 (Go)
+apps/server           croffle-server, 선택적 동기화 백엔드 (Go, 대시보드는 apps/server/web)
 packages/types        @croffledev/croffle-types (배포)
 packages/cli          @croffledev/croffle-cli (배포)
+packages/sync-fixtures  데스크톱·서버가 함께 읽는 동기화 프로토콜 시나리오
 ```
 
 main·renderer가 공유하는 UI 문구 위치:
@@ -102,7 +103,7 @@ main·renderer가 공유하는 UI 문구 위치:
 apps/desktop/src/common/i18n/locales/   # 언어당 JSON 하나 (en, ko, …)
 ```
 
-언어를 추가하려면 **[CONTRIBUTING.ko.md → 국제화](./CONTRIBUTING.ko.md#국제화-i18n)** 절차로 PR을 열어 주세요 (`en.json` 복사 → 로케일 등록 → 설정 UI 반영).
+언어를 추가하려면 **[CONTRIBUTING.ko.md → 국제화](./CONTRIBUTING.ko.md#언어-및-번역-i18n)** 절차로 PR을 열어 주세요 (`en.json` 복사 → 로케일 등록 → 설정 UI 반영).
 
 ```bash
 git clone https://github.com/team-croffle/croffle.git
@@ -111,7 +112,7 @@ pnpm install
 pnpm dev
 ```
 
-요구 사항: **Node.js ≥ 24**, **pnpm** (Corepack 권장).
+요구 사항: **Node.js ≥ 24**, **pnpm 12** (Corepack 권장). 서버를 다룰 때만 **Go**가 필요합니다.
 
 - 확장 스캐폴딩: [`@croffledev/croffle-cli`](./packages/cli/README.md)
 - 확장 타입: [`@croffledev/croffle-types`](./packages/types/README.md)
@@ -122,8 +123,9 @@ pnpm dev
 
 ## 기술 스택
 
-- **앱:** Electron, Vue 3, Vite, Tailwind CSS, TypeScript
-- **데이터:** SQLite (`better-sqlite3`), TypeORM
+- **앱:** Electron, Vue 3, Vite (electron-vite), Tailwind CSS, TypeScript, FullCalendar, Pinia, vue-i18n
+- **데이터:** SQLite (`better-sqlite3`), Drizzle ORM
+- **서버:** Go, SQLite (`modernc.org/sqlite`), Vue 대시보드
 - **모노레포:** pnpm workspaces, Changesets
 - **품질:** oxlint, oxfmt, husky
 
@@ -131,7 +133,7 @@ pnpm dev
 
 ## 기여하기
 
-버그 제보, 아이디어, 번역, PR을 환영합니다. 자세한 내용(i18n 파일 위치·언어 추가 절차 포함)은 **[CONTRIBUTING.ko.md](./CONTRIBUTING.ko.md)**를 참고하세요.
+버그 제보, 아이디어, 번역, PR을 환영합니다. 설치, 검사, i18n, PR, 릴리스는 **[CONTRIBUTING.ko.md](./CONTRIBUTING.ko.md)**를 참고하세요.
 
 ---
 
