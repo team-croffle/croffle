@@ -46,6 +46,13 @@ type Options struct {
 	// Dash backs the read-only dashboard. Without it the /dash routes are not
 	// registered at all, so a build without a dashboard has no session surface.
 	Dash Dash
+	// Admin backs the operator API (/dash/admin/). It needs Dash too: the
+	// operator screens are reached through a dashboard session. Without it
+	// there is no operator API.
+	Admin Admin
+	// DeviceTokenTTL is the default lifetime of a token the operator API
+	// issues, as CROFFLE_DEVICE_TOKEN_TTL is for `token issue`. Zero: never.
+	DeviceTokenTTL time.Duration
 	// Assets is the built dashboard. Without it the catch-all answers the JSON
 	// 404 it always did, so an API-only build behaves the same as before.
 	Assets fs.FS
@@ -62,37 +69,46 @@ type Options struct {
 }
 
 type server struct {
-	version    string
-	commit     string
-	basePath   string
-	logger     *slog.Logger
-	healthFn   HealthFunc
-	auth       Authenticator
-	sync       Syncer
-	retention  RetentionFunc
-	dash       Dash
-	hooks      hooks.Emitter
-	trustProxy bool
-	csrf       *http.CrossOriginProtection
-	metrics    Recorder
-	now        func() time.Time
+	version   string
+	commit    string
+	basePath  string
+	logger    *slog.Logger
+	healthFn  HealthFunc
+	auth      Authenticator
+	sync      Syncer
+	retention RetentionFunc
+	dash      Dash
+	admin     Admin
+	// deviceTokenTTL is Options.DeviceTokenTTL.
+	deviceTokenTTL time.Duration
+	hooks          hooks.Emitter
+	trustProxy     bool
+	csrf           *http.CrossOriginProtection
+	// routeMethods are the methods registered per path, for the 405 answer.
+	// Written only while the mux is built.
+	routeMethods map[string][]string
+	metrics      Recorder
+	now          func() time.Time
 }
 
 // NewHandler builds the whole HTTP handler: middleware, routes and stubs.
 func NewHandler(o Options) http.Handler {
 	s := &server{
-		version:    valueOr(o.Version, "dev"),
-		commit:     o.Commit,
-		basePath:   normaliseBase(o.BasePath),
-		logger:     o.Logger,
-		healthFn:   o.Health,
-		auth:       o.Auth,
-		sync:       o.Sync,
-		retention:  o.Retention,
-		dash:       o.Dash,
-		hooks:      o.Hooks,
-		trustProxy: o.TrustProxy,
-		now:        o.Now,
+		version:   valueOr(o.Version, "dev"),
+		commit:    o.Commit,
+		basePath:  normaliseBase(o.BasePath),
+		logger:    o.Logger,
+		healthFn:  o.Health,
+		auth:      o.Auth,
+		sync:      o.Sync,
+		retention: o.Retention,
+		dash:      o.Dash,
+		admin:     o.Admin,
+		hooks:     o.Hooks,
+
+		deviceTokenTTL: o.DeviceTokenTTL,
+		trustProxy:     o.TrustProxy,
+		now:            o.Now,
 	}
 	if s.logger == nil {
 		s.logger = slog.Default()
@@ -163,11 +179,25 @@ func NewHandler(o Options) http.Handler {
 // a wrong-method request matches "/" and answers 404, hiding the fact that the
 // path exists. net/http picks the method-specific pattern first, so the extra
 // registration only ever handles the mismatch.
+//
+// A path may carry several methods (the operator API has GET and POST on
+// /dash/admin/accounts): the 405 is registered once per path and names them
+// all.
 func (s *server) route(mux *http.ServeMux, method, path string, h http.HandlerFunc) {
-	mux.HandleFunc(method+" "+s.prefix(path), h)
-	mux.HandleFunc(s.prefix(path), func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Allow", method)
-		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "use "+method+" on this endpoint")
+	full := s.prefix(path)
+	mux.HandleFunc(method+" "+full, h)
+	if s.routeMethods == nil {
+		s.routeMethods = map[string][]string{}
+	}
+	known, seen := s.routeMethods[full]
+	s.routeMethods[full] = append(known, method)
+	if seen {
+		return
+	}
+	mux.HandleFunc(full, func(w http.ResponseWriter, r *http.Request) {
+		allowed := strings.Join(s.routeMethods[full], ", ")
+		w.Header().Set("Allow", allowed)
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "use "+allowed+" on this endpoint")
 	})
 }
 

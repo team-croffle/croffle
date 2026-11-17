@@ -69,3 +69,15 @@ func (db *DB) DeleteSession(ctx context.Context, tokenHash []byte) error {
 		return nil
 	})
 }
+
+// DeleteAccountSessions ends every dashboard session of an account, so a
+// password reset by an operator signs out whoever knew the old password.
+func (db *DB) DeleteAccountSessions(ctx context.Context, accountID string) error {
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM dash_session WHERE accountId = ?`, accountID); err != nil {
+			return fmt.Errorf("sqlite: delete account sessions: %w", err)
+		}
+		return nil
+	})
+}

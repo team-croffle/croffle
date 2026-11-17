@@ -67,6 +67,9 @@ func (s *server) dashRoutes(mux *http.ServeMux) {
 	s.dashRoute(mux, http.MethodGet, "/dash/teams", s.requireSession(s.dashTeams))
 	s.dashRoute(mux, http.MethodGet, "/dash/rows", s.requireSession(s.dashRows))
 	s.dashRoute(mux, http.MethodGet, "/dash/commits", s.requireSession(s.dashCommits))
+	if s.admin != nil {
+		s.adminRoutes(mux)
+	}
 }
 
 // dashRoute registers a dashboard route behind cross-origin protection.
