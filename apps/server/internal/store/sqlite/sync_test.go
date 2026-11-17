@@ -391,3 +391,50 @@ func TestApplyCommitsKeepsSequencesContiguous(t *testing.T) {
 		want++
 	}
 }
+
+// Review 2 G-3: the stored row decides who may write it.
+func TestApplyCommitsAuthorizesAgainstTheStoredRow(t *testing.T) {
+	db, ctx := newSyncFixture(t)
+	newAccount(t, db, "acct-2", "bob")
+	if err := db.AddTeamMember(ctx, store.DefaultTeamID, "acct-2", "member"); err != nil {
+		t.Fatal(err)
+	}
+	team := store.DefaultTeamID
+	asBob := func(c store.Commit) store.ApplyRequest {
+		r := request(c)
+		r.AccountID, r.DeviceID = "acct-2", "bob-device"
+		return r
+	}
+
+	// alice's private row: bob can neither change it nor read it through a conflict.
+	if _, err := db.ApplyCommits(ctx, request(upsert("op-1", "private", 0, 1))); err != nil {
+		t.Fatal(err)
+	}
+	for _, base := range []int64{0, 1} {
+		if _, err := db.ApplyCommits(ctx, asBob(upsert("op-b"+string(rune('0'+base)), "private", base, base+1))); !errors.Is(err, store.ErrForeignTeam) {
+			t.Fatalf("bob on alice's private row (base %d): %v, want ErrForeignTeam", base, err)
+		}
+	}
+
+	// alice's row shared with the team: bob may edit it, but not take it out
+	// of the team; alice, the owner, may.
+	shared := upsert("op-2", "shared", 0, 1)
+	shared.TeamID = &team
+	if _, err := db.ApplyCommits(ctx, request(shared)); err != nil {
+		t.Fatal(err)
+	}
+	edit := upsert("op-3", "shared", 1, 2)
+	edit.TeamID = &team
+	if res, err := db.ApplyCommits(ctx, asBob(edit)); err != nil || len(res.Accepted) != 1 {
+		t.Fatalf("a member editing a team row: %+v, %v", res, err)
+	}
+	if _, err := db.ApplyCommits(ctx, asBob(upsert("op-4", "shared", 2, 3))); !errors.Is(err, store.ErrForeignTeam) {
+		t.Fatalf("a member taking alice's row out of the team: %v, want ErrForeignTeam", err)
+	}
+	if res, err := db.ApplyCommits(ctx, request(upsert("op-5", "shared", 2, 3))); err != nil || len(res.Accepted) != 1 {
+		t.Fatalf("the owner unsharing: %+v, %v", res, err)
+	}
+	if row := readRow(t, db, "schedule", "shared"); row.TeamID != nil || row.OwnerID != testAccount {
+		t.Fatalf("after unsharing: %+v", row)
+	}
+}

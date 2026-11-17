@@ -29,25 +29,29 @@ type fakeSyncer struct {
 	gotSnapshot    store.SnapshotQuery
 
 	// uncovered is what UncoveredTeams answers; covered records CoverTeams.
-	uncovered []string
-	covered   [][]string
+	uncovered         []string
+	covered           [][]string
+	coveredGeneration int64
+	// stateTeams and stateGeneration are what MembershipState answers.
+	stateTeams      []string
+	stateGeneration int64
 }
 
 func (f *fakeSyncer) UncoveredTeams(_ context.Context, _ string, _ []string) ([]string, error) {
 	return f.uncovered, nil
 }
 
-func (f *fakeSyncer) CoverTeams(_ context.Context, _ string, memberships []store.Membership) error {
-	ids := []string{}
-	for _, m := range memberships {
-		ids = append(ids, m.TeamID)
-	}
-	f.covered = append(f.covered, ids)
+func (f *fakeSyncer) CoverTeams(_ context.Context, _ string, teamIDs []string, generation int64) error {
+	f.covered = append(f.covered, teamIDs)
+	f.coveredGeneration = generation
 	return nil
 }
 
-func (f *fakeSyncer) Memberships(_ context.Context, _ string) ([]store.Membership, error) {
-	return []store.Membership{{TeamID: store.DefaultTeamID, JoinedAtMs: 1}}, nil
+func (f *fakeSyncer) MembershipState(_ context.Context, _ string) ([]string, int64, error) {
+	if f.stateTeams != nil {
+		return f.stateTeams, f.stateGeneration, nil
+	}
+	return []string{store.DefaultTeamID}, 1, nil
 }
 
 func (f *fakeSyncer) ApplyCommits(_ context.Context, req store.ApplyRequest) (store.ApplyResult, error) {
@@ -588,7 +592,7 @@ func TestBootstrapScopeCarriesTheStartingTeams(t *testing.T) {
 		t.Fatal(err)
 	}
 	cursor, err := protocol.DecodeBootstrapCursor(page.Cursor)
-	if err != nil || !reflect.DeepEqual(cursor.Teams, []protocol.CursorMembership{{TeamID: store.DefaultTeamID, JoinedAtMs: 1}}) {
+	if err != nil || !reflect.DeepEqual(cursor.Teams, []string{store.DefaultTeamID}) || cursor.Generation != 1 {
 		t.Fatalf("cursor = %+v, %v", cursor, err)
 	}
 	if syncer.covered != nil {
@@ -599,14 +603,14 @@ func TestBootstrapScopeCarriesTheStartingTeams(t *testing.T) {
 	// current ones (team-late joined halfway through).
 	syncer.snapshotResult = store.SnapshotResult{ServerSeq: 9, HasMore: false}
 	next, _ := protocol.EncodeBootstrapCursor(protocol.BootstrapCursor{
-		BaseSeq: 9, Table: "schedule", RowID: "row-1", Teams: []protocol.CursorMembership{{TeamID: "team-first", JoinedAtMs: 3}},
+		BaseSeq: 9, Table: "schedule", RowID: "row-1", Teams: []string{"team-first"}, Generation: 3,
 	})
 	rec = postJSON(t, h, "/sync/bootstrap", `{"cursor":"`+next+`"}`, "tok")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("last page = %d %s", rec.Code, rec.Body.String())
 	}
-	if !reflect.DeepEqual(syncer.covered, [][]string{{"team-first"}}) {
-		t.Fatalf("covered = %v, want the cursor's teams", syncer.covered)
+	if !reflect.DeepEqual(syncer.covered, [][]string{{"team-first"}}) || syncer.coveredGeneration != 3 {
+		t.Fatalf("covered = %v at generation %d, want the cursor's teams and generation", syncer.covered, syncer.coveredGeneration)
 	}
 }
 
@@ -618,5 +622,27 @@ func TestBootstrapScopeSinglePageCoversTheRequestTeams(t *testing.T) {
 	}
 	if !reflect.DeepEqual(syncer.covered, [][]string{{store.DefaultTeamID}}) {
 		t.Fatalf("covered = %v", syncer.covered)
+	}
+}
+
+// Review 2 G-2: the first page shows the teams read with the generation, not
+// the ones authentication saw a moment earlier; otherwise a team joined in
+// between would be covered without being in the snapshot.
+func TestBootstrapScopeFirstPageUsesTheMembershipRead(t *testing.T) {
+	syncer := &fakeSyncer{
+		snapshotResult:  store.SnapshotResult{ServerSeq: 3},
+		stateTeams:      []string{store.DefaultTeamID, "team-joined"},
+		stateGeneration: 5,
+	}
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/bootstrap", `{}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	want := []string{store.DefaultTeamID, "team-joined"}
+	if !reflect.DeepEqual(syncer.gotSnapshot.TeamIDs, want) {
+		t.Fatalf("snapshot teams = %v, want %v", syncer.gotSnapshot.TeamIDs, want)
+	}
+	if !reflect.DeepEqual(syncer.covered, [][]string{want}) || syncer.coveredGeneration != 5 {
+		t.Fatalf("covered = %v at %d", syncer.covered, syncer.coveredGeneration)
 	}
 }

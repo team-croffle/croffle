@@ -318,13 +318,16 @@ func (db *DB) AddTeamMember(ctx context.Context, teamID, accountID, role string)
 		if err := teamExists(ctx, tx, teamID); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(ctx, `
+		res, err := tx.ExecContext(ctx, `
 			INSERT INTO team_member (teamId, accountId, role, createdAt)
 			VALUES (?, ?, ?, ?)
 			ON CONFLICT (teamId, accountId) DO NOTHING`,
 			teamID, accountID, role, toMillis(timeNow()))
 		if err != nil {
 			return fmt.Errorf("sqlite: add team member: %w", err)
+		}
+		if n, _ := res.RowsAffected(); n == 1 {
+			return bumpMembershipGeneration(ctx, tx, accountID)
 		}
 		return nil
 	})
