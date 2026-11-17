@@ -2,9 +2,10 @@
 id: "005"
 slug: server-console-teams
 version: "server-0.2.0"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-18", words: "승인", rev: "5c5cd43" }
 waivers: []
 supersedes: null
 ---
