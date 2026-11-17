@@ -27,12 +27,13 @@ import (
 // groups are the subcommand names. Anything else on the command line belongs to
 // the server itself, so `croffle-server --listen :9000` keeps working.
 var groups = map[string]func(*command) error{
-	"user":  (*command).user,
-	"token": (*command).token,
-	"team":  (*command).team,
-	"db":    (*command).database,
-	"log":   (*command).logs,
-	"help":  (*command).help,
+	"user":   (*command).user,
+	"token":  (*command).token,
+	"team":   (*command).team,
+	"db":     (*command).database,
+	"log":    (*command).logs,
+	"secret": (*command).secret,
+	"help":   (*command).help,
 }
 
 // IsSubcommand reports whether args starts with one of the operator groups.
@@ -224,6 +225,8 @@ Commands:
   token revoke <device-id>                  withdraw a device token
   team list                                 list teams
   team add-member <team-id> <username>      let an account see a team's rows
+  secret generate                           print a new secret key (base64)
+  secret rotate --new-key-file <path>       re-seal one-time code secrets with a new key
   db migrate                                apply pending migrations and exit
   db info                                   schema version, size and counts
   log dump                                  print the commit log as JSON lines
