@@ -112,12 +112,17 @@ func (db *DB) metaInt(ctx context.Context, key string) (int64, error) {
 	return value, nil
 }
 
-// visibility builds the ownership filter: own rows, plus rows shared with a
-// team this account is in.
+// visibility builds the ownership filter: own rows that are not shared, plus
+// rows shared with a team this account is in now.
+//
+// A shared row belongs to its team's link, not to its owner (spec 005 S-7):
+// when an account leaves a team, the link is cut and the team's rows stop
+// reaching it, its own shared rows included. The rows stay on the server, with
+// the team, and on the devices that already have them.
 func visibility(accountID string, teamIDs []string) (string, []any) {
 	args := []any{accountID}
 	if len(teamIDs) == 0 {
-		return `ownerId = ?`, args
+		return `ownerId = ? AND teamId IS NULL`, args
 	}
 
 	placeholders := make([]string, len(teamIDs))
@@ -127,7 +132,7 @@ func visibility(accountID string, teamIDs []string) (string, []any) {
 	}
 	// Built from the length of the slice, never from its contents, so the team
 	// ids stay bound parameters.
-	return `ownerId = ? OR teamId IN (` + strings.Join(placeholders, ", ") + `)`, args
+	return `(ownerId = ? AND teamId IS NULL) OR teamId IN (` + strings.Join(placeholders, ", ") + `)`, args
 }
 
 func clampLimit(requested, fallback, maximum int) int {

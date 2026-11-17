@@ -1,7 +1,7 @@
 {
   "name": "team-leave-hides",
   "protocol": 1,
-  "description": "An account taken out of a team stops receiving the team's rows: new team commits are not in its pull, the team's rows are not in its snapshot, and a push into the team answers 403 foreign_team. Joining again has to catch up again (410 team_scope, then a snapshot with every team row).",
+  "description": "Leaving a team cuts the link to its shared rows, and nothing is deleted. The account receives none of the team's rows any more, not even one it created and shared: not in pull, not in a snapshot, and a push into the team answers 403 foreign_team. The team keeps every row, the leaver's included, and keeps changing them. Joining again catches up again (410 team_scope, then a snapshot with every team row).",
   "accounts": [
     {
       "id": "acct-1",
@@ -63,6 +63,42 @@
     },
     {
       "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-alice",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-alice",
+                "title": "Shared by alice",
+                "ownerId": "acct-1",
+                "teamId": "team-2",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-2"]
+        }
+      }
+    },
+    {
+      "request": {
         "endpoint": "/sync/pull",
         "as": "client-1",
         "body": {
@@ -72,10 +108,13 @@
       "expect": {
         "status": 200,
         "body": {
-          "serverSeq": 1,
+          "serverSeq": 2,
           "changes": [
             {
               "rowId": "row-a"
+            },
+            {
+              "rowId": "row-alice"
             }
           ]
         }
@@ -94,7 +133,7 @@
           "clientId": "client-2",
           "commits": [
             {
-              "opId": "op-2",
+              "opId": "op-3",
               "table": "schedule",
               "rowId": "row-b",
               "op": "upsert",
@@ -118,7 +157,43 @@
       "expect": {
         "status": 200,
         "body": {
-          "accepted": ["op-2"]
+          "accepted": ["op-3"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-2",
+        "body": {
+          "clientId": "client-2",
+          "commits": [
+            {
+              "opId": "op-4",
+              "table": "schedule",
+              "rowId": "row-alice",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000002000,
+              "lastWriterId": "device:client-2",
+              "row": {
+                "id": "row-alice",
+                "title": "Changed by bob",
+                "ownerId": "acct-1",
+                "teamId": "team-2",
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000002000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-4"]
         }
       }
     },
@@ -127,7 +202,7 @@
         "endpoint": "/sync/pull",
         "as": "client-1",
         "body": {
-          "lastServerSeq": 1
+          "lastServerSeq": 2
         }
       },
       "expect": {
@@ -153,28 +228,53 @@
     },
     {
       "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-2",
+        "body": {
+          "lastServerSeq": 2
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": [
+            {
+              "rowId": "row-b"
+            },
+            {
+              "rowId": "row-alice",
+              "row": {
+                "title": "Changed by bob"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
         "endpoint": "/sync/push",
         "as": "client-1",
         "body": {
           "clientId": "client-1",
           "commits": [
             {
-              "opId": "op-3",
+              "opId": "op-5",
               "table": "schedule",
-              "rowId": "row-a",
+              "rowId": "row-alice",
               "op": "upsert",
-              "baseVersion": 1,
-              "version": 2,
-              "updatedAtMs": 1700000001000,
+              "baseVersion": 2,
+              "version": 3,
+              "updatedAtMs": 1700000003000,
               "lastWriterId": "device:client-1",
               "row": {
-                "id": "row-a",
+                "id": "row-alice",
                 "title": "Edited after leaving",
-                "ownerId": "acct-2",
+                "ownerId": "acct-1",
                 "teamId": "team-2",
                 "deletedAt": null,
-                "version": 2,
-                "updatedAtMs": 1700000001000
+                "version": 3,
+                "updatedAtMs": 1700000003000
               }
             }
           ]
@@ -197,7 +297,7 @@
         "endpoint": "/sync/pull",
         "as": "client-1",
         "body": {
-          "lastServerSeq": 2
+          "lastServerSeq": 4
         }
       },
       "expect": {
@@ -225,6 +325,9 @@
               "rowId": "row-a"
             },
             {
+              "rowId": "row-alice"
+            },
+            {
               "rowId": "row-b"
             }
           ]
@@ -236,7 +339,7 @@
         "endpoint": "/sync/pull",
         "as": "client-1",
         "body": {
-          "lastServerSeq": 2
+          "lastServerSeq": 4
         }
       },
       "expect": {
