@@ -1,7 +1,8 @@
 ---
 intent: "005"
-status: draft
-approvals: []
+status: accepted
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "859785a", kind: summary }
 summary_for_user: |
   서버 0.2.0 을 작업 단위 8개로 나눴습니다: TOTP secret 암호화(AES-GCM, 새 의존성 없음) → 키 CLI(generate · rotate) → 운영자 역할(0006) → 다중 팀 CLI → 팀 범위 따라잡기(0007) → 운영 API `/dash/admin/*` → 대시보드 운영 화면 → 문서.
   intent 와 다른 점: 로드맵의 "scope별 커서"를 클라이언트 쪽 protocol 확장으로 열지 않고, 서버가 기기별로 "이 팀을 처음부터 받았는지"를 기록해 새 팀에 들어간 기기에 410 을 주는 방식으로 했습니다. 데스크톱 1.3.x 가 이미 410 이면 스냅샷을 다시 받으므로 데스크톱 수정이 없습니다. 대신 팀에 들어갈 때마다 그 계정의 기기가 전체 스냅샷을 받습니다(우려 3).
