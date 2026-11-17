@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -67,6 +68,10 @@ type step struct {
 	Expect  *expectation `json:"expect,omitempty"`
 	Effect  string       `json:"effect,omitempty"`
 	Value   int64        `json:"value,omitempty"`
+	// TeamID and AccountID name the membership addTeamMember and
+	// removeTeamMember change.
+	TeamID    string `json:"teamId,omitempty"`
+	AccountID string `json:"accountId,omitempty"`
 }
 
 type request struct {
@@ -183,6 +188,7 @@ func setup(t *testing.T, sc scenario) *harness {
 			t.Fatalf("create account %s: %v", a.ID, err)
 		}
 		for _, team := range a.Teams {
+			ensureTeam(t, db, team)
 			if err := db.AddTeamMember(ctx, team, a.ID, "member"); err != nil {
 				t.Fatalf("add %s to %s: %v", a.ID, team, err)
 			}
@@ -224,8 +230,18 @@ func setup(t *testing.T, sc scenario) *harness {
 	return &harness{url: srv.URL, db: db, path: path, tokens: tokens}
 }
 
-// applyEffect produces a state no endpoint can: so far only "retention has
-// swept this far".
+// ensureTeam creates a team a scenario names, unless it exists (team-default
+// is seeded by the migrations).
+func ensureTeam(t *testing.T, db *sqlite.DB, teamID string) {
+	t.Helper()
+	err := db.CreateTeam(context.Background(), store.Team{ID: teamID, Name: teamID, CreatedAt: time.Now()})
+	if err != nil && !errors.Is(err, store.ErrDuplicate) {
+		t.Fatalf("create team %s: %v", teamID, err)
+	}
+}
+
+// applyEffect produces a state no sync endpoint can: retention having swept
+// this far, or an operator changing a team's members.
 func (h *harness) applyEffect(t *testing.T, index int, s step) {
 	t.Helper()
 
@@ -242,6 +258,20 @@ func (h *harness) applyEffect(t *testing.T, index int, s step) {
 		if _, err := raw.Exec(
 			`UPDATE sync_meta SET value = ? WHERE key = 'purgedThroughSeq'`, s.Value); err != nil {
 			t.Fatalf("step %d: %v", index, err)
+		}
+	case "addTeamMember", "removeTeamMember":
+		if s.TeamID == "" || s.AccountID == "" {
+			t.Fatalf("step %d: %s needs teamId and accountId", index, s.Effect)
+		}
+		var err error
+		if s.Effect == "addTeamMember" {
+			ensureTeam(t, h.db, s.TeamID)
+			err = h.db.AddTeamMember(context.Background(), s.TeamID, s.AccountID, "member")
+		} else {
+			err = h.db.RemoveTeamMember(context.Background(), s.TeamID, s.AccountID)
+		}
+		if err != nil {
+			t.Fatalf("step %d: %s: %v", index, s.Effect, err)
 		}
 	default:
 		// An unimplemented effect must fail loudly: skipping it would let a

@@ -1,0 +1,250 @@
+{
+  "name": "team-leave-hides",
+  "protocol": 1,
+  "description": "An account taken out of a team stops receiving the team's rows: new team commits are not in its pull, the team's rows are not in its snapshot, and a push into the team answers 403 foreign_team. Joining again has to catch up again (410 team_scope, then a snapshot with every team row).",
+  "accounts": [
+    {
+      "id": "acct-1",
+      "username": "alice",
+      "teams": ["team-default", "team-2"]
+    },
+    {
+      "id": "acct-2",
+      "username": "bob",
+      "teams": ["team-default", "team-2"]
+    }
+  ],
+  "devices": [
+    {
+      "id": "client-1",
+      "accountId": "acct-1"
+    },
+    {
+      "id": "client-2",
+      "accountId": "acct-2"
+    }
+  ],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-2",
+        "body": {
+          "clientId": "client-2",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-a",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-2",
+              "row": {
+                "id": "row-a",
+                "title": "Before",
+                "ownerId": "acct-2",
+                "teamId": "team-2",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-1"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 0
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 1,
+          "changes": [
+            {
+              "rowId": "row-a"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "effect": "removeTeamMember",
+      "teamId": "team-2",
+      "accountId": "acct-1"
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-2",
+        "body": {
+          "clientId": "client-2",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-b",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-2",
+              "row": {
+                "id": "row-b",
+                "title": "After",
+                "ownerId": "acct-2",
+                "teamId": "team-2",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-2"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 1
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": []
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/bootstrap",
+        "as": "client-1",
+        "body": {}
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "hasMore": false,
+          "rows": []
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-3",
+              "table": "schedule",
+              "rowId": "row-a",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000001000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-a",
+                "title": "Edited after leaving",
+                "ownerId": "acct-2",
+                "teamId": "team-2",
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000001000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "foreign_team"
+        }
+      }
+    },
+    {
+      "effect": "addTeamMember",
+      "teamId": "team-2",
+      "accountId": "acct-1"
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 2
+        }
+      },
+      "expect": {
+        "status": 410,
+        "body": {
+          "code": "cursor_too_old",
+          "details": {
+            "reason": "team_scope"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/bootstrap",
+        "as": "client-1",
+        "body": {}
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "hasMore": false,
+          "rows": [
+            {
+              "rowId": "row-a"
+            },
+            {
+              "rowId": "row-b"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 2
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": []
+        }
+      }
+    }
+  ]
+}

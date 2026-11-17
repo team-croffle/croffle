@@ -62,9 +62,14 @@ not break every scenario:
 
 ### Effects
 
-| effect                | meaning                                           |
-| --------------------- | ------------------------------------------------- |
-| `setPurgedThroughSeq` | pretend retention has deleted up to that sequence |
+| effect                | fields                | meaning                                                       |
+| --------------------- | --------------------- | ------------------------------------------------------------- |
+| `setPurgedThroughSeq` | `value`               | pretend retention has deleted up to that sequence             |
+| `addTeamMember`       | `teamId`, `accountId` | an operator puts the account in the team (created if missing) |
+| `removeTeamMember`    | `teamId`, `accountId` | an operator takes the account out of the team                 |
+
+Teams named in `accounts[].teams` are created when they do not exist;
+`team-default` always exists.
 
 ### Server-only additions
 
@@ -72,12 +77,15 @@ Some scenarios pin down what a newer server adds without changing protocol 1.
 They still say `"protocol": 1` and both runners read them, but only the server
 runner checks the steps; the desktop runner reads `rowCodec` only.
 
-| scenario                                 | since server | what it pins down                                                                                                                        |
-| ---------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `13-push-conflict-different-fields.json` | 0.1.1        | `differentFields` on a push conflict: sorted, no bookkeeping fields, `[]` for the same data, `deletedAt` for a delete against a live row |
+| scenario                                 | since server | what it pins down                                                                                                                                                                    |
+| ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `13-push-conflict-different-fields.json` | 0.1.1        | `differentFields` on a push conflict: sorted, no bookkeeping fields, `[]` for the same data, `deletedAt` for a delete against a live row                                             |
+| `14-team-join-catches-up.json`           | 0.2.0        | joining a team after the device's cursor: the next pull is `410 cursor_too_old` with `details.reason: "team_scope"`, the snapshot brings the team's older rows, then pulls are quiet |
+| `15-team-leave-hides.json`               | 0.2.0        | leaving a team: no new team commits in pull or snapshot, `403 foreign_team` on push, and joining again catches up again                                                              |
 
 ## Adding a scenario
 
 Keep one scenario about one thing, and write the `description` as the sentence
 you would want to read in a failure. A scenario that needs a state no endpoint
-can produce needs a new effect, and both runners have to implement it.
+can produce needs a new effect. The server runner has to implement it; the
+desktop runner reads `rowCodec` only, so it ignores steps and effects.

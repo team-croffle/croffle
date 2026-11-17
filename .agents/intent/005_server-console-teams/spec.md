@@ -61,6 +61,7 @@ summary_for_user: |
 - pull: 계정의 팀 중 그 기기의 `device_scope` 에 없는 팀이 있으면 `410 cursor_too_old`(기존 코드 · 문구 재사용, `details.reason = "team_scope"` 를 선택 필드로). 데스크톱 1.3.x 는 bootstrap 으로 넘어갑니다.
 - bootstrap: 첫 페이지에서 그때의 계정 팀 목록을 커서(`BootstrapCursor`)에 함께 담고, 마지막 페이지(`hasMore=false`)를 줄 때 **커서의 팀 목록과 그 순간 계정 팀의 교집합**으로 `device_scope` 를 채웁니다(도중에 빠진 팀을 다시 심지 않음). 한 페이지로 끝나는 스냅샷은 그 요청의 계정 팀으로 채웁니다. 스냅샷 도중에 들어간 팀은 기록되지 않아 다음 pull 에서 다시 410 → 한 번 더 스냅샷(드묾, 정확성 우선). (qa-designer 지적 4)
 - 멤버 제거: 그 계정의 모든 기기에서 그 팀의 `device_scope` 행을 지웁니다(다시 들어오면 다시 따라잡기).
+- 새 기기는 **만들어질 때 계정이 속한 팀**으로 `device_scope` 를 채웁니다(로그인 · `token issue` · `/auth/token` 의 기기 생성, A-2). 아직 아무것도 받지 않은 기기는 그 팀들을 처음부터 받을 수 있으므로 따라잡을 것이 없고, 그 뒤에 들어간 팀만 410 의 대상입니다. 이 규칙이 없으면 bootstrap 없이 push 후 그 `serverSeq` 로 pull 하는 기존 픽스처 04 가 410 을 받아 protocol 1 의 답이 바뀝니다.
 - 커서 0 의 pull(`lastServerSeq == 0`)은 검사하지 않고 통과시키며, 그 요청 때의 계정 팀을 모두 `device_scope` 에 기록합니다. 처음부터 받는 pull 은 남아 있는 모든 commit 을 받으므로 누락이 없고, 이미 지워진 구간이 있으면 지금처럼 retention 의 410 이 먼저 납니다. 페이지를 넘기는 도중(커서 > 0)에 들어간 팀은 기록이 없어 410 이 납니다. bootstrap 없이 pull 부터 하는 기존 픽스처 07 · 08 · 09 와 기존 테스트가 이 규칙으로 그대로 통과합니다(qa-designer 지적 2).
 - 기기가 없는 조회(`PullQuery.DeviceID == ""`, 대시보드 `GET /dash/commits`)는 검사하지 않습니다.
 - `/health` `features` 에 `team-scopes` 를 더합니다. 0.2.0 의 값은 정확히 `["conflict-fields", "device-token-ttl", "team-scopes", "token-pair", "totp"]`(이름순)입니다.
@@ -105,8 +106,8 @@ summary_for_user: |
 - [x] W-1 (678a6b8) TOTP secret 암호화 · 시작 시 이전 · 키 없음 경고 — S-1, S-2, S-10
 - [x] W-2 (1b690f0) `secret generate` · `secret rotate` — S-3
 - [x] W-3 (97b82b1) 운영자 역할(0006) · CLI · `requireOperator` — S-4
-- [x] W-4 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
-- [ ] W-5 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
+- [x] W-4 (4abd54b) 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
+- [x] W-5 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
 - [ ] W-6 운영 API `/dash/admin/*` — S-8, S-4
 - [ ] W-7 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
 - [ ] W-8 README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
@@ -399,6 +400,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 
 ## 조정 기록
 - A-1 (2026-11-18, W-4) 운영자가 정하는 팀 id(`team create --id`)를 1–64자 `[a-z0-9-]` 로 제한 · 운영 API 경로(`/dash/admin/teams/{id}`)와 로그에 그대로 들어가므로. 없는 팀에 `add-member` 하면 외래 키 오류 대신 `ErrNotFound` · W-4 커밋
+- A-2 (2026-11-18, W-5) 새 기기를 만들 때 계정의 팀으로 `device_scope` 를 채움 · 처음 설계(커서 0 pull · bootstrap 완료 때만 기록)로는 기존 픽스처 04(bootstrap 없이 push → 그 `serverSeq` 로 pull)가 410 을 받아 protocol 1 의 답이 바뀌었음(S-9). 마이그레이션이 기존 기기에 쓰는 규칙과 같음 · W-5 커밋
 
 ## 우려
 1. **키를 잃으면 암호화된 OTP secret 을 되살릴 수 없습니다.** 서버는 뜨지 않고(S-2), 운영자는 키 없이 시작하려면 OTP 를 쓰는 계정의 OTP 를 CLI 로 해제해야 합니다(`user otp disable` 은 `DELETE FROM account_otp` 라 secret 을 읽지 않으므로 키 없이 됩니다 — `store/sqlite/otp.go:132`. 단 W-1 의 시작 검사보다 먼저 쓸 수 있어야 하므로, CLI 명령은 시작 검사를 거치지 않습니다). README 에 백업 주의를 둡니다.

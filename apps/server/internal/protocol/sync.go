@@ -365,6 +365,10 @@ type BootstrapCursor struct {
 	// Table and RowID are the keyset position: the last row of the page.
 	Table string `json:"t,omitempty"`
 	RowID string `json:"r,omitempty"`
+	// Teams are the account's teams when the snapshot started (server 0.2.0).
+	// A cursor from an older server has none, and its snapshot then covers no
+	// team: the next pull asks for one more snapshot, which is safe.
+	Teams []string `json:"m,omitempty"`
 }
 
 // ErrInvalidCursor marks a cursor this server did not produce.

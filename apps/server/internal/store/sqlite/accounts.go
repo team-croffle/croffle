@@ -64,6 +64,10 @@ func (db *DB) UpsertDevice(ctx context.Context, device store.Device) error {
 	}
 
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		existed, err := deviceExists(ctx, tx, device.ID)
+		if err != nil {
+			return err
+		}
 		// The WHERE on the conflict clause is the ownership check; it makes the
 		// update a no-op for a foreign device, which RowsAffected then reports.
 		res, err := tx.ExecContext(ctx, `
@@ -93,8 +97,38 @@ func (db *DB) UpsertDevice(ctx context.Context, device store.Device) error {
 		if affected == 0 {
 			return ErrDeviceOwnedByAnotherAccount
 		}
+		if !existed {
+			return coverNewDevice(ctx, tx, device.ID, device.AccountID)
+		}
 		return nil
 	})
+}
+
+// deviceExists tells a first sign-in from a repeated one.
+func deviceExists(ctx context.Context, tx *sql.Tx, deviceID string) (bool, error) {
+	var one int
+	err := tx.QueryRowContext(ctx, `SELECT 1 FROM device WHERE id = ?`, deviceID).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("sqlite: read device: %w", err)
+	}
+	return true, nil
+}
+
+// coverNewDevice records a new device as covered for the teams its account is
+// in now (see migration 0007): it has received nothing yet, so it is free to
+// fetch those teams from the beginning, by a snapshot or by a pull from 0.
+// Only a team joined after this point needs a catch-up snapshot.
+func coverNewDevice(ctx context.Context, tx *sql.Tx, deviceID, accountID string) error {
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO device_scope (deviceId, teamId, coveredAt)
+		SELECT ?, teamId, ? FROM team_member WHERE accountId = ?
+		ON CONFLICT (deviceId, teamId) DO NOTHING`, deviceID, toMillis(timeNow()), accountID); err != nil {
+		return fmt.Errorf("sqlite: cover a new device: %w", err)
+	}
+	return nil
 }
 
 func (db *DB) FindDeviceByTokenHash(ctx context.Context, tokenHash []byte) (*store.Device, error) {
@@ -146,6 +180,10 @@ func (db *DB) RegisterDeviceWithPair(ctx context.Context, device store.Device, p
 }
 
 func registerDevice(ctx context.Context, tx *sql.Tx, device store.Device) error {
+	existed, err := deviceExists(ctx, tx, device.ID)
+	if err != nil {
+		return err
+	}
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO device (id, accountId, name, createdAt, lastSeenAt)
 		VALUES (?, ?, ?, ?, ?)
@@ -165,6 +203,9 @@ func registerDevice(ctx context.Context, tx *sql.Tx, device store.Device) error 
 	}
 	if affected == 0 {
 		return ErrDeviceOwnedByAnotherAccount
+	}
+	if !existed {
+		return coverNewDevice(ctx, tx, device.ID, device.AccountID)
 	}
 	return nil
 }

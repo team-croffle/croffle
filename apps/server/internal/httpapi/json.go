@@ -20,6 +20,9 @@ const MaxBodyBytes = 8 << 20
 type ErrorBody struct {
 	Code    string `json:"code"`
 	Message string `json:"message,omitempty"`
+	// Details is optional and additive: clients that do not know a key
+	// ignore it (desktop 1.3.x reads only code).
+	Details map[string]string `json:"details,omitempty"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -37,6 +40,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	writeJSON(w, status, ErrorBody{Code: code, Message: message})
+}
+
+func writeErrorDetails(w http.ResponseWriter, status int, code, message string, details map[string]string) {
+	writeJSON(w, status, ErrorBody{Code: code, Message: message, Details: details})
 }
 
 // DecodeJSON reads the request body into dst. It reports whether decoding
