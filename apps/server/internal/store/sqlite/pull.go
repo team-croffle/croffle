@@ -17,8 +17,9 @@ const metaPurgedThroughSeq = "purgedThroughSeq"
 // PullSince returns the commits after a cursor that the account may see.
 //
 // Visibility is fixed: the account's own rows plus the rows shared with a team
-// it belongs to. Clients do not send scopes in 0.1; a per-scope cursor arrives
-// with multi-team support in 0.3.
+// it belongs to. Clients do not send scopes: a device that joins a team after
+// its cursor was set is sent to a snapshot first (device_scope, migration
+// 0007), so one cursor per device stays enough.
 func (db *DB) PullSince(ctx context.Context, query store.PullQuery) (store.PullResult, error) {
 	if query.AccountID == "" {
 		return store.PullResult{}, errors.New("sqlite: pull needs an account")

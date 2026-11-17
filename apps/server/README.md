@@ -9,7 +9,7 @@ first; this server exists so several devices of one account can exchange
 changes, and so a schedule can be shared with a team. If you only use one
 machine, you do not need this.
 
-Status: **0.1 beta.** One Go binary, one SQLite file, a dashboard for your own account.
+Status: **0.2 beta.** One Go binary, one SQLite file, a dashboard for your own account and, for operators, for the whole server.
 
 ---
 
@@ -20,7 +20,7 @@ Status: **0.1 beta.** One Go binary, one SQLite file, a dashboard for your own a
 services:
   croffle-server:
     # Pin a version; :latest moves with every stable release.
-    image: ghcr.io/team-croffle/croffle-server:0.1.1
+    image: ghcr.io/team-croffle/croffle-server:0.2.0
     restart: unless-stopped
     environment:
       CROFFLE_DB_PATH: /var/lib/croffle/server.db
@@ -38,10 +38,13 @@ volumes:
 ```bash
 docker compose up -d
 
-# An account, then a token for one device. The token is printed once.
-docker compose exec croffle-server croffle-server user create alice --password-stdin
+# A first account that is also the operator, then a token for one device.
+# The token is printed once.
+docker compose exec croffle-server croffle-server user create alice --password-stdin --operator
 docker compose exec croffle-server croffle-server token issue alice --device-name "laptop"
 ```
+
+Also set a [secret key](#secret-key) before anyone turns on one-time codes.
 
 In the desktop app: **Settings → Sync**, enter the server URL, then either sign
 in with the username and password or paste the token. Internally both end up as
@@ -49,8 +52,9 @@ the same thing — a token — so the two screens are one mechanism.
 
 Open the server URL in a browser for the dashboard. It shows the signed-in
 account's own data, and lets that account revoke its own devices and turn on
-one-time codes ([Authentication](#authentication)). Everything else that changes
-state is a command above.
+one-time codes ([Authentication](#authentication)). An [operator](#operators)
+also gets the operator screens: accounts, every device and token, teams, and the
+server itself — everything the commands below do.
 
 ---
 
@@ -79,6 +83,8 @@ that could redirect them.
 | `CROFFLE_REFRESH_TOKEN_TTL`    | `720h`                       | Lifetime of refresh tokens; it restarts at every refresh. Must be longer than the access lifetime.                                                                                          |
 | `CROFFLE_METRICS_LISTEN`       | — (off)                      | `host:port` for Prometheus metrics on a separate listener, e.g. `127.0.0.1:9090`. Empty opens no port. See [Metrics](#metrics).                                                             |
 | `CROFFLE_DASH_TRUSTED_ORIGINS` | —                            | Comma-separated extra origins (`https://croffle.example.com`) allowed to send dashboard requests that change state, for a proxy that rewrites `Host`.                                       |
+| `CROFFLE_SECRET_KEY`           | — (none)                     | Base64 of 32 bytes that encrypts one-time code secrets. Make one with `secret generate`. See [Secret key](#secret-key).                                                                     |
+| `CROFFLE_SECRET_KEY_FILE`      | —                            | A file holding that key instead (a Docker secret, for instance). Set one of the two, not both.                                                                                              |
 
 Invalid values fail at startup rather than being defaulted: a server listening
 on the wrong port or writing to the wrong file is worse than one that refuses to
@@ -99,7 +105,7 @@ say a proxy is there.
 ```yaml
 services:
   croffle-server:
-    image: ghcr.io/team-croffle/croffle-server:0.1.1
+    image: ghcr.io/team-croffle/croffle-server:0.2.0
     environment:
       CROFFLE_TRUST_PROXY: 'true'
     labels:
@@ -162,15 +168,18 @@ Every command takes `--db` to point at the database file, and the listings take
 
 | Command                                                                                     | What it does                                                                                                 |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `user create <username> --password-stdin`                                                   | Creates a login and adds it to the team.                                                                     |
-| `user list`                                                                                 | Lists logins and whether they are disabled.                                                                  |
-| `user disable <username>` / `user enable <username>`                                        | Blocks or restores authentication.                                                                           |
+| `user create <username> --password-stdin [--operator]`                                      | Creates a login and adds it to `team-default`. `--operator` makes it an [operator](#operators).              |
+| `user list`                                                                                 | Lists logins, whether they are disabled, and whether they are operators.                                     |
+| `user disable <username> [--force]` / `user enable <username>`                              | Blocks or restores authentication. The last active operator needs `--force`.                                 |
+| `user operator grant <username>` · `user operator revoke <username> [--force]`              | Makes an account an operator, or a regular account again.                                                    |
 | `user set-password <username> --password-stdin`                                             | Changes a password. Existing device tokens keep working.                                                     |
 | `token issue <username> [--device-name N] [--client-id ID] [--expires-in D \| --no-expiry]` | Issues a device token. **Printed once.** Follows `CROFFLE_DEVICE_TOKEN_TTL` unless a flag says otherwise.    |
 | `token list [username]`                                                                     | Lists devices: created, last seen, token expiry (`never`), and `pending` / `active` / `expired` / `revoked`. |
 | `user otp status <username>` · `user otp disable <username>`                                | Shows (`off` / `pending` / `enabled`) or removes an account's one-time codes.                                |
 | `token revoke <device-id>`                                                                  | Withdraws that device's token.                                                                               |
-| `team list` · `team add-member <team-id> <username>`                                        | Teams and membership.                                                                                        |
+| `team list` · `team create <name> [--id ID]` · `team rename <team-id> <name>`               | Teams. [Teams](#teams) explains membership.                                                                  |
+| `team members <team-id>` · `team add-member <team-id> <username>` · `team remove-member …`  | Who is in a team.                                                                                            |
+| `secret generate` · `secret rotate --new-key-file <path>`                                   | Make a [secret key](#secret-key), or re-encrypt the one-time code secrets with a new one.                    |
 | `db migrate` · `db info` · `db vacuum`                                                      | Apply migrations, show counts, reclaim space.                                                                |
 | `log dump [--since-seq N] [--limit N]`                                                      | Prints the change log as JSON lines. **The first thing to reach for when a client and the server disagree.** |
 
@@ -254,11 +263,104 @@ already handles by asking for the code. A code is accepted once (a code for a
 time step already used is refused), recovery codes work once each, and wrong
 codes count towards the login rate limit like wrong passwords. To turn codes off,
 the account confirms with its password and a code; an operator can remove them
-with `user otp disable` for someone who has lost both. `token issue` is an
-operator command and does not ask for a code.
+with `user otp disable` (or the **Accounts** screen) for someone who has lost
+both. `token issue` is an operator command and does not ask for a code. The
+secrets behind the codes are encrypted when a [secret key](#secret-key) is set.
 
 The login rate limit is five attempts per address and username, then one per 30
 seconds. A sign-in that stops at `otp_required` counts as one attempt.
+
+---
+
+## Operators
+
+An operator is an account that may use the dashboard's operator screens:
+
+- **Accounts** — create, disable and enable, reset a password (this signs the
+  account out of every browser; its device tokens keep working), turn off
+  one-time codes, make or remove operators.
+- **All devices** — every account's devices; issue a token (shown once, with a
+  copy button) and revoke one.
+- **Manage teams** — create and rename teams, add and remove members.
+- **Server** — database facts and the secret key state, vacuum, and the commit
+  log of every account (metadata only; `log dump` has the row contents).
+
+Name the first operator with the command line — `user create <name> --operator`
+or `user operator grant <name>` — and the rest from the dashboard. Being an
+operator changes nothing about sync: an operator's devices see the same rows as
+anyone's. Every operator action leaves one `operator action` line in the log
+(who, what, on what; never a password or a token).
+
+The last active operator cannot be removed or disabled from the dashboard
+(`409 last_operator`), so the server always keeps someone who can use the
+operator screens. The command line can do it with `--force`, because whoever
+runs it can also undo it.
+
+---
+
+## Secret key
+
+One-time code secrets have to be readable by the server to check a code, so
+they cannot be stored as hashes. With a secret key they are stored encrypted
+(AES-256-GCM, bound to the account); without one they are stored as they are,
+and the server says so at start-up and on the operator screens.
+
+```bash
+# Make a key and keep it outside the database volume.
+docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.key
+```
+
+Give it to the server as `CROFFLE_SECRET_KEY_FILE` (mounted as a Docker secret
+or a read-only file) or as `CROFFLE_SECRET_KEY`. At the next start the server
+encrypts every secret that is still plain; nobody has to set up codes again.
+
+- **Back the key up separately from the database.** A copy of the database
+  alone is then not enough to generate codes, and a lost key does not lose the
+  database.
+- **If the key is lost**, the server refuses to start while encrypted secrets
+  exist. Turn off one-time codes for those accounts with `user otp disable`
+  (it needs no key), start without the key or with a new one, and let them set
+  codes up again.
+- **To change the key**: stop the server, run `secret rotate` with the old key
+  still configured, switch the configuration to the new key, and start the
+  server. With compose (the service still points at the old key):
+
+  ```bash
+  docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.new
+  docker compose stop croffle-server
+  docker compose run --rm -v "$PWD/croffle-secret.new:/new.key:ro" croffle-server \
+    secret rotate --new-key-file /new.key
+  mv croffle-secret.new croffle-secret.key   # the file the service mounts
+  docker compose up -d
+  ```
+
+  A rotate while the server runs is not safe: the running server keeps the old
+  key until it restarts.
+
+- A server started with a key that does not match the stored secrets refuses
+  to start and names the key the secrets were sealed with.
+
+---
+
+## Teams
+
+Every account is in `team-default`. An operator can make more teams and move
+accounts in and out (`team create`, `team add-member`, `team remove-member`, or
+**Manage teams**). A schedule shared with a team is visible to its members.
+
+- **Joining a team.** The account's devices have to receive the team's earlier
+  rows too. Each device takes one fresh snapshot at its next sync: the server
+  answers its pull with `410 cursor_too_old` (`details.reason: "team_scope"`),
+  which desktop 1.3.x already turns into a snapshot. Upgrading to 0.2.0 sends no
+  device to a snapshot.
+- **Leaving a team.** From then on the server does not send the team's rows to
+  the account, and a change to one of them is refused (`403 foreign_team`; the
+  desktop marks that change as failed and keeps syncing). What the devices
+  already have stays on them.
+- Teams cannot be deleted yet; rename one instead.
+- A device that was in a team under 0.1.x without ever taking a snapshot after
+  joining may miss that team's older rows. Revoke the device and sign in on it
+  again to give it a fresh snapshot.
 
 ---
 
@@ -407,19 +509,21 @@ ports:
 | ------ | ------------- | ------- |
 | 0.1.0  | 1             | 1.3.x   |
 | 0.1.1  | 1             | 1.3.x   |
+| 0.2.0  | 1             | 1.3.x   |
 
-0.1.1 adds features on top of protocol 1 without changing it, so desktop 1.3.0
-works with it unchanged. The desktop does not use the new ones yet (token pairs,
-`differentFields`); one-time codes work with 1.3.0 because it already answers
-`otp_required`.
+0.1.1 and 0.2.0 add features on top of protocol 1 without changing it, so
+desktop 1.3.0 works with them unchanged. The desktop does not use some of them
+yet (token pairs, `differentFields`); one-time codes work with 1.3.0 because it
+already answers `otp_required`, and joining a team works because it already
+answers `cursor_too_old` with a snapshot.
 
 `GET /health` reports the range this server speaks, and the optional features:
 
 ```json
 {
-  "server": "0.1.1",
+  "server": "0.2.0",
   "protocol": { "min": 1, "max": 1 },
-  "features": ["conflict-fields", "device-token-ttl", "token-pair", "totp"],
+  "features": ["conflict-fields", "device-token-ttl", "team-scopes", "token-pair", "totp"],
   "db": "ok",
   "retention": { "oldestCommitSeq": 1041, "purgedThroughSeq": 1040 },
   "time": 1792000000000
@@ -450,28 +554,32 @@ client still decides the winner by last-writer-wins.
   into a working credential. The same is true of passwords (argon2id).
 - **The dashboard session is a different credential from a sync token**, and
   neither is accepted where the other belongs. A dashboard session cannot push.
-- The dashboard shows the signed-in account's own data and changes only that
-  account's own state (its devices, its one-time codes). Requests that change
-  state are refused from another origin. Looking at another account means using
-  the commands above, which already require access to the file.
-- One-time code secrets are stored in the database as they are (recovery codes
-  only as hashes). Whoever has the database file could generate codes, though
-  they would still need the password. Encrypting the secrets is planned for 0.2.0.
+- The dashboard shows a regular account its own data and changes only that
+  account's own state (its devices, its one-time codes). The operator screens
+  act on every account and are checked on every request: an account that stops
+  being an operator loses them at its next click. Requests that change state are
+  refused from another origin.
+- **An operator session is powerful.** Make only the people who run the server
+  operators, and turn on one-time codes for them.
+- One-time code secrets are encrypted with the [secret key](#secret-key) when
+  one is set (recovery codes are only ever stored as hashes). Without a key,
+  whoever has the database file could generate codes, though they would still
+  need the password.
 - The commands bypass authentication by design: whoever can run the binary
   against the database file is the operator.
 
 ---
 
-## 0.1 limits
+## 0.2 limits
 
-- **One team.** Multiple teams come later.
 - **Sharing cannot be undone** yet, and shared schedules cannot be managed
-  remotely.
+  remotely. Members cannot invite others or leave a team themselves: an operator
+  manages teams.
+- Teams cannot be deleted.
 - Tags and reminders are not shared along with a schedule.
-- The desktop (1.3.0) uses device tokens only: it does not renew tokens with
+- The desktop (1.3.x) uses device tokens only: it does not renew tokens with
   `POST /auth/token` yet, so an expiring device token means signing in again.
-- The dashboard manages only the signed-in account's own devices and one-time
-  codes; accounts and teams are commands.
+- Joining a team sends each of the account's devices to one full snapshot.
 - Disabling an account blocks it; it does not erase its data.
 
 ---
@@ -508,6 +616,9 @@ and only from a well-established source:
 | `golang.org/x/time/rate`              | the login rate limit                              |
 | `github.com/pquerna/otp`              | one-time codes (TOTP, RFC 6238) and their QR code |
 | `github.com/prometheus/client_golang` | the optional metrics endpoint                     |
+
+Encrypting the one-time code secrets uses the standard library
+(`crypto/aes`, `crypto/cipher`); 0.2.0 adds no dependency.
 
 Still one binary and one SQLite file: nothing here needs another service.
 
