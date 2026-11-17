@@ -90,7 +90,7 @@ func (db *DB) PrepareSecrets(ctx context.Context, box secretbox.Box) (SecretsRep
 				return ErrSecretsNeedKey
 			}
 			if id, _ := secretbox.KeyIDOf(s.value); id != keyID {
-				return fmt.Errorf("%w (id %s); run `croffle-server secret rotate`", ErrSecretsOtherKey, id)
+				return fmt.Errorf("%w (id %s); run secret rotate", ErrSecretsOtherKey, id)
 			}
 		}
 		return nil
