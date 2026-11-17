@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -28,17 +29,40 @@ func (db *DB) FindOTP(ctx context.Context, accountID string) (*store.OTP, error)
 	}
 	otp.EnabledAt = fromMillisPtr(enabledAt)
 	otp.CreatedAt = fromMillis(createdAt)
+	if otp.Secret, err = db.secrets.Open(accountID, otp.Secret); err != nil {
+		return nil, fmt.Errorf("sqlite: open otp secret: %w", err)
+	}
 	return &otp, nil
 }
 
+func (db *DB) OTPStatus(ctx context.Context, accountID string) (string, error) {
+	var enabled bool
+	err := db.read.QueryRowContext(ctx,
+		`SELECT enabledAt IS NOT NULL FROM account_otp WHERE accountId = ?`, accountID).Scan(&enabled)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return "off", nil
+	case err != nil:
+		return "", fmt.Errorf("sqlite: read otp status: %w", err)
+	case enabled:
+		return "enabled", nil
+	default:
+		return "pending", nil
+	}
+}
+
 func (db *DB) StartOTP(ctx context.Context, accountID, secret string, at time.Time) error {
+	stored, err := db.secrets.Seal(accountID, secret)
+	if err != nil {
+		return fmt.Errorf("sqlite: seal otp secret: %w", err)
+	}
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
 		res, err := tx.ExecContext(ctx, `
 			INSERT INTO account_otp (accountId, secret, createdAt) VALUES (?, ?, ?)
 			ON CONFLICT (accountId) DO UPDATE SET
 				secret = excluded.secret, createdAt = excluded.createdAt, lastStep = 0
 			WHERE account_otp.enabledAt IS NULL`,
-			accountID, secret, toMillis(at))
+			accountID, stored, toMillis(at))
 		if err != nil {
 			return fmt.Errorf("sqlite: start otp: %w", err)
 		}
@@ -56,9 +80,28 @@ func (db *DB) StartOTP(ctx context.Context, accountID, secret string, at time.Ti
 func (db *DB) EnableOTP(ctx context.Context, accountID, secret string, step int64, recoveryHashes [][]byte, at time.Time) error {
 	now := toMillis(at)
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		// The stored value is sealed with a fresh nonce, so it cannot be
+		// compared with secret in SQL: open it here, in the same transaction,
+		// and update only the row that was read.
+		var stored string
+		err := tx.QueryRowContext(ctx,
+			`SELECT secret FROM account_otp WHERE accountId = ? AND enabledAt IS NULL`, accountID).Scan(&stored)
+		if errors.Is(err, sql.ErrNoRows) {
+			return store.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("sqlite: read pending otp: %w", err)
+		}
+		plain, err := db.secrets.Open(accountID, stored)
+		if err != nil {
+			return fmt.Errorf("sqlite: open otp secret: %w", err)
+		}
+		if subtle.ConstantTimeCompare([]byte(plain), []byte(secret)) != 1 {
+			return store.ErrNotFound
+		}
 		res, err := tx.ExecContext(ctx, `
 			UPDATE account_otp SET enabledAt = ?, lastStep = ?
-			WHERE accountId = ? AND secret = ? AND enabledAt IS NULL`, now, step, accountID, secret)
+			WHERE accountId = ? AND secret = ? AND enabledAt IS NULL`, now, step, accountID, stored)
 		if err != nil {
 			return fmt.Errorf("sqlite: enable otp: %w", err)
 		}

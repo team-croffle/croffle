@@ -1,8 +1,12 @@
 package config
 
 import (
+	"bytes"
+	"encoding/base64"
 	"errors"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -235,4 +239,50 @@ func TestMetricsListen(t *testing.T) {
 	if err != nil || cfg.MetricsListen != "127.0.0.1:9090" {
 		t.Fatalf("set = %q, %v", cfg.MetricsListen, err)
 	}
+}
+
+func TestSecretKeyLoad(t *testing.T) {
+	key := testKey(1) // 32 bytes of 0x01, made here: no key-like literal in the tree
+	cfg, err := Load(nil, envMap(nil))
+	if err != nil || cfg.SecretKey != nil {
+		t.Fatalf("no key set: SecretKey = %v, err %v; want nil", cfg.SecretKey, err)
+	}
+
+	cfg, err = Load(nil, envMap(map[string]string{EnvSecretKey: key}))
+	if err != nil || len(cfg.SecretKey) != 32 || cfg.SecretKey[0] != 1 {
+		t.Fatalf("%s: SecretKey = %v, err %v", EnvSecretKey, cfg.SecretKey, err)
+	}
+
+	file := filepath.Join(t.TempDir(), "key")
+	if err := os.WriteFile(file, []byte(key+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = Load(nil, envMap(map[string]string{EnvSecretKeyFile: file}))
+	if err != nil || len(cfg.SecretKey) != 32 {
+		t.Fatalf("%s with a trailing newline: SecretKey = %v, err %v", EnvSecretKeyFile, cfg.SecretKey, err)
+	}
+}
+
+func TestSecretKeyLoadError(t *testing.T) {
+	short := base64.StdEncoding.EncodeToString(make([]byte, 16)) // 16 bytes: too short
+	key := testKey(1)
+	file := filepath.Join(t.TempDir(), "key")
+	if err := os.WriteFile(file, []byte(key), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for name, env := range map[string]map[string]string{
+		"both set":     {EnvSecretKey: key, EnvSecretKeyFile: file},
+		"16 bytes":     {EnvSecretKey: short},
+		"not base64":   {EnvSecretKey: "not base64 !"},
+		"missing file": {EnvSecretKeyFile: filepath.Join(t.TempDir(), "absent")},
+	} {
+		if _, err := Load(nil, envMap(env)); err == nil {
+			t.Errorf("%s: Load succeeded", name)
+		}
+	}
+}
+
+// testKey returns a 32-byte key of one repeated byte, base64-encoded.
+func testKey(fill byte) string {
+	return base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{fill}, 32))
 }

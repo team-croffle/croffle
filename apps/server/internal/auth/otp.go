@@ -58,17 +58,11 @@ type OTPEnrollment struct {
 
 // OTPState is the one-word status: off, pending or enabled.
 func (s *Service) OTPState(ctx context.Context, accountID string) (string, error) {
-	enrolment, err := s.store.FindOTP(ctx, accountID)
-	if errors.Is(err, store.ErrNotFound) {
-		return "off", nil
-	}
+	state, err := s.store.OTPStatus(ctx, accountID)
 	if err != nil {
-		return "", fmt.Errorf("find otp: %w", err)
+		return "", fmt.Errorf("otp status: %w", err)
 	}
-	if enrolment.Enabled() {
-		return "enabled", nil
-	}
-	return "pending", nil
+	return state, nil
 }
 
 // BeginOTP starts (or restarts) an enrolment and returns the new secret.

@@ -18,10 +18,13 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/team-croffle/croffle/apps/server/internal/secretbox"
 )
 
 // Environment variable names. Flags use the same name without the prefix and
@@ -47,6 +50,9 @@ const (
 	EnvRefreshTokenTTL = "CROFFLE_REFRESH_TOKEN_TTL"
 
 	EnvMetricsListen = "CROFFLE_METRICS_LISTEN"
+
+	EnvSecretKey     = "CROFFLE_SECRET_KEY"
+	EnvSecretKeyFile = "CROFFLE_SECRET_KEY_FILE"
 )
 
 // Defaults assume the container image. The README documents ./server.db for
@@ -114,6 +120,9 @@ type Config struct {
 	// MetricsListen is the host:port of the separate Prometheus listener.
 	// Empty (the default) means no metrics and no extra port.
 	MetricsListen string
+	// SecretKey seals the TOTP secrets. Nil (the default) means they are
+	// stored as they are, as in 0.1.1, and the server warns about it.
+	SecretKey []byte
 }
 
 // Load parses args (without the program name) and the environment.
@@ -203,7 +212,43 @@ func Load(args []string, getenv func(string) string) (*Config, error) {
 		return nil, err
 	}
 
+	if cfg.SecretKey, err = LoadSecretKey(getenv); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// LoadSecretKey reads the key that seals TOTP secrets from CROFFLE_SECRET_KEY
+// or the file CROFFLE_SECRET_KEY_FILE names (for Docker secrets). Neither set
+// means no key (nil). Both set is an error, as is a key that is not 32 bytes:
+// guessing which one the operator meant could seal secrets with the wrong key.
+// The CLI shares it so `secret rotate` sees the same key as the server.
+func LoadSecretKey(getenv func(string) string) ([]byte, error) {
+	inline := getenv(EnvSecretKey)
+	file := strings.TrimSpace(getenv(EnvSecretKeyFile))
+	switch {
+	case strings.TrimSpace(inline) != "" && file != "":
+		return nil, fmt.Errorf("set %s or %s, not both", EnvSecretKey, EnvSecretKeyFile)
+	case file != "":
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", EnvSecretKeyFile, err)
+		}
+		key, err := secretbox.ParseKey(string(raw))
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", EnvSecretKeyFile, err)
+		}
+		return key, nil
+	case strings.TrimSpace(inline) != "":
+		key, err := secretbox.ParseKey(inline)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", EnvSecretKey, err)
+		}
+		return key, nil
+	default:
+		return nil, nil
+	}
 }
 
 func envOr(getenv func(string) string, key, fallback string) string {

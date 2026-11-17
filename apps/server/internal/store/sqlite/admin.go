@@ -205,6 +205,16 @@ func (db *DB) Info(ctx context.Context) (store.Info, error) {
 			return info, fmt.Errorf("sqlite: %s: %w", c.query, err)
 		}
 	}
+	var err error
+	if info.OTPSecretsPlain, info.OTPSecretsEncrypted, err = db.secretCounts(ctx); err != nil {
+		return info, err
+	}
+	// The box this handle uses: the server's after PrepareSecrets, the CLI's
+	// own (Plain) otherwise. The CLI overrides it from the configuration.
+	info.SecretKey = "missing"
+	if db.secrets.KeyID() != "" {
+		info.SecretKey = "set"
+	}
 	return info, nil
 }
 

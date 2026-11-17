@@ -282,6 +282,17 @@ func (f *fakeStore) FindOTP(_ context.Context, _ string) (*store.OTP, error) {
 	return &copied, nil
 }
 
+func (f *fakeStore) OTPStatus(_ context.Context, _ string) (string, error) {
+	switch {
+	case f.otp == nil:
+		return "off", nil
+	case f.otp.Enabled():
+		return "enabled", nil
+	default:
+		return "pending", nil
+	}
+}
+
 func (f *fakeStore) StartOTP(_ context.Context, accountID, secret string, at time.Time) error {
 	if f.otp != nil && f.otp.Enabled() {
 		return store.ErrDuplicate
