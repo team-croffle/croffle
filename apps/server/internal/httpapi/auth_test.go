@@ -332,3 +332,21 @@ func TestLoginReportsDeviceTokenExpiry(t *testing.T) {
 		t.Fatalf("expiresAt present without an expiry: %s", rec.Body.String())
 	}
 }
+
+func TestFirstTeamPrefersTheDefaultTeam(t *testing.T) {
+	for _, c := range []struct {
+		teams []string
+		want  string
+	}{
+		{[]string{"team-0f1e2d3c4b", store.DefaultTeamID}, store.DefaultTeamID},
+		{[]string{store.DefaultTeamID}, store.DefaultTeamID},
+		{[]string{"team-a", "team-b"}, "team-a"},
+	} {
+		if got := firstTeam(c.teams); got == nil || *got != c.want {
+			t.Errorf("firstTeam(%v) = %v, want %s", c.teams, got, c.want)
+		}
+	}
+	if firstTeam(nil) != nil {
+		t.Error("firstTeam(nil) is not nil")
+	}
+}
