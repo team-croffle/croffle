@@ -19,7 +19,7 @@ English: **[README.md](./README.md)**
 services:
   croffle-server:
     # 버전을 고정하세요. :latest 는 정식 릴리스마다 움직입니다.
-    image: ghcr.io/team-croffle/croffle-server:0.1.0
+    image: ghcr.io/team-croffle/croffle-server:0.1.1
     restart: unless-stopped
     environment:
       CROFFLE_DB_PATH: /var/lib/croffle/server.db
@@ -94,7 +94,7 @@ docker compose exec croffle-server croffle-server token issue alice --device-nam
 ```yaml
 services:
   croffle-server:
-    image: ghcr.io/team-croffle/croffle-server:0.1.0
+    image: ghcr.io/team-croffle/croffle-server:0.1.1
     environment:
       CROFFLE_TRUST_PROXY: 'true'
     labels:

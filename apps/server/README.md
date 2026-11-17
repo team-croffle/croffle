@@ -20,7 +20,7 @@ Status: **0.1 beta.** One Go binary, one SQLite file, a dashboard for your own a
 services:
   croffle-server:
     # Pin a version; :latest moves with every stable release.
-    image: ghcr.io/team-croffle/croffle-server:0.1.0
+    image: ghcr.io/team-croffle/croffle-server:0.1.1
     restart: unless-stopped
     environment:
       CROFFLE_DB_PATH: /var/lib/croffle/server.db
@@ -99,7 +99,7 @@ say a proxy is there.
 ```yaml
 services:
   croffle-server:
-    image: ghcr.io/team-croffle/croffle-server:0.1.0
+    image: ghcr.io/team-croffle/croffle-server:0.1.1
     environment:
       CROFFLE_TRUST_PROXY: 'true'
     labels:

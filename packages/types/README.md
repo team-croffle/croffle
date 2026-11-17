@@ -5,19 +5,19 @@
 
 # Croffle Types
 
-> Official TypeScript definitions for CROFFLE plugin development
+> Official TypeScript definitions for Croffle extension development
 
 </div>
 
-**@croffledev/croffle-types** provides the essential type definitions and interfaces required to build, extend, and integrate plugins for the [CROFFLE](https://www.google.com/search?q=https://github.com/croffledev/croffle) ecosystem.
+**@croffledev/croffle-types** provides the type definitions and interfaces for building [Croffle](https://github.com/team-croffle/croffle) extensions.
 
-By using this package, developers can ensure type safety and leverage IntelliSense when interacting with the Croffle Core API, IPC events, and the plugin lifecycle.
+By using this package, developers can ensure type safety and leverage IntelliSense when interacting with the Croffle host API, events, and the extension lifecycle.
 
 ---
 
 ## 📦 Installation
 
-This package should be installed as a **development dependency** in your plugin project.
+This package should be installed as a **development dependency** in your extension project.
 
 ```bash
 # Using npm
@@ -128,10 +128,10 @@ Event names also changed: an `emit('x')` from an extension now reaches subscribe
 
 If you want to contribute to the type definitions or add support for new Core APIs:
 
-1.  Fork the [Croffle Main Repository](https://www.google.com/search?q=https://github.com/croffledev/croffle).
-2.  Navigate to the types workspace (or this standalone repo).
-3.  Update `index.d.ts`.
-4.  Submit a Pull Request with a clear description of the changes.
+1.  Fork the [Croffle repository](https://github.com/team-croffle/croffle); the types live in `packages/types`.
+2.  Add or change the declarations under `api/` (host API) or `models/` (data shapes), and export them from `index.d.ts`.
+3.  Add a Changeset (`pnpm changeset`).
+4.  Open a pull request — see [CONTRIBUTING.md](https://github.com/team-croffle/croffle/blob/master/CONTRIBUTING.md).
 
 ---
 

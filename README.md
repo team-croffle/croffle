@@ -91,9 +91,10 @@ This repository is a **pnpm monorepo**.
 
 ```text
 apps/desktop          Electron app (main / preload / renderer)
-apps/server           croffle-server, the optional sync backend (Go)
+apps/server           croffle-server, the optional sync backend (Go; dashboard in apps/server/web)
 packages/types        @croffledev/croffle-types (publishable)
 packages/cli          @croffledev/croffle-cli (publishable)
+packages/sync-fixtures  sync protocol scenarios shared by desktop and server
 ```
 
 Shared UI strings (main + renderer) live in:
@@ -111,7 +112,7 @@ pnpm install
 pnpm dev
 ```
 
-Requirements: **Node.js ≥ 24**, **pnpm** (via Corepack).
+Requirements: **Node.js ≥ 24**, **pnpm 12** (via Corepack); **Go** only for the server.
 
 - Extension scaffolding: [`@croffledev/croffle-cli`](./packages/cli/README.md)
 - Types for extensions: [`@croffledev/croffle-types`](./packages/types/README.md)
@@ -122,8 +123,9 @@ Requirements: **Node.js ≥ 24**, **pnpm** (via Corepack).
 
 ## Tech Stack
 
-- **App:** Electron, Vue 3, Vite, Tailwind CSS, TypeScript
-- **Data:** SQLite (`better-sqlite3`), TypeORM
+- **App:** Electron, Vue 3, Vite (electron-vite), Tailwind CSS, TypeScript, FullCalendar, Pinia, vue-i18n
+- **Data:** SQLite (`better-sqlite3`), Drizzle ORM
+- **Server:** Go, SQLite (`modernc.org/sqlite`), Vue dashboard
 - **Monorepo:** pnpm workspaces, Changesets
 - **Quality:** oxlint, oxfmt, husky
 
@@ -131,7 +133,7 @@ Requirements: **Node.js ≥ 24**, **pnpm** (via Corepack).
 
 ## Contributing
 
-Bug reports, ideas, translations, and PRs are welcome. See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for setup, i18n locations, PR templates, labels, and release notes.
+Bug reports, ideas, translations, and PRs are welcome. See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for setup, checks, i18n, pull requests and releases.
 
 ---
 
