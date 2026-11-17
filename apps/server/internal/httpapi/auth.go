@@ -270,12 +270,21 @@ func (s *server) logAuth(r *http.Request, level slog.Level, msg string, attrs []
 	s.logger.LogAttrs(r.Context(), level, msg, attrs...)
 }
 
-// firstTeam adapts the internal slice to the wire's single teamId. Server 0.1
-// seeds exactly one team; multi-team (0.3) changes the wire, not this code.
+// firstTeam adapts the internal slice to the wire's single teamId (protocol
+// 1). Since 0.2.0 an account can be in several teams, and the slice is sorted
+// by id, so a generated id can sort before team-default. The default team wins
+// whenever the account is in it: desktop 1.3.x stores this value as the team it
+// shares with, and joining a second team must not change it.
 func firstTeam(teams []string) *string {
 	if len(teams) == 0 {
 		return nil
 	}
 	team := teams[0]
+	for _, id := range teams {
+		if id == store.DefaultTeamID {
+			team = id
+			break
+		}
+	}
 	return &team
 }
