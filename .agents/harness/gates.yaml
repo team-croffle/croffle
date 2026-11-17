@@ -2,32 +2,27 @@
 # Edited by hand on 2026-11-11 with the user's permission: the gates CI runs.
 # test added by hand on 2026-11-11 in spec 001 W-5, once, with the user's permission
 # (intent 001 waivers): the desktop now has a `test` script (node --test).
+# Edited by hand on 2026-11-17 with the user's permission (reins 0.3.3 gate refresh): every `from`
+# removed so the gates stay the user's own (refresh lists them, never pairs or removes them);
+# format runs the root `format:check` script.
 schema: reins/gates@1
 gates:
   typecheck:
     cmd: pnpm typecheck
-    from: package.json#scripts.typecheck
   lint:
     cmd: pnpm lint
-    from: package.json#scripts.lint
   format:
-    cmd: pnpm exec oxfmt --check
-    from: .github/workflows/ci.yml#Format check (oxfmt)
+    cmd: pnpm format:check
   test:
     cmd: pnpm -r test
-    from: apps/desktop/package.json#scripts.test
   build:
     cmd: pnpm build
-    from: package.json#scripts.build
   build-cli:
     cmd: pnpm --filter @croffledev/croffle-cli build
-    from: .github/workflows/ci.yml#Build cli
   server:
     cmd: make -C apps/server check
-    from: apps/server/Makefile#check
   server-web:
     cmd: pnpm --dir apps/server/web build
-    from: .github/workflows/ci.yml#Server dashboard
 order:
   - typecheck
   - lint
