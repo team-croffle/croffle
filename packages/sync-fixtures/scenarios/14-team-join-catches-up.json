@@ -1,0 +1,214 @@
+{
+  "name": "team-join-catches-up",
+  "protocol": 1,
+  "description": "An account that joins a team receives the team's older shared rows. Its device's cursor is already past them, so the next pull answers 410 cursor_too_old (details.reason team_scope) and the bootstrap that a protocol-1 client takes on that answer delivers them; after it a pull is quiet. Teams the account was in when the device was created never cause this.",
+  "accounts": [
+    {
+      "id": "acct-1",
+      "username": "alice",
+      "teams": ["team-default"]
+    },
+    {
+      "id": "acct-2",
+      "username": "bob",
+      "teams": ["team-default", "team-2"]
+    }
+  ],
+  "devices": [
+    {
+      "id": "client-1",
+      "accountId": "acct-1"
+    },
+    {
+      "id": "client-2",
+      "accountId": "acct-2"
+    }
+  ],
+  "steps": [
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-2",
+        "body": {
+          "clientId": "client-2",
+          "commits": [
+            {
+              "opId": "op-1",
+              "table": "schedule",
+              "rowId": "row-shared-old",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-2",
+              "row": {
+                "id": "row-shared-old",
+                "title": "Team retro",
+                "ownerId": "acct-2",
+                "teamId": "team-2",
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-1"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-2",
+              "table": "schedule",
+              "rowId": "row-own",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000000000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-own",
+                "title": "Mine",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000000000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "accepted": ["op-2"]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 0
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "serverSeq": 2,
+          "changes": [
+            {
+              "rowId": "row-own"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 2
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": []
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-2",
+        "body": {
+          "lastServerSeq": 1
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": []
+        }
+      }
+    },
+    {
+      "effect": "addTeamMember",
+      "teamId": "team-2",
+      "accountId": "acct-1"
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 2
+        }
+      },
+      "expect": {
+        "status": 410,
+        "body": {
+          "code": "cursor_too_old",
+          "details": {
+            "reason": "team_scope"
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/bootstrap",
+        "as": "client-1",
+        "body": {}
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "hasMore": false,
+          "serverSeq": 2,
+          "rows": [
+            {
+              "rowId": "row-own"
+            },
+            {
+              "rowId": "row-shared-old",
+              "row": {
+                "teamId": "team-2"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/pull",
+        "as": "client-1",
+        "body": {
+          "lastServerSeq": 2
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "changes": []
+        }
+      }
+    }
+  ]
+}

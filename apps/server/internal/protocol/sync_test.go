@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -252,8 +253,20 @@ func TestBootstrapCursorRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DecodeBootstrapCursor: %v", err)
 	}
-	if decoded != original {
+	if !reflect.DeepEqual(decoded, original) {
 		t.Errorf("decoded = %+v, want %+v", decoded, original)
+	}
+}
+
+func TestBootstrapScopeCursorCarriesTeams(t *testing.T) {
+	original := BootstrapCursor{BaseSeq: 7, Table: "schedule", RowID: "r", Teams: []string{"team-a", "team-default"}}
+	encoded, err := EncodeBootstrapCursor(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeBootstrapCursor(encoded)
+	if err != nil || !reflect.DeepEqual(decoded, original) {
+		t.Fatalf("decoded = %+v, %v", decoded, err)
 	}
 }
 
@@ -263,7 +276,7 @@ func TestDecodeBootstrapCursorEmptyMeansFirstPage(t *testing.T) {
 		if err != nil {
 			t.Errorf("DecodeBootstrapCursor(%q): %v", input, err)
 		}
-		if cursor != (BootstrapCursor{}) {
+		if !reflect.DeepEqual(cursor, BootstrapCursor{}) {
 			t.Errorf("cursor = %+v, want the zero value", cursor)
 		}
 	}

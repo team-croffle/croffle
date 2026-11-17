@@ -52,8 +52,18 @@ func (db *DB) RenameTeam(ctx context.Context, teamID, name string) error {
 
 func (db *DB) RemoveTeamMember(ctx context.Context, teamID, accountID string) error {
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
-		return execOne(ctx, tx, "team member", teamID+"/"+accountID,
-			`DELETE FROM team_member WHERE teamId = ? AND accountId = ?`, teamID, accountID)
+		if err := execOne(ctx, tx, "team member", teamID+"/"+accountID,
+			`DELETE FROM team_member WHERE teamId = ? AND accountId = ?`, teamID, accountID); err != nil {
+			return err
+		}
+		// Joining again has to catch up again: whatever the team wrote while
+		// the account was out never reached its devices.
+		if _, err := tx.ExecContext(ctx, `
+			DELETE FROM device_scope
+			WHERE teamId = ? AND deviceId IN (SELECT id FROM device WHERE accountId = ?)`, teamID, accountID); err != nil {
+			return fmt.Errorf("sqlite: drop device scope: %w", err)
+		}
+		return nil
 	})
 }
 

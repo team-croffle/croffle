@@ -41,7 +41,7 @@ func TestOpenCreatesSchemaAndIsIdempotent(t *testing.T) {
 	// Named rather than counted, so a migration that forgets a table or adds
 	// an unintended one is visible here.
 	want := []string{
-		"account", "account_otp", "applied_op", "auth_token", "commit_log", "dash_session", "device", "otp_recovery_code",
+		"account", "account_otp", "applied_op", "auth_token", "commit_log", "dash_session", "device", "device_scope", "otp_recovery_code",
 		"schema_migrations", "sync_meta", "sync_row", "team", "team_member",
 	}
 	got := tableNames(t, db)

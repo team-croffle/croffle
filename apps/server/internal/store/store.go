@@ -571,6 +571,12 @@ type Store interface {
 	ApplyCommits(ctx context.Context, req ApplyRequest) (ApplyResult, error)
 	// PullSince returns commits after the cursor that the account may see.
 	PullSince(ctx context.Context, query PullQuery) (PullResult, error)
+	// UncoveredTeams returns the teams of teamIDs this device has not
+	// received from the beginning; a pull past 0 with any of them has to
+	// become a snapshot. CoverTeams records that it has, for the teams the
+	// account is still in.
+	UncoveredTeams(ctx context.Context, deviceID string, teamIDs []string) ([]string, error)
+	CoverTeams(ctx context.Context, deviceID string, teamIDs []string) error
 	// Snapshot returns current state for a bootstrapping device.
 	Snapshot(ctx context.Context, query SnapshotQuery) (SnapshotResult, error)
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -26,6 +27,19 @@ type fakeSyncer struct {
 	snapshotResult store.SnapshotResult
 	snapshotErr    error
 	gotSnapshot    store.SnapshotQuery
+
+	// uncovered is what UncoveredTeams answers; covered records CoverTeams.
+	uncovered []string
+	covered   [][]string
+}
+
+func (f *fakeSyncer) UncoveredTeams(_ context.Context, _ string, _ []string) ([]string, error) {
+	return f.uncovered, nil
+}
+
+func (f *fakeSyncer) CoverTeams(_ context.Context, _ string, teamIDs []string) error {
+	f.covered = append(f.covered, teamIDs)
+	return nil
 }
 
 func (f *fakeSyncer) ApplyCommits(_ context.Context, req store.ApplyRequest) (store.ApplyResult, error) {
@@ -498,5 +512,103 @@ func TestPushEmitsNothingWhenEverythingConflicted(t *testing.T) {
 
 	if got := recorder.typesSeen(); len(got) != 0 {
 		t.Errorf("events = %v, want none when nothing was applied", got)
+	}
+}
+
+func TestPullTeamScopeSendsANewTeamToASnapshot(t *testing.T) {
+	syncer := &fakeSyncer{uncovered: []string{"team-2"}}
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":5}`, "tok")
+	if rec.Code != http.StatusGone {
+		t.Fatalf("status = %d, want 410", rec.Code)
+	}
+	var body ErrorBody
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Code != "cursor_too_old" || body.Details["reason"] != "team_scope" {
+		t.Fatalf("body = %+v, want cursor_too_old with reason team_scope", body)
+	}
+	if syncer.gotPull.SinceSeq != 0 || syncer.gotPull.AccountID != "" {
+		t.Fatal("the pull ran although the device has to take a snapshot")
+	}
+}
+
+func TestPullTeamScopeFromZeroCoversTheTeams(t *testing.T) {
+	// From 0 the check does not apply even with an uncovered team, and the
+	// teams are recorded once the pull has been served.
+	syncer := &fakeSyncer{uncovered: []string{"team-default"}}
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":0}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d (%s)", rec.Code, rec.Body.String())
+	}
+	if !reflect.DeepEqual(syncer.covered, [][]string{{store.DefaultTeamID}}) {
+		t.Fatalf("covered = %v", syncer.covered)
+	}
+
+	// A failed pull from 0 records nothing.
+	failing := &fakeSyncer{pullErr: store.ErrCursorTooOld}
+	postJSON(t, syncHandler(t, failing), "/sync/pull", `{"lastServerSeq":0}`, "tok")
+	if failing.covered != nil {
+		t.Fatalf("a failed pull covered %v", failing.covered)
+	}
+}
+
+func TestPullTeamScopeCoveredDevicePullsNormally(t *testing.T) {
+	syncer := &fakeSyncer{}
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":5}`, "tok")
+	if rec.Code != http.StatusOK || syncer.gotPull.SinceSeq != 5 {
+		t.Fatalf("status = %d, pulled since %d", rec.Code, syncer.gotPull.SinceSeq)
+	}
+	if syncer.covered != nil {
+		t.Fatal("a pull past 0 recorded coverage")
+	}
+}
+
+func TestBootstrapScopeCarriesTheStartingTeams(t *testing.T) {
+	// Page 1: the cursor carries the teams of the first request; nothing is
+	// covered yet.
+	syncer := &fakeSyncer{snapshotResult: store.SnapshotResult{
+		Rows: []store.Row{{Table: "schedule", RowID: "row-1", Version: 1}}, ServerSeq: 9, HasMore: true,
+	}}
+	h := syncHandler(t, syncer)
+	rec := postJSON(t, h, "/sync/bootstrap", `{}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("page 1 = %d %s", rec.Code, rec.Body.String())
+	}
+	var page protocol.BootstrapResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	cursor, err := protocol.DecodeBootstrapCursor(page.Cursor)
+	if err != nil || !reflect.DeepEqual(cursor.Teams, []string{store.DefaultTeamID}) {
+		t.Fatalf("cursor = %+v, %v", cursor, err)
+	}
+	if syncer.covered != nil {
+		t.Fatal("page 1 recorded coverage")
+	}
+
+	// Last page: the teams from the cursor are covered, not the request's
+	// current ones (team-late joined halfway through).
+	syncer.snapshotResult = store.SnapshotResult{ServerSeq: 9, HasMore: false}
+	next, _ := protocol.EncodeBootstrapCursor(protocol.BootstrapCursor{
+		BaseSeq: 9, Table: "schedule", RowID: "row-1", Teams: []string{"team-first"},
+	})
+	rec = postJSON(t, h, "/sync/bootstrap", `{"cursor":"`+next+`"}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("last page = %d %s", rec.Code, rec.Body.String())
+	}
+	if !reflect.DeepEqual(syncer.covered, [][]string{{"team-first"}}) {
+		t.Fatalf("covered = %v, want the cursor's teams", syncer.covered)
+	}
+}
+
+func TestBootstrapScopeSinglePageCoversTheRequestTeams(t *testing.T) {
+	syncer := &fakeSyncer{snapshotResult: store.SnapshotResult{ServerSeq: 3}}
+	rec := postJSON(t, syncHandler(t, syncer), "/sync/bootstrap", `{}`, "tok")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if !reflect.DeepEqual(syncer.covered, [][]string{{store.DefaultTeamID}}) {
+		t.Fatalf("covered = %v", syncer.covered)
 	}
 }

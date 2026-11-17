@@ -30,4 +30,4 @@ const (
 //   - device-token-ttl: device tokens may carry an expiry (LoginResponse.ExpiresAt)
 //   - token-pair: POST /auth/token issues access/refresh pairs
 //   - totp: accounts may require a one-time code (401 otp_required)
-var Features = []string{"conflict-fields", "device-token-ttl", "token-pair", "totp"}
+var Features = []string{"conflict-fields", "device-token-ttl", "team-scopes", "token-pair", "totp"}
