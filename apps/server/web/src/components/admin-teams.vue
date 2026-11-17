@@ -14,12 +14,26 @@
   const memberName = ref('');
   const renameTo = ref('');
 
+  /**
+   * Opens a team: its members are fetched first and the team and its list are
+   * published together, so a failed fetch never leaves another team's members
+   * under this team's name (where Remove would act on the wrong team).
+   */
+  async function openTeam(team: AdminTeam | null) {
+    if (!team) {
+      open.value = null;
+      members.value = [];
+      return;
+    }
+    const list = (await admin.members(team.id)).members;
+    open.value = team;
+    members.value = list;
+  }
+
   async function refresh() {
     teams.value = (await admin.teams()).teams;
     if (open.value) {
-      const current = teams.value.find((t) => t.id === open.value?.id) ?? null;
-      open.value = current;
-      members.value = current ? (await admin.members(current.id)).members : [];
+      await openTeam(teams.value.find((t) => t.id === open.value?.id) ?? null);
     }
   }
 
@@ -31,6 +45,10 @@
       await refresh();
     } catch (err) {
       error.value = (err as Error).message;
+      // What is on screen may no longer match the server: close the member
+      // list rather than leave actions on data that failed to load.
+      open.value = null;
+      members.value = [];
     } finally {
       busy.value = false;
     }
@@ -44,7 +62,9 @@
 
   const show = (team: AdminTeam) =>
     run(async () => {
-      open.value = team;
+      open.value = null;
+      members.value = [];
+      await openTeam(team);
       renameTo.value = team.name;
     });
 
