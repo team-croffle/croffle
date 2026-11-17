@@ -172,7 +172,7 @@ Every command takes `--db` to point at the database file, and the listings take
 | `user list`                                                                                 | Lists logins, whether they are disabled, and whether they are operators.                                     |
 | `user disable <username> [--force]` / `user enable <username>`                              | Blocks or restores authentication. The last active operator needs `--force`.                                 |
 | `user operator grant <username>` · `user operator revoke <username> [--force]`              | Makes an account an operator, or a regular account again.                                                    |
-| `user set-password <username> --password-stdin`                                             | Changes a password. Existing device tokens keep working.                                                     |
+| `user set-password <username> --password-stdin`                                             | Changes a password and signs the account's browsers out. Existing device tokens keep working.                |
 | `token issue <username> [--device-name N] [--client-id ID] [--expires-in D \| --no-expiry]` | Issues a device token. **Printed once.** Follows `CROFFLE_DEVICE_TOKEN_TTL` unless a flag says otherwise.    |
 | `token list [username]`                                                                     | Lists devices: created, last seen, token expiry (`never`), and `pending` / `active` / `expired` / `revoked`. |
 | `user otp status <username>` · `user otp disable <username>`                                | Shows (`off` / `pending` / `enabled`) or removes an account's one-time codes.                                |
@@ -335,7 +335,10 @@ encrypts every secret that is still plain; nobody has to set up codes again.
   ```
 
   A rotate while the server runs is not safe: the running server keeps the old
-  key until it restarts.
+  key until it restarts, so a code set up in between is sealed with the old key
+  and the next start fails. To recover, keep the new key configured and run
+  `secret rotate --new-key-file <new> --old-key-file <old>`: it opens secrets
+  sealed with either key and seals them all with the new one.
 
 - A server started with a key that does not match the stored secrets refuses
   to start and names the key the secrets were sealed with.
@@ -359,8 +362,11 @@ accounts in and out (`team create`, `team add-member`, `team remove-member`, or
   already have stays on them.
 - Teams cannot be deleted yet; rename one instead.
 - A device that was in a team under 0.1.x without ever taking a snapshot after
-  joining may miss that team's older rows. Revoke the device and sign in on it
-  again to give it a fresh snapshot.
+  joining may miss that team's older rows. On that desktop, choose **Settings →
+  Sync → Sign out** and sign in again: signing out clears the device's position
+  in the change log, so the next sync takes a full snapshot. (Revoking the
+  device is not enough: signing in again as the same account keeps the old
+  position.)
 
 ---
 

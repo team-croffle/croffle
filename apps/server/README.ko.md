@@ -165,7 +165,7 @@ server {
 | `user list`                                                                                 | 계정, 비활성 여부, 운영자 여부를 보여줍니다.                                                            |
 | `user disable <username> [--force]` / `user enable <username>`                              | 인증을 막거나 되돌립니다. 마지막 활성 운영자는 `--force` 가 있어야 합니다.                              |
 | `user operator grant <username>` · `user operator revoke <username> [--force]`              | 계정을 운영자로 만들거나 일반 계정으로 되돌립니다.                                                      |
-| `user set-password <username> --password-stdin`                                             | 비밀번호를 바꿉니다. 기존 기기 토큰은 그대로 동작합니다.                                                |
+| `user set-password <username> --password-stdin`                                             | 비밀번호를 바꾸고 그 계정의 브라우저 로그인을 모두 끊습니다. 기존 기기 토큰은 그대로 동작합니다.        |
 | `token issue <username> [--device-name N] [--client-id ID] [--expires-in D \| --no-expiry]` | 기기 토큰을 발급합니다. **한 번만 출력됩니다.** 플래그가 없으면 `CROFFLE_DEVICE_TOKEN_TTL` 을 따릅니다. |
 | `token list [username]`                                                                     | 기기 목록: 생성·마지막 접속·토큰 만료(`never`)와 `pending`/`active`/`expired`/`revoked`.                |
 | `user otp status <username>` · `user otp disable <username>`                                | 계정의 일회용 코드 상태(`off`/`pending`/`enabled`)를 보거나 끕니다.                                     |
@@ -316,7 +316,9 @@ docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > crof
   ```
 
   서버가 떠 있는 동안의 rotate 는 안전하지 않습니다. 떠 있는 서버는 다시 시작할 때까지
-  옛 키를 쓰기 때문입니다.
+  옛 키를 쓰므로, 그 사이에 등록한 코드는 옛 키로 잠기고 다음 시작이 실패합니다. 되돌리려면
+  새 키를 설정한 채로 `secret rotate --new-key-file <새 키> --old-key-file <옛 키>` 를
+  실행하십시오. 두 키 중 어느 것으로 잠긴 secret 이든 열어 모두 새 키로 잠급니다.
 
 - 저장된 secret 과 맞지 않는 키로 시작하면 서버는 시작을 거부하고, secret 을 잠근 키의
   id 를 알려 줍니다.
@@ -338,7 +340,9 @@ docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > crof
   계속합니다). 기기에 이미 받아 둔 것은 기기에 남습니다.
 - 팀은 아직 지울 수 없습니다. 이름을 바꾸십시오.
 - 0.1.x 에서 팀에 들어간 뒤 스냅샷을 다시 받지 않은 기기는 그 팀의 예전 행을 놓쳤을 수
-  있습니다. 그 기기를 회수하고 다시 로그인하면 스냅샷을 새로 받습니다.
+  있습니다. 그 데스크톱에서 **설정 → 동기화 → 로그아웃** 후 다시 로그인하십시오.
+  로그아웃하면 기기의 변경 로그 위치가 지워져 다음 동기화에서 전체 스냅샷을 받습니다
+  (기기 회수만으로는 안 됩니다. 같은 계정으로 다시 로그인하면 예전 위치가 남습니다).
 
 ---
 
