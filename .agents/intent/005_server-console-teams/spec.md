@@ -103,8 +103,8 @@ summary_for_user: |
 각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트(`make -C apps/server check`, 대시보드를 고치면 `pnpm --dir apps/server/web build`, 공통 게이트)를 통과합니다.
 
 - [x] W-1 (678a6b8) TOTP secret 암호화 · 시작 시 이전 · 키 없음 경고 — S-1, S-2, S-10
-- [x] W-2 `secret generate` · `secret rotate` — S-3
-- [ ] W-3 운영자 역할(0006) · CLI · `requireOperator` — S-4
+- [x] W-2 (1b690f0) `secret generate` · `secret rotate` — S-3
+- [x] W-3 운영자 역할(0006) · CLI · `requireOperator` — S-4
 - [ ] W-4 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
 - [ ] W-5 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
 - [ ] W-6 운영 API `/dash/admin/*` — S-8, S-4

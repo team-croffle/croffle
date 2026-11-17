@@ -45,6 +45,11 @@ var ErrForeignTeam = errors.New("store: account is not a member of that team")
 // violation at an operator.
 var ErrDuplicate = errors.New("store: already exists")
 
+// ErrLastOperator refuses to revoke or disable the only active operator:
+// nobody could use the operator screens afterwards. The CLI can force it,
+// because whoever runs the CLI can also undo it.
+var ErrLastOperator = errors.New("store: this is the last active operator")
+
 // Op is the kind of change a commit carries. A delete keeps the row and sets
 // its tombstone: "deleted" and "never received" have to stay distinguishable
 // for a client that is catching up.
@@ -66,10 +71,16 @@ type Account struct {
 	PasswordHash string
 	CreatedAt    time.Time
 	DisabledAt   *time.Time
+	// OperatorAt is when the account was made an operator; nil for a regular
+	// account.
+	OperatorAt *time.Time
 }
 
 // Disabled reports whether the account may no longer authenticate.
 func (a Account) Disabled() bool { return a.DisabledAt != nil }
+
+// Operator reports whether the account may use the operator screens.
+func (a Account) Operator() bool { return a.OperatorAt != nil }
 
 // Device is one installation of the desktop app. ID is the client's own
 // clientId, which is also what appears in a row's lastWriterId as
@@ -401,7 +412,12 @@ type Admin interface {
 	// store never handles a plaintext password.
 	CreateAccount(ctx context.Context, account Account) error
 	ListAccounts(ctx context.Context) ([]Account, error)
-	SetAccountDisabled(ctx context.Context, accountID string, disabled bool) error
+	// SetAccountDisabled returns ErrLastOperator for the last active
+	// operator unless force is set.
+	SetAccountDisabled(ctx context.Context, accountID string, disabled, force bool) error
+	// SetOperator makes the account an operator or a regular account again;
+	// revoking the last active operator is ErrLastOperator unless force.
+	SetOperator(ctx context.Context, accountID string, operator, force bool) error
 	SetAccountPassword(ctx context.Context, accountID, passwordHash string) error
 
 	// ListDevices lists one account's devices, or every device when accountID

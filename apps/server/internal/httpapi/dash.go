@@ -47,6 +47,9 @@ type dashIdentity struct {
 	accountID string
 	username  string
 	teams     []string
+	// operator is read from the account on every request, so revoking it
+	// takes effect on the next request, not at the next sign-in.
+	operator bool
 }
 
 func (s *server) dashRoutes(mux *http.ServeMux) {
@@ -89,6 +92,9 @@ type dashMeResponse struct {
 	Username   string   `json:"username"`
 	Teams      []string `json:"teams"`
 	OTPEnabled bool     `json:"otpEnabled"`
+	// Operator says whether the operator screens are shown. The API checks
+	// it again on every operator request (requireOperator).
+	Operator bool `json:"operator"`
 }
 
 func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
@@ -143,6 +149,7 @@ func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
 		Username:   account.Username,
 		Teams:      orEmpty(teams),
 		OTPEnabled: state == "enabled",
+		Operator:   account.Operator(),
 	})
 }
 
@@ -171,6 +178,7 @@ func (s *server) dashMe(w http.ResponseWriter, r *http.Request) {
 		Username:   identity.username,
 		Teams:      orEmpty(identity.teams),
 		OTPEnabled: state == "enabled",
+		Operator:   identity.operator,
 	})
 }
 
@@ -455,9 +463,23 @@ func (s *server) requireSession(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		identity := dashIdentity{accountID: account.ID, username: account.Username, teams: teams}
+		identity := dashIdentity{
+			accountID: account.ID, username: account.Username, teams: teams, operator: account.Operator(),
+		}
 		next(w, r.WithContext(context.WithValue(r.Context(), ctxKeySession, identity)))
 	}
+}
+
+// requireOperator is requireSession plus the operator check. Everything under
+// /dash/admin/ goes through it.
+func (s *server) requireOperator(next http.HandlerFunc) http.HandlerFunc {
+	return s.requireSession(func(w http.ResponseWriter, r *http.Request) {
+		if !sessionOf(r.Context()).operator {
+			writeError(w, http.StatusForbidden, "not_operator", "this account is not an operator")
+			return
+		}
+		next(w, r)
+	})
 }
 
 func sessionOf(ctx context.Context) dashIdentity {

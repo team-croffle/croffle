@@ -37,16 +37,57 @@ func (c *command) user() error {
 		return c.userSetPassword()
 	case "otp":
 		return c.userOTP()
+	case "operator":
+		return c.userOperator()
 	default:
 		return c.usage(
-			"croffle-server user create <username> --password-stdin",
+			"croffle-server user create <username> --password-stdin [--operator]",
 			"croffle-server user list [--json]",
-			"croffle-server user disable <username>",
+			"croffle-server user disable <username> [--force]",
 			"croffle-server user enable <username>",
 			"croffle-server user set-password <username> --password-stdin",
 			"croffle-server user otp status <username>",
-			"croffle-server user otp disable <username>")
+			"croffle-server user otp disable <username>",
+			"croffle-server user operator grant <username>",
+			"croffle-server user operator revoke <username> [--force]")
 	}
+}
+
+// lastOperatorHint explains ErrLastOperator on the command line.
+func lastOperatorHint(username string) error {
+	return fmt.Errorf("%s is the last active operator; make another account an operator first "+
+		"(croffle-server user operator grant <user>), or pass --force to leave the server without one", username)
+}
+
+func (c *command) userOperator() error {
+	action := c.action()
+	if action != "grant" && action != "revoke" {
+		return c.usage(
+			"croffle-server user operator grant <username>",
+			"croffle-server user operator revoke <username> [--force]")
+	}
+	fs := c.flags("operator "+action, false)
+	force := fs.Bool("force", false, "revoke even the last active operator")
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+	account, err := c.resolveAccount(c.arg(0))
+	if err != nil {
+		return err
+	}
+	grant := action == "grant"
+	if err := c.db.SetOperator(c.ctx, account.ID, grant, *force); err != nil {
+		if errors.Is(err, store.ErrLastOperator) {
+			return lastOperatorHint(account.Username)
+		}
+		return err
+	}
+	if grant {
+		c.printf("%s is an operator: the dashboard shows it the operator screens\n", account.Username)
+	} else {
+		c.printf("%s is no longer an operator\n", account.Username)
+	}
+	return nil
 }
 
 func (c *command) userCreate() error {
@@ -54,6 +95,7 @@ func (c *command) userCreate() error {
 	password := fs.String("password", "", "password (prefer --password-stdin: a flag lands in the shell history)")
 	fromStdin := fs.Bool("password-stdin", false, "read the password from stdin")
 	id := fs.String("id", "", "account id (generated when empty)")
+	operator := fs.Bool("operator", false, "make the account an operator")
 	if err := c.parse(fs); err != nil {
 		return err
 	}
@@ -78,8 +120,12 @@ func (c *command) userCreate() error {
 		accountID = newID("acct")
 	}
 
+	now := time.Now()
 	account := store.Account{
-		ID: accountID, Username: username, PasswordHash: hash, CreatedAt: time.Now(),
+		ID: accountID, Username: username, PasswordHash: hash, CreatedAt: now,
+	}
+	if *operator {
+		account.OperatorAt = &now
 	}
 	if err := c.db.CreateAccount(c.ctx, account); err != nil {
 		if errors.Is(err, store.ErrDuplicate) {
@@ -119,10 +165,11 @@ func (c *command) userList() error {
 			Username  string `json:"username"`
 			CreatedAt string `json:"createdAt"`
 			Disabled  bool   `json:"disabled"`
+			Operator  bool   `json:"operator"`
 		}
 		out := make([]row, 0, len(accounts))
 		for _, a := range accounts {
-			out = append(out, row{a.ID, a.Username, formatTime(&a.CreatedAt), a.Disabled()})
+			out = append(out, row{a.ID, a.Username, formatTime(&a.CreatedAt), a.Disabled(), a.Operator()})
 		}
 		return c.writeJSON(out)
 	}
@@ -133,14 +180,19 @@ func (c *command) userList() error {
 		if a.Disabled() {
 			state = "disabled"
 		}
-		rows = append(rows, []string{a.Username, a.ID, formatTime(&a.CreatedAt), state})
+		operator := "no"
+		if a.Operator() {
+			operator = "yes"
+		}
+		rows = append(rows, []string{a.Username, a.ID, formatTime(&a.CreatedAt), state, operator})
 	}
-	c.table([]string{"USERNAME", "ID", "CREATED", "STATE"}, rows)
+	c.table([]string{"USERNAME", "ID", "CREATED", "STATE", "OPERATOR"}, rows)
 	return nil
 }
 
 func (c *command) userSetDisabled(action string, disabled bool) error {
 	fs := c.flags(action, false)
+	force := fs.Bool("force", false, "disable even the last active operator")
 	if err := c.parse(fs); err != nil {
 		return err
 	}
@@ -149,7 +201,10 @@ func (c *command) userSetDisabled(action string, disabled bool) error {
 	if err != nil {
 		return err
 	}
-	if err := c.db.SetAccountDisabled(c.ctx, account.ID, disabled); err != nil {
+	if err := c.db.SetAccountDisabled(c.ctx, account.ID, disabled, *force); err != nil {
+		if errors.Is(err, store.ErrLastOperator) {
+			return lastOperatorHint(account.Username)
+		}
 		return err
 	}
 
