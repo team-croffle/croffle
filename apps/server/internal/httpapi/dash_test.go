@@ -55,6 +55,15 @@ func (f *fakeDash) DeleteSession(_ context.Context, hash []byte) error {
 	return nil
 }
 
+func (f *fakeDash) DeleteAccountSessions(_ context.Context, accountID string) error {
+	for hash, session := range f.sessions {
+		if session.AccountID == accountID {
+			delete(f.sessions, hash)
+		}
+	}
+	return nil
+}
+
 func (f *fakeDash) FindAccountByID(_ context.Context, id string) (*store.Account, error) {
 	if f.account.ID != id {
 		return nil, store.ErrNotFound

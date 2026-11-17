@@ -183,6 +183,8 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 		Auth:               authService,
 		Sync:               db,
 		Dash:               db,
+		Admin:              db,
+		DeviceTokenTTL:     cfg.DeviceTokenTTL,
 		Assets:             assets,
 		Hooks:              emitter,
 		DashTrustedOrigins: cfg.DashTrustedOrigins,

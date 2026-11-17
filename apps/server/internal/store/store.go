@@ -403,10 +403,12 @@ type Info struct {
 	OTPSecretsEncrypted int64  `json:"otpSecretsEncrypted"`
 }
 
-// Admin is the operator-facing surface, used by the CLI and never by a request
-// handler. It is a separate interface so the request path stays small and so it
-// is obvious which operations bypass authentication by design: whoever can run
-// the binary against the database file is already the operator.
+// Admin is the operator-facing surface: the CLI, and since 0.2.0 the
+// dashboard's operator API, which reaches it only through requireOperator (a
+// signed-in account with operatorAt set). It is a separate interface so the
+// sync request path stays small and so it is obvious which operations act on
+// every account: whoever can run the binary against the database file, or an
+// operator, is allowed to.
 type Admin interface {
 	// CreateAccount inserts a login whose password is already hashed; the
 	// store never handles a plaintext password.
@@ -472,6 +474,8 @@ type Sessions interface {
 	// FindSession returns ErrNotFound for a missing or expired session.
 	FindSession(ctx context.Context, tokenHash []byte, now time.Time) (*Session, error)
 	DeleteSession(ctx context.Context, tokenHash []byte) error
+	// DeleteAccountSessions ends every session of an account.
+	DeleteAccountSessions(ctx context.Context, accountID string) error
 }
 
 // Store is the persistence contract.

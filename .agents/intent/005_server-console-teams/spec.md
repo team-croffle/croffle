@@ -107,8 +107,8 @@ summary_for_user: |
 - [x] W-2 (1b690f0) `secret generate` · `secret rotate` — S-3
 - [x] W-3 (97b82b1) 운영자 역할(0006) · CLI · `requireOperator` — S-4
 - [x] W-4 (4abd54b) 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
-- [x] W-5 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
-- [ ] W-6 운영 API `/dash/admin/*` — S-8, S-4
+- [x] W-5 (420f68a) 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
+- [x] W-6 운영 API `/dash/admin/*` — S-8, S-4
 - [ ] W-7 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
 - [ ] W-8 README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
 
@@ -401,6 +401,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 ## 조정 기록
 - A-1 (2026-11-18, W-4) 운영자가 정하는 팀 id(`team create --id`)를 1–64자 `[a-z0-9-]` 로 제한 · 운영 API 경로(`/dash/admin/teams/{id}`)와 로그에 그대로 들어가므로. 없는 팀에 `add-member` 하면 외래 키 오류 대신 `ErrNotFound` · W-4 커밋
 - A-2 (2026-11-18, W-5) 새 기기를 만들 때 계정의 팀으로 `device_scope` 를 채움 · 처음 설계(커서 0 pull · bootstrap 완료 때만 기록)로는 기존 픽스처 04(bootstrap 없이 push → 그 `serverSeq` 로 pull)가 410 을 받아 protocol 1 의 답이 바뀌었음(S-9). 마이그레이션이 기존 기기에 쓰는 규칙과 같음 · W-5 커밋
+- A-3 (2026-11-18, W-6) ① `route` 가 같은 경로의 405 대체 패턴을 경로마다 한 번만 등록하고 `Allow` 에 메서드를 모두 적음 · 운영 API 는 한 경로에 GET · POST 가 있어 기존 방식(메서드마다 대체 패턴 등록)이 패턴 충돌로 시작 시 panic. ② `GET /dash/admin/commits` 는 메타데이터(seq · 표 · 행 id · op · 소유자 · 팀 · 버전 · 시각 · 작성자)만 주고 행 본문은 주지 않음 · 운영자에게도 남의 일정 내용을 보이지 않으려는 PM 판단, 본문은 CLI `log dump`. ③ 응답에 `tokenExpiresAt`(발급) · `memberCount`(팀 목록) · `sizeBefore`/`sizeAfter`(vacuum) 를 더함 · W-6 커밋
 
 ## 우려
 1. **키를 잃으면 암호화된 OTP secret 을 되살릴 수 없습니다.** 서버는 뜨지 않고(S-2), 운영자는 키 없이 시작하려면 OTP 를 쓰는 계정의 OTP 를 CLI 로 해제해야 합니다(`user otp disable` 은 `DELETE FROM account_otp` 라 secret 을 읽지 않으므로 키 없이 됩니다 — `store/sqlite/otp.go:132`. 단 W-1 의 시작 검사보다 먼저 쓸 수 있어야 하므로, CLI 명령은 시작 검사를 거치지 않습니다). README 에 백업 주의를 둡니다.
