@@ -452,11 +452,116 @@ func (c *command) team() error {
 		return c.teamList()
 	case "add-member":
 		return c.teamAddMember()
+	case "create":
+		return c.teamCreate()
+	case "rename":
+		return c.teamRename()
+	case "members":
+		return c.teamMembers()
+	case "remove-member":
+		return c.teamRemoveMember()
 	default:
 		return c.usage(
 			"croffle-server team list [--json]",
-			"croffle-server team add-member <team-id> <username> [--role ROLE]")
+			"croffle-server team create <name> [--id ID]",
+			"croffle-server team rename <team-id> <name>",
+			"croffle-server team members <team-id> [--json]",
+			"croffle-server team add-member <team-id> <username> [--role ROLE]",
+			"croffle-server team remove-member <team-id> <username>")
 	}
+}
+
+func (c *command) teamCreate() error {
+	fs := c.flags("create", false)
+	id := fs.String("id", "", "team id (generated when empty: team-<10 characters>)")
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+	if len(c.args) != 1 {
+		return errors.New("usage: croffle-server team create <name> [--id ID] (quote a name with spaces)")
+	}
+	name, err := store.NormaliseTeamName(c.arg(0))
+	if err != nil {
+		return err
+	}
+	teamID := strings.TrimSpace(*id)
+	if teamID == "" {
+		teamID = store.NewTeamID()
+	} else if err := store.ValidateTeamID(teamID); err != nil {
+		return err
+	}
+	if err := c.db.CreateTeam(c.ctx, store.Team{ID: teamID, Name: name, CreatedAt: time.Now()}); err != nil {
+		if errors.Is(err, store.ErrDuplicate) {
+			return fmt.Errorf("a team with id %q already exists", teamID)
+		}
+		return err
+	}
+	c.printf("created team %s (%s)\n", name, teamID)
+	c.printf("next: croffle-server team add-member %s <username>\n", teamID)
+	return nil
+}
+
+func (c *command) teamRename() error {
+	fs := c.flags("rename", false)
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+	if len(c.args) != 2 {
+		return errors.New("usage: croffle-server team rename <team-id> <name>")
+	}
+	name, err := store.NormaliseTeamName(c.arg(1))
+	if err != nil {
+		return err
+	}
+	if err := c.db.RenameTeam(c.ctx, c.arg(0), name); err != nil {
+		return err
+	}
+	c.printf("renamed team %s to %s\n", c.arg(0), name)
+	return nil
+}
+
+func (c *command) teamMembers() error {
+	fs := c.flags("members", true)
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+	teamID := strings.TrimSpace(c.arg(0))
+	if teamID == "" {
+		return errors.New("usage: croffle-server team members <team-id> [--json]")
+	}
+	members, err := c.db.ListTeamMembers(c.ctx, teamID)
+	if err != nil {
+		return err
+	}
+	if c.asJSON {
+		return c.writeJSON(members)
+	}
+	rows := make([][]string, 0, len(members))
+	for _, m := range members {
+		rows = append(rows, []string{m.Username, m.AccountID, m.Role, formatTime(&m.CreatedAt)})
+	}
+	c.table([]string{"USERNAME", "ACCOUNT", "ROLE", "ADDED"}, rows)
+	return nil
+}
+
+func (c *command) teamRemoveMember() error {
+	fs := c.flags("remove-member", false)
+	if err := c.parse(fs); err != nil {
+		return err
+	}
+	teamID := strings.TrimSpace(c.arg(0))
+	if teamID == "" {
+		return errors.New("usage: croffle-server team remove-member <team-id> <username>")
+	}
+	account, err := c.resolveAccount(c.arg(1))
+	if err != nil {
+		return err
+	}
+	if err := c.db.RemoveTeamMember(c.ctx, teamID, account.ID); err != nil {
+		return err
+	}
+	c.printf("removed %s from team %s; its devices stop receiving the team's rows\n", account.Username, teamID)
+	return nil
 }
 
 func (c *command) teamList() error {
@@ -484,7 +589,7 @@ func (c *command) teamList() error {
 
 func (c *command) teamAddMember() error {
 	fs := c.flags("add-member", false)
-	role := fs.String("role", "member", "role inside the team (not enforced in 0.1)")
+	role := fs.String("role", "member", "role inside the team (not enforced yet)")
 	if err := c.parse(fs); err != nil {
 		return err
 	}

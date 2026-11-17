@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -587,5 +588,84 @@ func TestOperatorCLI(t *testing.T) {
 	r.mustRun("", "user", "operator", "revoke", "regular1", "--force")
 	if out := r.mustRun("", "user", "list").out; strings.Contains(out, "yes") {
 		t.Fatalf("forced revoke left an operator:\n%s", out)
+	}
+}
+
+func TestTeamCreateCLI(t *testing.T) {
+	r := newRunner(t)
+	r.mustRun("pw\n", "user", "create", "alice", "--password-stdin")
+	r.mustRun("pw\n", "user", "create", "bob", "--password-stdin")
+
+	out := r.mustRun("", "team", "create", "  Design Team  ").out
+	if !regexp.MustCompile(`created team Design Team \(team-[0-9a-f]{10}\)`).MatchString(out) {
+		t.Fatalf("create without --id: %q", out)
+	}
+	r.mustRun("", "team", "create", "Engineering", "--id", "team-eng")
+	r.mustRun("", "team", "rename", "team-eng", "Core Engineering")
+
+	var teams []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal([]byte(r.mustRun("", "team", "list", "--json").out), &teams); err != nil {
+		t.Fatal(err)
+	}
+	names := map[string]string{}
+	for _, team := range teams {
+		names[team.ID] = team.Name
+	}
+	if names["team-default"] == "" || names["team-eng"] != "Core Engineering" || len(teams) != 3 {
+		t.Fatalf("teams = %+v", teams)
+	}
+
+	for _, args := range [][]string{
+		{"team", "create", "   "},
+		{"team", "create", strings.Repeat("a", 65)},
+		{"team", "rename", "team-eng", strings.Repeat("a", 65)},
+		{"team", "create", "Again", "--id", "team-eng"},
+		{"team", "create", "Bad id", "--id", "Team Eng"},
+	} {
+		if _, err := r.run("", args...); err == nil {
+			t.Errorf("%v succeeded", args)
+		}
+	}
+}
+
+func TestTeamMembersCLI(t *testing.T) {
+	r := newRunner(t)
+	r.mustRun("pw\n", "user", "create", "alice", "--password-stdin")
+	r.mustRun("pw\n", "user", "create", "bob", "--password-stdin")
+	r.mustRun("", "team", "create", "Engineering", "--id", "team-eng")
+	r.mustRun("", "team", "add-member", "team-eng", "alice")
+	r.mustRun("", "team", "add-member", "team-eng", "bob")
+
+	members := func() []string {
+		var list []struct {
+			Username string `json:"username"`
+		}
+		if err := json.Unmarshal([]byte(r.mustRun("", "team", "members", "team-eng", "--json").out), &list); err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for _, m := range list {
+			names = append(names, m.Username)
+		}
+		return names
+	}
+	if got := strings.Join(members(), ","); got != "alice,bob" {
+		t.Fatalf("members = %s", got)
+	}
+	if table := r.mustRun("", "team", "members", "team-eng").out; !strings.Contains(table, "USERNAME") {
+		t.Fatalf("members table:\n%s", table)
+	}
+	r.mustRun("", "team", "remove-member", "team-eng", "bob")
+	if got := strings.Join(members(), ","); got != "alice" {
+		t.Fatalf("after remove-member = %s", got)
+	}
+	if _, err := r.run("", "team", "remove-member", "team-eng", "bob"); err == nil {
+		t.Fatal("removing a non-member succeeded")
+	}
+	if _, err := r.run("", "team", "add-member", "team-missing", "bob"); err == nil {
+		t.Fatal("adding to a missing team succeeded")
 	}
 }

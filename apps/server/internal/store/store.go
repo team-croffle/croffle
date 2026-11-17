@@ -429,8 +429,20 @@ type Admin interface {
 	RevokeDevice(ctx context.Context, deviceID string) error
 
 	ListTeams(ctx context.Context) ([]Team, error)
-	// AddTeamMember grants an account access to a team's shared rows.
+	// AddTeamMember grants an account access to a team's shared rows. A team
+	// that does not exist is ErrNotFound.
 	AddTeamMember(ctx context.Context, teamID, accountID, role string) error
+	// CreateTeam inserts a team; an id already taken is ErrDuplicate. The
+	// caller has normalised the name and validated the id.
+	CreateTeam(ctx context.Context, team Team) error
+	// RenameTeam changes a team's name; a missing team is ErrNotFound.
+	RenameTeam(ctx context.Context, teamID, name string) error
+	// RemoveTeamMember takes an account out of a team; from then on the
+	// team's rows are not served to it. Not a member is ErrNotFound.
+	RemoveTeamMember(ctx context.Context, teamID, accountID string) error
+	// ListTeamMembers lists a team's accounts by username; a missing team is
+	// ErrNotFound.
+	ListTeamMembers(ctx context.Context, teamID string) ([]TeamMember, error)
 
 	Info(ctx context.Context) (Info, error)
 	// Vacuum reclaims the space a sweep freed. It is never run automatically:

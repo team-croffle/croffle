@@ -274,6 +274,9 @@ func (db *DB) AddTeamMember(ctx context.Context, teamID, accountID, role string)
 		role = "member"
 	}
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if err := teamExists(ctx, tx, teamID); err != nil {
+			return err
+		}
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO team_member (teamId, accountId, role, createdAt)
 			VALUES (?, ?, ?, ?)
