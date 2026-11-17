@@ -21,8 +21,8 @@ type Syncer interface {
 	PullSince(ctx context.Context, query store.PullQuery) (store.PullResult, error)
 	Snapshot(ctx context.Context, query store.SnapshotQuery) (store.SnapshotResult, error)
 	UncoveredTeams(ctx context.Context, deviceID string, teamIDs []string) ([]string, error)
-	CoverTeams(ctx context.Context, deviceID string, memberships []store.Membership) error
-	Memberships(ctx context.Context, accountID string) ([]store.Membership, error)
+	CoverTeams(ctx context.Context, deviceID string, teamIDs []string, generation int64) error
+	MembershipState(ctx context.Context, accountID string) ([]string, int64, error)
 }
 
 func (s *server) push(w http.ResponseWriter, r *http.Request) {
@@ -385,26 +385,26 @@ func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_cursor", err.Error())
 		return
 	}
-	// The memberships the snapshot started with travel in the cursor: a team
-	// joined halfway through is missing from the earlier pages, and so is one
-	// left and joined again, so neither may be recorded as covered when the
-	// last page goes out (CoverTeams also compares the join time).
-	snapshotTeams := cursor.Teams
+	// The teams and the membership generation the snapshot started with
+	// travel in the cursor. The first page reads both together and also uses
+	// those teams for its rows, so what the pages show and what the last page
+	// covers come from one instant (review 2 G-2). If the generation moves
+	// before the last page, a membership changed in between and the snapshot
+	// covers nothing (review 1 F-3, review 2 G-1).
+	snapshotTeams, generation := cursor.Teams, cursor.Generation
+	visibleTeams := identity.TeamIDs
 	if req.Cursor == "" {
-		memberships, err := s.sync.Memberships(r.Context(), identity.AccountID)
+		snapshotTeams, generation, err = s.sync.MembershipState(r.Context(), identity.AccountID)
 		if err != nil {
 			s.writeSyncError(w, r, err)
 			return
 		}
-		snapshotTeams = make([]protocol.CursorMembership, 0, len(memberships))
-		for _, m := range memberships {
-			snapshotTeams = append(snapshotTeams, protocol.CursorMembership{TeamID: m.TeamID, JoinedAtMs: m.JoinedAtMs})
-		}
+		visibleTeams = snapshotTeams
 	}
 
 	result, err := s.sync.Snapshot(r.Context(), store.SnapshotQuery{
 		AccountID:  identity.AccountID,
-		TeamIDs:    identity.TeamIDs,
+		TeamIDs:    visibleTeams,
 		BaseSeq:    cursor.BaseSeq,
 		AfterTable: cursor.Table,
 		AfterRowID: cursor.RowID,
@@ -435,7 +435,8 @@ func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
 		// The next cursor carries the same instant, so the following page stays
 		// part of the same snapshot.
 		next, err := protocol.EncodeBootstrapCursor(protocol.BootstrapCursor{
-			BaseSeq: result.ServerSeq, Table: last.Table, RowID: last.RowID, Teams: snapshotTeams,
+			BaseSeq: result.ServerSeq, Table: last.Table, RowID: last.RowID,
+			Teams: snapshotTeams, Generation: generation,
 		})
 		if err != nil {
 			s.writeSyncError(w, r, err)
@@ -453,13 +454,7 @@ func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if !result.HasMore {
-		// CoverTeams keeps only the teams the account is still in, so a team
-		// left halfway through is not recorded either.
-		covered := make([]store.Membership, 0, len(snapshotTeams))
-		for _, m := range snapshotTeams {
-			covered = append(covered, store.Membership{TeamID: m.TeamID, JoinedAtMs: m.JoinedAtMs})
-		}
-		if err := s.sync.CoverTeams(r.Context(), identity.DeviceID, covered); err != nil {
+		if err := s.sync.CoverTeams(r.Context(), identity.DeviceID, snapshotTeams, generation); err != nil {
 			s.writeSyncError(w, r, err)
 			return
 		}

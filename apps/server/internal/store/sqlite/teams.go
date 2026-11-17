@@ -56,6 +56,9 @@ func (db *DB) RemoveTeamMember(ctx context.Context, teamID, accountID string) er
 			`DELETE FROM team_member WHERE teamId = ? AND accountId = ?`, teamID, accountID); err != nil {
 			return err
 		}
+		if err := bumpMembershipGeneration(ctx, tx, accountID); err != nil {
+			return err
+		}
 		// Joining again has to catch up again: whatever the team wrote while
 		// the account was out never reached its devices.
 		if _, err := tx.ExecContext(ctx, `

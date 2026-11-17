@@ -588,10 +588,11 @@ type Store interface {
 	// become a snapshot. CoverTeams records that it has, for the teams the
 	// account is still in.
 	UncoveredTeams(ctx context.Context, deviceID string, teamIDs []string) ([]string, error)
-	CoverTeams(ctx context.Context, deviceID string, memberships []Membership) error
-	// Memberships lists the account's teams with the time each membership
-	// began (unix ms); a snapshot records them at its start.
-	Memberships(ctx context.Context, accountID string) ([]Membership, error)
+	CoverTeams(ctx context.Context, deviceID string, teamIDs []string, generation int64) error
+	// MembershipState returns the account's teams and its membership
+	// generation, read together; a snapshot records both at its start and
+	// covers its teams at the end only if the generation has not moved.
+	MembershipState(ctx context.Context, accountID string) ([]string, int64, error)
 	// Snapshot returns current state for a bootstrapping device.
 	Snapshot(ctx context.Context, query SnapshotQuery) (SnapshotResult, error)
 

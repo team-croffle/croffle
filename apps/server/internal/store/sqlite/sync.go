@@ -56,6 +56,13 @@ func (db *DB) ApplyCommits(ctx context.Context, req store.ApplyRequest) (store.A
 			if err != nil {
 				return err
 			}
+			// The stored row decides who may touch it, not the commit: a commit
+			// naming no team must not reach a row another account owns or a
+			// team the account is not in (anymore). Checked before the version,
+			// so a refused push cannot read the row through a conflict either.
+			if current != nil && !mayWrite(current, req.AccountID, req.TeamIDs, commit.TeamID) {
+				return fmt.Errorf("%w: %s/%s", store.ErrForeignTeam, commit.Table, commit.RowID)
+			}
 
 			if current != nil && current.Version != commit.BaseVersion {
 				// The server moved on. Hand the row back and let the client
@@ -243,4 +250,18 @@ func payloadOrNil(payload json.RawMessage) any {
 		return nil
 	}
 	return string(payload)
+}
+
+// mayWrite reports whether an account may change an existing row: its own row
+// that is not shared, or a row shared with a team it is in now. Moving a row to
+// another team or out of its team is the owner's decision.
+func mayWrite(current *store.Row, accountID string, teamIDs []string, nextTeam *string) bool {
+	visible := (current.OwnerID == accountID && current.TeamID == nil) ||
+		(current.TeamID != nil && slices.Contains(teamIDs, *current.TeamID))
+	if !visible {
+		return false
+	}
+	sameTeam := (current.TeamID == nil && nextTeam == nil) ||
+		(current.TeamID != nil && nextTeam != nil && *current.TeamID == *nextTeam)
+	return sameTeam || current.OwnerID == accountID
 }

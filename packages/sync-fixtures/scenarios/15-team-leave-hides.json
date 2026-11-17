@@ -1,7 +1,7 @@
 {
   "name": "team-leave-hides",
   "protocol": 1,
-  "description": "Leaving a team cuts the link to its shared rows, and nothing is deleted. The account receives none of the team's rows any more, not even one it created and shared: not in pull, not in a snapshot, and a push into the team answers 403 foreign_team. The team keeps every row, the leaver's included, and keeps changing them. Joining again catches up again (410 team_scope, then a snapshot with every team row).",
+  "description": "Leaving a team cuts the link to its shared rows, and nothing is deleted. The account receives none of the team's rows any more, not even one it created and shared: not in pull, not in a snapshot, and a push to a team row answers 403 foreign_team — also with teamId null, whether its version is stale (no conflict may show the row) or current (it may not take the row out of the team). The team keeps every row, the leaver's included, and keeps changing them. Joining again catches up again (410 team_scope, then a snapshot with every team row).",
   "accounts": [
     {
       "id": "acct-1",
@@ -284,6 +284,82 @@
         "status": 403,
         "body": {
           "code": "foreign_team"
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-6",
+              "table": "schedule",
+              "rowId": "row-a",
+              "op": "upsert",
+              "baseVersion": 0,
+              "version": 1,
+              "updatedAtMs": 1700000004000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-a",
+                "title": "Taken private",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 1,
+                "updatedAtMs": 1700000004000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "foreign_team",
+          "serverRow": "$absent",
+          "conflicts": "$absent"
+        }
+      }
+    },
+    {
+      "request": {
+        "endpoint": "/sync/push",
+        "as": "client-1",
+        "body": {
+          "clientId": "client-1",
+          "commits": [
+            {
+              "opId": "op-7",
+              "table": "schedule",
+              "rowId": "row-a",
+              "op": "upsert",
+              "baseVersion": 1,
+              "version": 2,
+              "updatedAtMs": 1700000004000,
+              "lastWriterId": "device:client-1",
+              "row": {
+                "id": "row-a",
+                "title": "Taken private",
+                "ownerId": "acct-1",
+                "teamId": null,
+                "deletedAt": null,
+                "version": 2,
+                "updatedAtMs": 1700000004000
+              }
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "foreign_team",
+          "serverRow": "$absent",
+          "conflicts": "$absent"
         }
       }
     },

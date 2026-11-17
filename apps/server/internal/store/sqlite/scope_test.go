@@ -56,7 +56,8 @@ func TestDeviceScopeNewDeviceAndLaterJoin(t *testing.T) {
 	if got := uncovered(t, db, "dev-1", "team-2"); len(got) != 1 {
 		t.Fatalf("a repeated sign-in covered team-2: %v", got)
 	}
-	if err := db.CoverTeams(ctx, "dev-1", memberships(t, db, "acct-1")); err != nil {
+	teams, generation := state(t, db, "acct-1")
+	if err := db.CoverTeams(ctx, "dev-1", teams, generation); err != nil {
 		t.Fatal(err)
 	}
 	if got := uncovered(t, db, "dev-1", store.DefaultTeamID, "team-2"); got != nil {
@@ -74,7 +75,8 @@ func TestDeviceScopeCoverTeamsSkipsTeamsTheAccountLeft(t *testing.T) {
 	}
 	// Not a member of team-2: a snapshot that started while it was must not
 	// mark it covered.
-	if err := db.CoverTeams(ctx, "dev-1", []store.Membership{{TeamID: "team-2", JoinedAtMs: 1}}); err != nil {
+	_, generation := state(t, db, "acct-1")
+	if err := db.CoverTeams(ctx, "dev-1", []string{"team-2"}, generation); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.AddTeamMember(ctx, "team-2", "acct-1", ""); err != nil {
@@ -169,18 +171,18 @@ func TestMigrate0007SeedsExistingDevices(t *testing.T) {
 	}
 }
 
-func memberships(t *testing.T, db *DB, accountID string) []store.Membership {
+func state(t *testing.T, db *DB, accountID string) ([]string, int64) {
 	t.Helper()
-	m, err := db.Memberships(context.Background(), accountID)
+	teams, generation, err := db.MembershipState(context.Background(), accountID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return m
+	return teams, generation
 }
 
-// Review F-3: a snapshot that started while the account was in team-2, saw it
-// leave and join again before the last page, must not cover team-2 — its pages
-// may have skipped the team's rows while the account was out.
+// Review 1 F-3, review 2 G-1: a snapshot that started while the account was in
+// team-2, and saw it leave and join again before the last page, covers
+// nothing — however fast the two changes were (no clock involved).
 func TestDeviceScopeCoverTeamsSkipsARejoinedTeam(t *testing.T) {
 	db := open(t, tempPath(t))
 	ctx := context.Background()
@@ -192,23 +194,26 @@ func TestDeviceScopeCoverTeamsSkipsARejoinedTeam(t *testing.T) {
 	if err := db.AddTeamMember(ctx, "team-2", "acct-1", ""); err != nil {
 		t.Fatal(err)
 	}
-	atStart := memberships(t, db, "acct-1")
+	teams, generation := state(t, db, "acct-1")
 
 	if err := db.RemoveTeamMember(ctx, "team-2", "acct-1"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Millisecond) // a new membership has a later join time
 	if err := db.AddTeamMember(ctx, "team-2", "acct-1", ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.CoverTeams(ctx, "dev-1", atStart); err != nil {
+	if err := db.CoverTeams(ctx, "dev-1", teams, generation); err != nil {
 		t.Fatal(err)
 	}
 	if got := uncovered(t, db, "dev-1", "team-2"); len(got) != 1 {
 		t.Fatalf("a team left and joined again during the snapshot was covered")
 	}
-	// The membership as it is now is covered by the next snapshot.
-	if err := db.CoverTeams(ctx, "dev-1", memberships(t, db, "acct-1")); err != nil {
+	// Adding someone who is already a member changes nothing.
+	teams, generation = state(t, db, "acct-1")
+	if err := db.AddTeamMember(ctx, "team-2", "acct-1", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.CoverTeams(ctx, "dev-1", teams, generation); err != nil {
 		t.Fatal(err)
 	}
 	if got := uncovered(t, db, "dev-1", "team-2"); got != nil {
