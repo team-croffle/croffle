@@ -1,7 +1,6 @@
 # AGENTS.md
 
-<!-- reins:tidy pending -->
-> **AGENTS.md guide — do this first in the next conversation.** reins now ships a guide for what this file holds (`.agents/harness/templates/agents-md-guide.md`). Run the `onboard` skill: with the user, sort the project sections by the guide — current work and plans to the roadmap, decisions to knowledge candidates, personal notes to `.loctx/` — and show what went where. Then change the marker above to `<!-- reins:tidy done -->`.
+<!-- reins:tidy done -->
 
 <!-- reins:mode-changed done -->
 <!-- reins:reconcile done -->
@@ -14,15 +13,14 @@
 ## Project
 
 - Purpose: **Croffle** — a calendar-first, extensible desktop productivity app (Electron; Windows / macOS / Linux, MIT). Local-first: no cloud is required. Features are added through **extensions**. An optional self-hosted Go server (`croffle-server`) adds sync between devices and team sharing.
-- Stack: Electron, Vue 3, Vite (electron-vite), Tailwind CSS, TypeScript · SQLite (`better-sqlite3`) + **Drizzle** (README still mentions TypeORM; the code is the truth) · FullCalendar, rrule, Pinia, vue-i18n, electron-updater · pnpm workspaces, Changesets, oxlint, oxfmt, husky · server: Go (stdlib first, a few vetted libraries) + `modernc.org/sqlite`, Vue dashboard.
+- Stack: Electron, Vue 3, Vite (electron-vite), Tailwind CSS, TypeScript · SQLite (`better-sqlite3`) + **Drizzle** · FullCalendar, rrule, Pinia, vue-i18n, electron-updater · pnpm workspaces, Changesets, oxlint, oxfmt, husky · server: Go (stdlib first, a few vetted libraries) + `modernc.org/sqlite`, Vue dashboard.
 - Requirements: Node ≥ 24, pnpm 12 (`packageManager`, Corepack), Go (version in `apps/server/go.mod`) for the server.
 
 ## Goals and scope
 
 - The roadmap is `docs/ROADMAP.md` (public, Korean; settled items only). Ideas and the working plan are in `.loctx/ROADMAP.local.md`.
-- Current line: desktop **1.3** (optional sync beta, sharing, To-Do) paired with server **0.1 beta**; then server 0.1.1–0.2.1 and desktop 1.3.5 ↔ server 0.3.
 - Out of scope unless the roadmap says otherwise: a server-side plugin system (server extensibility is hooks + a signed webhook), team management UI inside the desktop shell, a sync framework (the protocol is our own row-level LWW changeset).
-- Work items migrated from the previous harness are listed in `.agents/intent/000_migrated` (draft); each version gets its own intent and spec before work starts.
+- Each version gets its own intent and spec before work starts; the order of versions is the roadmap's.
 
 ## Commands
 
@@ -32,10 +30,10 @@ Root, unless noted. The gates in `.agents/harness/gates.yaml` are the ones CI ru
 - dev: `pnpm dev` (desktop) · `pnpm --filter @croffledev/croffle-cli dev`
 - typecheck: `pnpm typecheck` (all packages) · `pnpm typecheck:desktop`
 - lint: `pnpm lint` (check) / `pnpm lint:fix` · format: `pnpm format:check` (check) / `pnpm format`
-- test: `pnpm -r test` (desktop: `node --test` over `apps/desktop/test/**/*.test.ts` — the shared sync fixtures and the outbox triggers; no extra dependency) · server: `make -C apps/server check` (gofmt, vet, go test incl. protocol conformance)
+- test: `pnpm -r test` (desktop: `node --test` over `apps/desktop/test/**/*.test.ts`) · server: `make -C apps/server check` (gofmt, vet, go test incl. protocol conformance)
 - build: `pnpm build` (desktop) · `pnpm build:unpack` / `build:win` / `build:mac` / `build:linux` · `pnpm --filter @croffledev/croffle-cli build` · `pnpm --dir apps/server/web build` (dashboard, before `make -C apps/server build`)
 - db: `pnpm --filter @croffledev/desktop db:generate` / `db:studio` (drizzle-kit)
-- release: `pnpm changeset` (types/cli); desktop and server through their GitHub Actions workflows (see CI/CD)
+- release: `pnpm changeset` (types/cli); desktop and server through their GitHub Actions workflows (see CONTRIBUTING.md → Maintainers)
 
 ## Layout
 
@@ -87,19 +85,17 @@ Root, unless noted. The gates in `.agents/harness/gates.yaml` are the ones CI ru
 
 ## Versioning
 
-Tags are prefixed per product: **`desktop-vX.Y.Z`** and **`server-vX.Y.Z`**, pre-release `…-rc.N`. The server release workflow already uses its prefix; the desktop workflow switches with its first 1.3.0 pre-release, so `v1.2.6` and earlier stay on the old unprefixed scheme and are never renamed.
+Tags are prefixed per product: **`desktop-vX.Y.Z`** and **`server-vX.Y.Z`**, pre-release `…-rc.N`. Desktop tags up to `v1.2.6` are unprefixed and stay so.
 Desktop version lives in `apps/desktop/package.json` (bumped by the release workflow); the server version is an input to its release workflow. `packages/*` are versioned independently by Changesets.
 
 ## CI/CD (`.github/workflows`)
 
-Workflows: `ci`, `secret-scan`, `labeler`, `publish-packages`, `release`, `server-release`.
+What each workflow does, its inputs and the release steps: CONTRIBUTING.md → Maintainers. The rules:
 
-- `ci`: on `master` push / PR (opened, synchronize, reopened, ready_for_review) / manual. Detects changed scopes (`desktop`, `types`, `cli`, `server`, `serverWeb`; shared config = all Node scopes) and runs oxlint, `oxfmt --check`, typecheck only on those scopes, then builds the changed app/package (desktop: electron-vite build; cli: tsup). The `server` scope runs its own Go gates instead, so a Node change never installs Go and a Go change never installs pnpm. `CI result` is the single required check.
-- `secret-scan`: on every branch push and PRs. TruffleHog (verified + unknown) and Gitleaks over the full history.
-- `labeler`: on PR open/reopen/sync; `actions/labeler@v5` with `.github/labeler.yaml`, creates missing labels.
-- `publish-packages`: on `master` push touching `.changeset/**`, `packages/**`, `package.json`, lockfile, or manual. `changesets/action` opens a "chore: version packages" PR or stages `@croffledev/croffle-types` / `@croffledev/croffle-cli` on npm (`scripts/stage-packages.mjs`, npm ≥ 11.15, OIDC trusted publishing); staged versions go live only when a maintainer approves them.
-- `server-release` ("Croffle Server Release"): manual only. Inputs: `version` (exact, no `v`), `prerelease_suffix` (e.g. `rc.1`), `dry_run`. Runs the Go gates, builds the multi-arch image, pushes `ghcr.io/<owner>/croffle-server:<version>` (plus `:latest` for a stable release) and tags `server-v<version>`. **It must never create a GitHub Release**: electron-updater resolves the repository's latest release, so one here would stop every desktop client from updating. Its notes go to `docs/server/release/<version>.md`.
-- `release` ("Croffle Release"): manual only. Inputs: `release_type` (patch|minor|major|rc), `version` (exact, no `v`), `version_suffix` (e.g. `rc.1`), `draft` (default false), `dry_run`. Bumps `apps/desktop/package.json`, commits, tags `desktop-v<version>` (`v<version>` up to 1.2.6; electron-builder's `publish.tagNamePrefix` matches), creates one draft Release first, then mac/linux/win electron-builder jobs attach unsigned installers. The release stays a **draft** (default `draft: true`); the note body is written in `.loctx/release/` and published with `gh release edit … --draft=false` (see `.github/release-notes.md`). Titles: `Pre-Release vX.Y.Z-rc.A` for rc, `Croffle vX.Y.Z — Release Note` for stable. Note: electron-updater cannot see draft releases, so publishing is a required step.
+- `CI result` is the single required check. `ci` runs only the changed scopes; the Go scope never installs pnpm and the Node scopes never install Go.
+- `server-release` publishes only the ghcr image and the `server-v<version>` tag. **It never creates a GitHub Release**: electron-updater resolves the repository's latest release, so one there would stop every desktop client from updating. Its notes go to `docs/server/release/<version>.md`.
+- `release` (desktop) leaves the GitHub Release a **draft** (`draft: true` by default). electron-updater cannot see a draft, so publishing it with the note body from `.loctx/release/` (`.github/release-notes.md`) is a required step.
+- `publish-packages` only **stages** `packages/*` on npm; a staged version goes live when a maintainer approves it on npmjs.com.
 
 ## Branch / PR / release rules
 
@@ -107,7 +103,7 @@ Workflows: `ci`, `secret-scan`, `labeler`, `publish-packages`, `release`, `serve
 - PRs are verified by GitHub Actions (`CI`, `Secret Scan`); merge with **Rebase and Merge** only, then delete the branch.
 - **rc = the preview of a finished version.** A version is cut as an rc only after it is implemented, reviewed, tested, merged and audited (Flow step 5); the rc exists to make the final adjustments before stable. Fixes after an rc are stabilisation work units, followed by the next rc. Work units are not released one by one.
 - Stable releases only on the maintainer's explicit instruction.
-- `packages/*` changes need a Changeset. The `chore: version packages` PR that the Changeset produces is part of the work that added it: verify it, then merge it without asking again. The bot PR runs no CI, so check it locally first — only `packages/*/package.json`, `CHANGELOG.md` and the consumed `.changeset/*.md` change, versions match the Changeset bumps, `pnpm install --frozen-lockfile`, typecheck of types and cli, the cli build, and `pnpm pack` of each package. The merge stages the packages on npm (`scripts/stage-packages.mjs`, `npm stage publish`); nothing is installable until the user approves the staged versions on npmjs.com, so ask the user to approve them. The git tag `<name>@<version>` is put on the staged commit when it is staged (a later run cannot tag an older commit: GitHub refuses it); delete it by hand if the staged version is rejected.
+- `packages/*` changes need a Changeset. The `chore: version packages` PR that the Changeset produces is part of the work that added it: verify it locally (it runs no CI; the checklist is in CONTRIBUTING.md → Maintainers → npm packages), then merge it without asking again, and ask the user to approve the staged versions on npmjs.com.
 - After a merge, delete the branch on both sides: the remote one (merge with `--delete-branch`) and the local one.
 
 ## Red lines
