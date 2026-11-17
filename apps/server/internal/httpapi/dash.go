@@ -123,12 +123,20 @@ func (s *server) dashLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := s.now()
-	if err := s.dash.CreateSession(r.Context(), store.Session{
+	err = s.dash.CreateSession(r.Context(), store.Session{
 		TokenHash: hash,
 		AccountID: account.ID,
 		CreatedAt: now,
 		ExpiresAt: now.Add(sessionLifetime),
-	}); err != nil {
+		// Created only while this is still the account's password: a reset
+		// between the check above and here must win.
+		PasswordHash: account.PasswordHash,
+	})
+	if errors.Is(err, store.ErrNotFound) {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "invalid username or password")
+		return
+	}
+	if err != nil {
 		s.writeSyncError(w, r, err)
 		return
 	}

@@ -19,13 +19,28 @@ func (db *DB) CreateSession(ctx context.Context, session store.Session) error {
 	}
 
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, `
+		if session.PasswordHash == "" {
+			_, err := tx.ExecContext(ctx, `
+				INSERT INTO dash_session (tokenHash, accountId, createdAt, expiresAt)
+				VALUES (?, ?, ?, ?)`,
+				session.TokenHash, session.AccountID,
+				toMillis(session.CreatedAt), toMillis(session.ExpiresAt))
+			if err != nil {
+				return fmt.Errorf("sqlite: create session: %w", err)
+			}
+			return nil
+		}
+		res, err := tx.ExecContext(ctx, `
 			INSERT INTO dash_session (tokenHash, accountId, createdAt, expiresAt)
-			VALUES (?, ?, ?, ?)`,
-			session.TokenHash, session.AccountID,
-			toMillis(session.CreatedAt), toMillis(session.ExpiresAt))
+			SELECT ?, id, ?, ? FROM account
+			WHERE id = ? AND passwordHash = ? AND disabledAt IS NULL`,
+			session.TokenHash, toMillis(session.CreatedAt), toMillis(session.ExpiresAt),
+			session.AccountID, session.PasswordHash)
 		if err != nil {
 			return fmt.Errorf("sqlite: create session: %w", err)
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return fmt.Errorf("%w: the password changed or the account was disabled during sign-in", store.ErrNotFound)
 		}
 		return nil
 	})
@@ -70,10 +85,18 @@ func (db *DB) DeleteSession(ctx context.Context, tokenHash []byte) error {
 	})
 }
 
-// DeleteAccountSessions ends every dashboard session of an account, so a
-// password reset by an operator signs out whoever knew the old password.
-func (db *DB) DeleteAccountSessions(ctx context.Context, accountID string) error {
+// ResetPassword sets a new password and signs out every dashboard session of
+// the account, in one transaction. Device tokens are separate credentials and
+// stay; revoking them is a separate step.
+func (db *DB) ResetPassword(ctx context.Context, accountID, passwordHash string) error {
+	if passwordHash == "" {
+		return errors.New("sqlite: empty password hash")
+	}
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if err := execOne(ctx, tx, "account", accountID,
+			`UPDATE account SET passwordHash = ? WHERE id = ?`, passwordHash, accountID); err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx,
 			`DELETE FROM dash_session WHERE accountId = ?`, accountID); err != nil {
 			return fmt.Errorf("sqlite: delete account sessions: %w", err)

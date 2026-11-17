@@ -4,7 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
+
+	"github.com/team-croffle/croffle/apps/server/internal/store"
 )
 
 // UncoveredTeams returns the teams of teamIDs the device has not received
@@ -40,29 +41,44 @@ func (db *DB) UncoveredTeams(ctx context.Context, deviceID string, teamIDs []str
 }
 
 // CoverTeams records that the device has received these teams' rows from the
-// beginning. Teams the account has left since (no membership row) are not
-// recorded, so a snapshot that started before a removal cannot mark a team the
-// device may no longer read.
-func (db *DB) CoverTeams(ctx context.Context, deviceID string, teamIDs []string) error {
-	if deviceID == "" || len(teamIDs) == 0 {
+// beginning. Only a membership that still exists unchanged is recorded: a team
+// the account has left since is not, and neither is one it left and joined
+// again (its join time differs), because the snapshot could have skipped that
+// team's rows while the account was out.
+func (db *DB) CoverTeams(ctx context.Context, deviceID string, memberships []store.Membership) error {
+	if deviceID == "" || len(memberships) == 0 {
 		return nil
 	}
-	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(teamIDs)), ", ")
-	args := []any{toMillis(timeNow()), deviceID}
-	for _, team := range teamIDs {
-		args = append(args, team)
-	}
+	now := toMillis(timeNow())
 	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
-		// Built from the length of the slice, never from its contents.
-		_, err := tx.ExecContext(ctx, `
-			INSERT INTO device_scope (deviceId, teamId, coveredAt)
-			SELECT d.id, m.teamId, ?
-			FROM device d JOIN team_member m ON m.accountId = d.accountId
-			WHERE d.id = ? AND m.teamId IN (`+placeholders+`)
-			ON CONFLICT (deviceId, teamId) DO NOTHING`, args...)
-		if err != nil {
-			return fmt.Errorf("sqlite: cover teams: %w", err)
+		for _, m := range memberships {
+			if _, err := tx.ExecContext(ctx, `
+				INSERT INTO device_scope (deviceId, teamId, coveredAt)
+				SELECT d.id, tm.teamId, ?
+				FROM device d JOIN team_member tm ON tm.accountId = d.accountId
+				WHERE d.id = ? AND tm.teamId = ? AND tm.createdAt = ?
+				ON CONFLICT (deviceId, teamId) DO NOTHING`, now, deviceID, m.TeamID, m.JoinedAtMs); err != nil {
+				return fmt.Errorf("sqlite: cover teams: %w", err)
+			}
 		}
 		return nil
 	})
+}
+
+func (db *DB) Memberships(ctx context.Context, accountID string) ([]store.Membership, error) {
+	rows, err := db.read.QueryContext(ctx,
+		`SELECT teamId, createdAt FROM team_member WHERE accountId = ? ORDER BY teamId`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: read memberships: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	out := []store.Membership{}
+	for rows.Next() {
+		var m store.Membership
+		if err := rows.Scan(&m.TeamID, &m.JoinedAtMs); err != nil {
+			return nil, fmt.Errorf("sqlite: scan membership: %w", err)
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }

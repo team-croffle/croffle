@@ -259,7 +259,7 @@ func TestBootstrapCursorRoundTrips(t *testing.T) {
 }
 
 func TestBootstrapScopeCursorCarriesTeams(t *testing.T) {
-	original := BootstrapCursor{BaseSeq: 7, Table: "schedule", RowID: "r", Teams: []string{"team-a", "team-default"}}
+	original := BootstrapCursor{BaseSeq: 7, Table: "schedule", RowID: "r", Teams: []CursorMembership{{TeamID: "team-a", JoinedAtMs: 5}, {TeamID: "team-default", JoinedAtMs: 1}}}
 	encoded, err := EncodeBootstrapCursor(original)
 	if err != nil {
 		t.Fatal(err)

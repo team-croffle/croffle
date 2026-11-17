@@ -55,3 +55,10 @@ type TeamMember struct {
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"createdAt"`
 }
+
+// Membership is an account's membership of one team, identified by when it
+// began: leaving and joining again is a new membership.
+type Membership struct {
+	TeamID     string
+	JoinedAtMs int64
+}

@@ -21,7 +21,8 @@ type Syncer interface {
 	PullSince(ctx context.Context, query store.PullQuery) (store.PullResult, error)
 	Snapshot(ctx context.Context, query store.SnapshotQuery) (store.SnapshotResult, error)
 	UncoveredTeams(ctx context.Context, deviceID string, teamIDs []string) ([]string, error)
-	CoverTeams(ctx context.Context, deviceID string, teamIDs []string) error
+	CoverTeams(ctx context.Context, deviceID string, memberships []store.Membership) error
+	Memberships(ctx context.Context, accountID string) ([]store.Membership, error)
 }
 
 func (s *server) push(w http.ResponseWriter, r *http.Request) {
@@ -278,12 +279,12 @@ func (s *server) pull(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A device whose account joined a team after its cursor was set never
-	// received the team's older commits. It has to take a snapshot, and
-	// cursor_too_old is the answer desktop 1.3.x already turns into one. A
-	// pull from 0 needs no check: it is about to receive everything that is
-	// retained (and retention answers 410 itself when that is not enough).
-	if req.LastServerSeq > 0 {
+	// A device whose account joined a team after the device was created has
+	// not received the team's older commits. It has to take a snapshot, and
+	// cursor_too_old is the answer desktop 1.3.x already turns into one. This
+	// holds for a pull from 0 as well: the commit log may have been pruned, so
+	// a pull from 0 is not the whole state (only a snapshot is).
+	{
 		missing, err := s.sync.UncoveredTeams(r.Context(), identity.DeviceID, identity.TeamIDs)
 		if err != nil {
 			s.writeSyncError(w, r, err)
@@ -311,12 +312,6 @@ func (s *server) pull(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.writeSyncError(w, r, err, slog.Int64("cursor", req.LastServerSeq))
 		return
-	}
-	if req.LastServerSeq == 0 {
-		if err := s.sync.CoverTeams(r.Context(), identity.DeviceID, identity.TeamIDs); err != nil {
-			s.writeSyncError(w, r, err)
-			return
-		}
 	}
 
 	changes := make([]protocol.Change, 0, len(result.Changes))
@@ -390,12 +385,21 @@ func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_cursor", err.Error())
 		return
 	}
-	// The teams the snapshot started with travel in the cursor: a team joined
-	// halfway through is missing from the earlier pages, so it must not be
-	// recorded as covered when the last page goes out.
+	// The memberships the snapshot started with travel in the cursor: a team
+	// joined halfway through is missing from the earlier pages, and so is one
+	// left and joined again, so neither may be recorded as covered when the
+	// last page goes out (CoverTeams also compares the join time).
 	snapshotTeams := cursor.Teams
 	if req.Cursor == "" {
-		snapshotTeams = identity.TeamIDs
+		memberships, err := s.sync.Memberships(r.Context(), identity.AccountID)
+		if err != nil {
+			s.writeSyncError(w, r, err)
+			return
+		}
+		snapshotTeams = make([]protocol.CursorMembership, 0, len(memberships))
+		for _, m := range memberships {
+			snapshotTeams = append(snapshotTeams, protocol.CursorMembership{TeamID: m.TeamID, JoinedAtMs: m.JoinedAtMs})
+		}
 	}
 
 	result, err := s.sync.Snapshot(r.Context(), store.SnapshotQuery{
@@ -451,7 +455,11 @@ func (s *server) bootstrap(w http.ResponseWriter, r *http.Request) {
 	if !result.HasMore {
 		// CoverTeams keeps only the teams the account is still in, so a team
 		// left halfway through is not recorded either.
-		if err := s.sync.CoverTeams(r.Context(), identity.DeviceID, snapshotTeams); err != nil {
+		covered := make([]store.Membership, 0, len(snapshotTeams))
+		for _, m := range snapshotTeams {
+			covered = append(covered, store.Membership{TeamID: m.TeamID, JoinedAtMs: m.JoinedAtMs})
+		}
+		if err := s.sync.CoverTeams(r.Context(), identity.DeviceID, covered); err != nil {
 			s.writeSyncError(w, r, err)
 			return
 		}

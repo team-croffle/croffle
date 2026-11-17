@@ -421,6 +421,10 @@ type Admin interface {
 	// revoking the last active operator is ErrLastOperator unless force.
 	SetOperator(ctx context.Context, accountID string, operator, force bool) error
 	SetAccountPassword(ctx context.Context, accountID, passwordHash string) error
+	// ResetPassword sets a new password hash and ends every dashboard session
+	// of the account, in one transaction: there is no moment when the new
+	// password is in place and an old session still works.
+	ResetPassword(ctx context.Context, accountID, passwordHash string) error
 
 	// ListDevices lists one account's devices, or every device when accountID
 	// is empty.
@@ -466,6 +470,12 @@ type Session struct {
 	AccountID string
 	CreatedAt time.Time
 	ExpiresAt time.Time
+	// PasswordHash, when set, is the hash the sign-in was checked against.
+	// It is not stored: CreateSession only creates the session while the
+	// account still has this hash and is enabled, so a password reset that
+	// lands between the check and the insert cannot be outlived by the
+	// sign-in it was meant to stop. A mismatch is ErrNotFound.
+	PasswordHash string
 }
 
 // Sessions is the dashboard's slice of the store.
@@ -474,8 +484,6 @@ type Sessions interface {
 	// FindSession returns ErrNotFound for a missing or expired session.
 	FindSession(ctx context.Context, tokenHash []byte, now time.Time) (*Session, error)
 	DeleteSession(ctx context.Context, tokenHash []byte) error
-	// DeleteAccountSessions ends every session of an account.
-	DeleteAccountSessions(ctx context.Context, accountID string) error
 }
 
 // Store is the persistence contract.
@@ -580,7 +588,10 @@ type Store interface {
 	// become a snapshot. CoverTeams records that it has, for the teams the
 	// account is still in.
 	UncoveredTeams(ctx context.Context, deviceID string, teamIDs []string) ([]string, error)
-	CoverTeams(ctx context.Context, deviceID string, teamIDs []string) error
+	CoverTeams(ctx context.Context, deviceID string, memberships []Membership) error
+	// Memberships lists the account's teams with the time each membership
+	// began (unix ms); a snapshot records them at its start.
+	Memberships(ctx context.Context, accountID string) ([]Membership, error)
 	// Snapshot returns current state for a bootstrapping device.
 	Snapshot(ctx context.Context, query SnapshotQuery) (SnapshotResult, error)
 

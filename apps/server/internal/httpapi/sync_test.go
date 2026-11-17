@@ -37,9 +37,17 @@ func (f *fakeSyncer) UncoveredTeams(_ context.Context, _ string, _ []string) ([]
 	return f.uncovered, nil
 }
 
-func (f *fakeSyncer) CoverTeams(_ context.Context, _ string, teamIDs []string) error {
-	f.covered = append(f.covered, teamIDs)
+func (f *fakeSyncer) CoverTeams(_ context.Context, _ string, memberships []store.Membership) error {
+	ids := []string{}
+	for _, m := range memberships {
+		ids = append(ids, m.TeamID)
+	}
+	f.covered = append(f.covered, ids)
 	return nil
+}
+
+func (f *fakeSyncer) Memberships(_ context.Context, _ string) ([]store.Membership, error) {
+	return []store.Membership{{TeamID: store.DefaultTeamID, JoinedAtMs: 1}}, nil
 }
 
 func (f *fakeSyncer) ApplyCommits(_ context.Context, req store.ApplyRequest) (store.ApplyResult, error) {
@@ -533,23 +541,23 @@ func TestPullTeamScopeSendsANewTeamToASnapshot(t *testing.T) {
 	}
 }
 
-func TestPullTeamScopeFromZeroCoversTheTeams(t *testing.T) {
-	// From 0 the check does not apply even with an uncovered team, and the
-	// teams are recorded once the pull has been served.
-	syncer := &fakeSyncer{uncovered: []string{"team-default"}}
+// A pull from 0 is no exception (review F-1): the log may be pruned, so only a
+// snapshot carries a team's whole state.
+func TestPullTeamScopeFromZeroStillNeedsASnapshot(t *testing.T) {
+	syncer := &fakeSyncer{uncovered: []string{"team-2"}}
 	rec := postJSON(t, syncHandler(t, syncer), "/sync/pull", `{"lastServerSeq":0}`, "tok")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d (%s)", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusGone {
+		t.Fatalf("status = %d (%s), want 410", rec.Code, rec.Body.String())
 	}
-	if !reflect.DeepEqual(syncer.covered, [][]string{{store.DefaultTeamID}}) {
-		t.Fatalf("covered = %v", syncer.covered)
+	if syncer.covered != nil {
+		t.Fatalf("a refused pull covered %v", syncer.covered)
 	}
 
-	// A failed pull from 0 records nothing.
-	failing := &fakeSyncer{pullErr: store.ErrCursorTooOld}
-	postJSON(t, syncHandler(t, failing), "/sync/pull", `{"lastServerSeq":0}`, "tok")
-	if failing.covered != nil {
-		t.Fatalf("a failed pull covered %v", failing.covered)
+	// A covered device pulls from 0 as before, and a pull never records coverage.
+	covered := &fakeSyncer{}
+	rec = postJSON(t, syncHandler(t, covered), "/sync/pull", `{"lastServerSeq":0}`, "tok")
+	if rec.Code != http.StatusOK || covered.covered != nil {
+		t.Fatalf("covered device from 0: %d, covered %v", rec.Code, covered.covered)
 	}
 }
 
@@ -580,7 +588,7 @@ func TestBootstrapScopeCarriesTheStartingTeams(t *testing.T) {
 		t.Fatal(err)
 	}
 	cursor, err := protocol.DecodeBootstrapCursor(page.Cursor)
-	if err != nil || !reflect.DeepEqual(cursor.Teams, []string{store.DefaultTeamID}) {
+	if err != nil || !reflect.DeepEqual(cursor.Teams, []protocol.CursorMembership{{TeamID: store.DefaultTeamID, JoinedAtMs: 1}}) {
 		t.Fatalf("cursor = %+v, %v", cursor, err)
 	}
 	if syncer.covered != nil {
@@ -591,7 +599,7 @@ func TestBootstrapScopeCarriesTheStartingTeams(t *testing.T) {
 	// current ones (team-late joined halfway through).
 	syncer.snapshotResult = store.SnapshotResult{ServerSeq: 9, HasMore: false}
 	next, _ := protocol.EncodeBootstrapCursor(protocol.BootstrapCursor{
-		BaseSeq: 9, Table: "schedule", RowID: "row-1", Teams: []string{"team-first"},
+		BaseSeq: 9, Table: "schedule", RowID: "row-1", Teams: []protocol.CursorMembership{{TeamID: "team-first", JoinedAtMs: 3}},
 	})
 	rec = postJSON(t, h, "/sync/bootstrap", `{"cursor":"`+next+`"}`, "tok")
 	if rec.Code != http.StatusOK {
