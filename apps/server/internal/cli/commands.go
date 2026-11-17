@@ -190,16 +190,11 @@ func (c *command) userOTP() error {
 		return nil
 	}
 
-	state := "off"
-	enrolment, err := c.db.FindOTP(c.ctx, account.ID)
-	switch {
-	case errors.Is(err, store.ErrNotFound):
-	case err != nil:
+	// The status never opens the secret, so it also works when the secret
+	// key is lost and the server refuses to start.
+	state, err := c.db.OTPStatus(c.ctx, account.ID)
+	if err != nil {
 		return err
-	case enrolment.Enabled():
-		state = "enabled"
-	default:
-		state = "pending"
 	}
 	if c.asJSON {
 		return c.writeJSON(map[string]string{"username": account.Username, "otp": state})
