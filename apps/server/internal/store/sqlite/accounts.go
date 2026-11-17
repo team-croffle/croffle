@@ -16,7 +16,7 @@ import (
 // another account's device id and invalidate that device's token.
 var ErrDeviceOwnedByAnotherAccount = errors.New("sqlite: device id belongs to another account")
 
-const accountColumns = `id, username, passwordHash, createdAt, disabledAt`
+const accountColumns = `id, username, passwordHash, createdAt, disabledAt, operatorAt`
 
 func (db *DB) FindAccountByUsername(ctx context.Context, username string) (*store.Account, error) {
 	return db.scanAccount(ctx,
@@ -29,23 +29,32 @@ func (db *DB) FindAccountByID(ctx context.Context, id string) (*store.Account, e
 }
 
 func (db *DB) scanAccount(ctx context.Context, query string, args ...any) (*store.Account, error) {
+	account, err := scanAccountRow(db.read.QueryRowContext(ctx, query, args...))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, store.ErrNotFound
+	}
+	return account, err
+}
+
+// scanAccountRow reads the columns of accountColumns, in order.
+func scanAccountRow(row rowScanner) (*store.Account, error) {
 	var (
 		account    store.Account
 		createdAt  int64
 		disabledAt *int64
+		operatorAt *int64
 	)
-
-	err := db.read.QueryRowContext(ctx, query, args...).Scan(
-		&account.ID, &account.Username, &account.PasswordHash, &createdAt, &disabledAt)
+	err := row.Scan(&account.ID, &account.Username, &account.PasswordHash,
+		&createdAt, &disabledAt, &operatorAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, store.ErrNotFound
+		return nil, err
 	}
 	if err != nil {
 		return nil, fmt.Errorf("sqlite: read account: %w", err)
 	}
-
 	account.CreatedAt = fromMillis(createdAt)
 	account.DisabledAt = fromMillisPtr(disabledAt)
+	account.OperatorAt = fromMillisPtr(operatorAt)
 	return &account, nil
 }
 
@@ -247,10 +256,10 @@ func (db *DB) CreateAccount(ctx context.Context, account store.Account) error {
 		}
 
 		_, err := tx.ExecContext(ctx, `
-			INSERT INTO account (id, username, passwordHash, createdAt, disabledAt)
-			VALUES (?, ?, ?, ?, ?)`,
+			INSERT INTO account (id, username, passwordHash, createdAt, disabledAt, operatorAt)
+			VALUES (?, ?, ?, ?, ?, ?)`,
 			account.ID, account.Username, account.PasswordHash,
-			toMillis(account.CreatedAt), toMillisPtr(account.DisabledAt))
+			toMillis(account.CreatedAt), toMillisPtr(account.DisabledAt), toMillisPtr(account.OperatorAt))
 		if err != nil {
 			return fmt.Errorf("sqlite: create account: %w", err)
 		}

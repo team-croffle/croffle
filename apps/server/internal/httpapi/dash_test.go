@@ -429,3 +429,25 @@ func TestDashRevokeDeviceOnlyOwnDevices(t *testing.T) {
 		t.Fatalf("no session: status %d", rec.Code)
 	}
 }
+
+func TestOperatorInDashMe(t *testing.T) {
+	for _, operator := range []bool{false, true} {
+		dash := newFakeDash()
+		if operator {
+			now := time.Now()
+			dash.account.OperatorAt = &now
+		}
+		h := dashHandler(t, dash)
+		cookie := dashLogin(t, h)
+		rec := withCookie(t, h, http.MethodGet, "/dash/me", cookie)
+		var me struct {
+			Operator bool `json:"operator"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &me); err != nil || rec.Code != http.StatusOK {
+			t.Fatalf("GET /dash/me = %d %s", rec.Code, rec.Body.String())
+		}
+		if me.Operator != operator {
+			t.Errorf("operator = %v, want %v", me.Operator, operator)
+		}
+	}
+}

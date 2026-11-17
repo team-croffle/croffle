@@ -23,18 +23,11 @@ func (db *DB) ListAccounts(ctx context.Context) ([]store.Account, error) {
 
 	accounts := []store.Account{}
 	for rows.Next() {
-		var (
-			account    store.Account
-			createdAt  int64
-			disabledAt *int64
-		)
-		if err := rows.Scan(&account.ID, &account.Username, &account.PasswordHash,
-			&createdAt, &disabledAt); err != nil {
-			return nil, fmt.Errorf("sqlite: scan account: %w", err)
+		account, err := scanAccountRow(rows)
+		if err != nil {
+			return nil, err
 		}
-		account.CreatedAt = fromMillis(createdAt)
-		account.DisabledAt = fromMillisPtr(disabledAt)
-		accounts = append(accounts, account)
+		accounts = append(accounts, *account)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("sqlite: iterate accounts: %w", err)
@@ -42,15 +35,80 @@ func (db *DB) ListAccounts(ctx context.Context) ([]store.Account, error) {
 	return accounts, nil
 }
 
-func (db *DB) SetAccountDisabled(ctx context.Context, accountID string, disabled bool) error {
-	var disabledAt *int64
-	if disabled {
-		ms := toMillis(timeNow())
-		disabledAt = &ms
+func (db *DB) SetAccountDisabled(ctx context.Context, accountID string, disabled, force bool) error {
+	if !disabled {
+		return db.updateOne(ctx, "account", accountID,
+			`UPDATE account SET disabledAt = NULL WHERE id = ?`, accountID)
 	}
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if !force {
+			if err := guardLastOperator(ctx, tx, accountID); err != nil {
+				return err
+			}
+		}
+		return execOne(ctx, tx, "account", accountID,
+			`UPDATE account SET disabledAt = COALESCE(disabledAt, ?) WHERE id = ?`, toMillis(timeNow()), accountID)
+	})
+}
 
-	return db.updateOne(ctx, "account", accountID,
-		`UPDATE account SET disabledAt = ? WHERE id = ?`, disabledAt, accountID)
+func (db *DB) SetOperator(ctx context.Context, accountID string, operator, force bool) error {
+	if operator {
+		return db.updateOne(ctx, "account", accountID,
+			`UPDATE account SET operatorAt = COALESCE(operatorAt, ?) WHERE id = ?`, toMillis(timeNow()), accountID)
+	}
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if !force {
+			if err := guardLastOperator(ctx, tx, accountID); err != nil {
+				return err
+			}
+		}
+		return execOne(ctx, tx, "account", accountID,
+			`UPDATE account SET operatorAt = NULL WHERE id = ?`, accountID)
+	})
+}
+
+// guardLastOperator returns ErrLastOperator when accountID is an active
+// operator and no other active operator exists. It runs in the write
+// transaction, so two requests cannot each remove "the other" operator.
+func guardLastOperator(ctx context.Context, tx *sql.Tx, accountID string) error {
+	var isActiveOperator bool
+	err := tx.QueryRowContext(ctx,
+		`SELECT operatorAt IS NOT NULL AND disabledAt IS NULL FROM account WHERE id = ?`, accountID).Scan(&isActiveOperator)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("%w: account %s", store.ErrNotFound, accountID)
+	}
+	if err != nil {
+		return fmt.Errorf("sqlite: read operator: %w", err)
+	}
+	if !isActiveOperator {
+		return nil
+	}
+	var others int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM account
+		WHERE operatorAt IS NOT NULL AND disabledAt IS NULL AND id <> ?`, accountID).Scan(&others); err != nil {
+		return fmt.Errorf("sqlite: count operators: %w", err)
+	}
+	if others == 0 {
+		return store.ErrLastOperator
+	}
+	return nil
+}
+
+// execOne runs an UPDATE that must hit exactly one row, inside tx.
+func execOne(ctx context.Context, tx *sql.Tx, what, id, query string, args ...any) error {
+	res, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("sqlite: update %s: %w", what, err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("sqlite: update %s rows: %w", what, err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("%w: %s %s", store.ErrNotFound, what, id)
+	}
+	return nil
 }
 
 func (db *DB) SetAccountPassword(ctx context.Context, accountID, passwordHash string) error {

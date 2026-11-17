@@ -550,3 +550,42 @@ func TestUserOTPStatusAndDisable(t *testing.T) {
 		t.Error("unknown otp action accepted")
 	}
 }
+
+func TestOperatorCLI(t *testing.T) {
+	r := newRunner(t)
+	r.mustRun("pw\n", "user", "create", "admin1", "--password-stdin", "--operator")
+	r.mustRun("pw\n", "user", "create", "regular1", "--password-stdin")
+
+	var accounts []struct {
+		Username string `json:"username"`
+		Operator bool   `json:"operator"`
+	}
+	if err := json.Unmarshal([]byte(r.mustRun("", "user", "list", "--json").out), &accounts); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{"admin1": true, "regular1": false}
+	for _, a := range accounts {
+		if a.Operator != want[a.Username] {
+			t.Errorf("%s operator = %v", a.Username, a.Operator)
+		}
+	}
+	if table := r.mustRun("", "user", "list").out; !strings.Contains(table, "OPERATOR") || !strings.Contains(table, "yes") {
+		t.Fatalf("user list table:\n%s", table)
+	}
+
+	// The last operator is protected without --force.
+	for _, args := range [][]string{
+		{"user", "operator", "revoke", "admin1"},
+		{"user", "disable", "admin1"},
+	} {
+		if _, err := r.run("", args...); err == nil || !strings.Contains(err.Error(), "last active operator") {
+			t.Fatalf("%v: %v, want the last-operator refusal", args, err)
+		}
+	}
+	r.mustRun("", "user", "operator", "grant", "regular1")
+	r.mustRun("", "user", "operator", "revoke", "admin1")
+	r.mustRun("", "user", "operator", "revoke", "regular1", "--force")
+	if out := r.mustRun("", "user", "list").out; strings.Contains(out, "yes") {
+		t.Fatalf("forced revoke left an operator:\n%s", out)
+	}
+}
