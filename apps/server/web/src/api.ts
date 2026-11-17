@@ -6,7 +6,52 @@ export type Me = {
   username: string;
   teams: string[];
   otpEnabled: boolean;
+  /** Shows the operator screens; the server checks it again on every call. */
+  operator: boolean;
 };
+
+export type AdminAccount = {
+  id: string;
+  username: string;
+  createdAt: number;
+  disabledAt?: number;
+  operator: boolean;
+  otp: 'off' | 'pending' | 'enabled';
+  deviceCount: number;
+};
+
+export type AdminDevice = Device & { accountId: string; username: string };
+
+export type AdminTeam = { id: string; name: string; createdAt: number; memberCount: number };
+
+export type TeamMember = { accountId: string; username: string; role: string; createdAt: number };
+
+export type IssuedToken = {
+  deviceId: string;
+  accountId: string;
+  /** Shown once: the server keeps only its hash. */
+  token: string;
+  tokenExpiresAt?: number;
+};
+
+export type ServerInfo = {
+  schemaVersion: number;
+  path: string;
+  sizeBytes: number;
+  accounts: number;
+  devices: number;
+  teams: number;
+  rows: number;
+  commits: number;
+  oldestSeq: number;
+  newestSeq: number;
+  purgedThroughSeq: number;
+  secretKey: 'set' | 'missing';
+  otpSecretsPlain: number;
+  otpSecretsEncrypted: number;
+};
+
+export type AdminCommit = Commit & { ownerId: string };
 
 export type OtpEnrolment = {
   secret: string;
@@ -129,6 +174,70 @@ export const api = {
       `dash/commits?sinceSeq=${sinceSeq}&limit=${limit}`,
     ),
 };
+
+const post = (body: unknown = {}): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
+const id = (value: string) => encodeURIComponent(value);
+
+/** The operator API (/dash/admin/); every call answers 403 for a regular account. */
+export const admin = {
+  accounts: () => request<{ accounts: AdminAccount[] }>('dash/admin/accounts'),
+  createAccount: (username: string, password: string, operator: boolean) =>
+    request<{ account: AdminAccount }>(
+      'dash/admin/accounts',
+      post({ username, password, operator }),
+    ),
+  setDisabled: (accountId: string, disabled: boolean) =>
+    request<void>(
+      `dash/admin/accounts/${id(accountId)}/${disabled ? 'disable' : 'enable'}`,
+      post(),
+    ),
+  setPassword: (accountId: string, password: string) =>
+    request<void>(`dash/admin/accounts/${id(accountId)}/password`, post({ password })),
+  disableOtp: (accountId: string) =>
+    request<void>(`dash/admin/accounts/${id(accountId)}/otp/disable`, post()),
+  setOperator: (accountId: string, operator: boolean) =>
+    request<void>(`dash/admin/accounts/${id(accountId)}/operator`, post({ operator })),
+  devices: (account = '') =>
+    request<{ devices: AdminDevice[] }>(
+      `dash/admin/devices${account ? `?account=${id(account)}` : ''}`,
+    ),
+  issueToken: (username: string, name: string, noExpiry: boolean, expiresIn: string) =>
+    request<IssuedToken>(
+      'dash/admin/devices',
+      post({ username, name, noExpiry, expiresIn: noExpiry ? '' : expiresIn }),
+    ),
+  revokeDevice: (deviceId: string) =>
+    request<void>(`dash/admin/devices/${id(deviceId)}/revoke`, post()),
+  teams: () => request<{ teams: AdminTeam[] }>('dash/admin/teams'),
+  createTeam: (name: string) => request<{ team: AdminTeam }>('dash/admin/teams', post({ name })),
+  renameTeam: (teamId: string, name: string) =>
+    request<void>(`dash/admin/teams/${id(teamId)}`, post({ name })),
+  members: (teamId: string) =>
+    request<{ members: TeamMember[] }>(`dash/admin/teams/${id(teamId)}/members`),
+  addMember: (teamId: string, username: string) =>
+    request<void>(`dash/admin/teams/${id(teamId)}/members`, post({ username })),
+  removeMember: (teamId: string, accountId: string) =>
+    request<void>(`dash/admin/teams/${id(teamId)}/members/${id(accountId)}`, {
+      method: 'DELETE',
+    }),
+  info: () => request<ServerInfo>('dash/admin/info'),
+  vacuum: () => request<{ sizeBefore: number; sizeAfter: number }>('dash/admin/vacuum', post()),
+  commits: (sinceSeq = 0, limit = 50) =>
+    request<{ commits: AdminCommit[]; hasMore: boolean; serverSeq: number }>(
+      `dash/admin/commits?sinceSeq=${sinceSeq}&limit=${limit}`,
+    ),
+};
+
+/** Formats a byte count for the server tab. */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KiB`;
+  }
+  return `${(bytes / 1024 / 1024).toFixed(1)} MiB`;
+}
 
 /** Formats a unix-millisecond stamp; the tables show nothing for a missing one. */
 export function formatTime(ms?: number): string {

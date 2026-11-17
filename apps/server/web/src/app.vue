@@ -3,6 +3,7 @@
 
   import {
     ApiError,
+    admin,
     api,
     formatTime,
     type Commit,
@@ -10,13 +11,27 @@
     type Health,
     type Me,
     type Row,
+    type ServerInfo,
     type Team,
   } from './api';
+  import AdminAccounts from './components/admin-accounts.vue';
+  import AdminDevices from './components/admin-devices.vue';
+  import AdminServer from './components/admin-server.vue';
+  import AdminTeams from './components/admin-teams.vue';
   import DataTable from './components/data-table.vue';
   import LoginForm from './components/login-form.vue';
   import SecurityPanel from './components/security-panel.vue';
 
-  type Tab = 'devices' | 'teams' | 'rows' | 'commits' | 'security';
+  type Tab =
+    | 'devices'
+    | 'teams'
+    | 'rows'
+    | 'commits'
+    | 'security'
+    | 'admin-accounts'
+    | 'admin-devices'
+    | 'admin-teams'
+    | 'admin-server';
 
   const me = ref<Me | null>(null);
   const health = ref<Health | null>(null);
@@ -31,6 +46,22 @@
   const commits = ref<Commit[]>([]);
   const commitsHasMore = ref(false);
   const commitCursor = ref(0);
+  /** The operator's view of the server; null for a regular account. */
+  const serverInfo = ref<ServerInfo | null>(null);
+  const keyMissing = computed(() => serverInfo.value?.secretKey === 'missing');
+
+  /** Reads the server info an operator's warning banner needs. */
+  async function loadServerInfo() {
+    serverInfo.value = null;
+    if (!me.value?.operator) {
+      return;
+    }
+    try {
+      serverInfo.value = await admin.info();
+    } catch {
+      // The tabs show their own errors; the banner is a convenience.
+    }
+  }
 
   const retention = computed(() => {
     const value = health.value?.retention;
@@ -68,6 +99,9 @@
         }
         case 'security':
           me.value = await api.me();
+          break;
+        default:
+          // The operator tabs load themselves when they mount.
           break;
       }
     } catch (err) {
@@ -119,6 +153,8 @@
 
   async function signedIn() {
     me.value = await api.me();
+    tab.value = 'devices';
+    await loadServerInfo();
     await load();
   }
 
@@ -136,6 +172,7 @@
     }
     try {
       me.value = await api.me();
+      await loadServerInfo();
       await load();
     } catch {
       me.value = null;
@@ -170,12 +207,44 @@
         <button :aria-current="tab === 'rows'" @click="select('rows')">Rows</button>
         <button :aria-current="tab === 'commits'" @click="select('commits')">Commits</button>
         <button :aria-current="tab === 'security'" @click="select('security')">Security</button>
+        <template v-if="me.operator">
+          <span class="divider" aria-hidden="true" />
+          <button :aria-current="tab === 'admin-accounts'" @click="select('admin-accounts')">
+            Accounts
+          </button>
+          <button :aria-current="tab === 'admin-devices'" @click="select('admin-devices')">
+            All devices
+          </button>
+          <button :aria-current="tab === 'admin-teams'" @click="select('admin-teams')">
+            Manage teams
+          </button>
+          <button :aria-current="tab === 'admin-server'" @click="select('admin-server')">
+            Server
+          </button>
+        </template>
       </nav>
 
-      <p class="notice">
+      <p v-if="me.operator && keyMissing" class="warning" role="alert">
+        No secret key is set: one-time code secrets are stored in plain text in the database. Set
+        <code>CROFFLE_SECRET_KEY</code> or <code>CROFFLE_SECRET_KEY_FILE</code> and restart — see
+        <a
+          href="https://github.com/team-croffle/croffle/blob/master/apps/server/README.md#secret-key"
+          target="_blank"
+          rel="noreferrer"
+          >Secret key</a
+        >
+        in the server README.
+      </p>
+
+      <p v-if="tab.startsWith('admin-')" class="notice">
+        Operator view: every account on this server. Each change here is written to the server log.
+      </p>
+      <p v-else class="notice">
         Scoped to this account: your own rows plus the rows shared with a team you are in. You can
-        revoke your own devices here; use the <code>croffle-server</code> commands for anything
-        else, or to look at another account.
+        revoke your own devices here<template v-if="me.operator"
+          >; the operator tabs manage every account</template
+        ><template v-else>; use the <code>croffle-server</code> commands for anything else</template
+        >.
       </p>
 
       <p v-if="error" class="error">{{ error }}</p>
@@ -263,6 +332,11 @@
       </template>
 
       <SecurityPanel v-else-if="tab === 'security'" :me="me" @changed="load" />
+
+      <AdminAccounts v-else-if="tab === 'admin-accounts'" :me-id="me.accountId" />
+      <AdminDevices v-else-if="tab === 'admin-devices'" />
+      <AdminTeams v-else-if="tab === 'admin-teams'" />
+      <AdminServer v-else-if="tab === 'admin-server'" @info="serverInfo = $event" />
 
       <template v-else>
         <DataTable
