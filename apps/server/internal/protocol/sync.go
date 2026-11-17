@@ -365,10 +365,18 @@ type BootstrapCursor struct {
 	// Table and RowID are the keyset position: the last row of the page.
 	Table string `json:"t,omitempty"`
 	RowID string `json:"r,omitempty"`
-	// Teams are the account's teams when the snapshot started (server 0.2.0).
-	// A cursor from an older server has none, and its snapshot then covers no
-	// team: the next pull asks for one more snapshot, which is safe.
-	Teams []string `json:"m,omitempty"`
+	// Teams are the account's memberships when the snapshot started (server
+	// 0.2.0), each with the time it began: leaving and joining again starts a
+	// new membership, which the snapshot does not cover. A cursor from an
+	// older server has none, and its snapshot then covers no team: the next
+	// pull asks for one more snapshot, which is safe.
+	Teams []CursorMembership `json:"m,omitempty"`
+}
+
+// CursorMembership is one team membership inside a BootstrapCursor.
+type CursorMembership struct {
+	TeamID     string `json:"t"`
+	JoinedAtMs int64  `json:"j"`
 }
 
 // ErrInvalidCursor marks a cursor this server did not produce.

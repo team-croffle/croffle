@@ -174,3 +174,41 @@ func (b *AEAD) Open(accountID, stored string) (string, error) {
 	}
 	return string(plain), nil
 }
+
+// Keys opens values sealed with any of several keys, picking the key by the
+// id in the value; plain values pass through. It cannot seal. secret rotate
+// uses it to recover a database that holds secrets sealed with two keys.
+func Keys(boxes ...*AEAD) Box { return keyring(boxes) }
+
+type keyring []*AEAD
+
+func (k keyring) Seal(_, _ string) (string, error) {
+	return "", errors.New("secretbox: a key ring opens only")
+}
+
+func (k keyring) Open(accountID, stored string) (string, error) {
+	if !IsSealed(stored) {
+		return stored, nil
+	}
+	id, ok := KeyIDOf(stored)
+	if !ok {
+		return "", ErrDamaged
+	}
+	for _, box := range k {
+		if box.KeyID() == id {
+			return box.Open(accountID, stored)
+		}
+	}
+	if len(k) == 0 {
+		return "", ErrNoKey
+	}
+	return "", fmt.Errorf("%w (id %s, none of the given keys)", ErrWrongKey, id)
+}
+
+// KeyID is the first key's id, or "" for an empty ring.
+func (k keyring) KeyID() string {
+	if len(k) == 0 {
+		return ""
+	}
+	return k[0].KeyID()
+}

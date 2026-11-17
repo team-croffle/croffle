@@ -171,3 +171,59 @@ func TestDBInfoReportsSecretKey(t *testing.T) {
 		t.Fatalf("otp status after disable = %q", out)
 	}
 }
+
+// Review F-7: rotate K1 -> K2 while a server still holds K1 and seals a new
+// enrolment with it. The database then mixes keys; rotating with the new key
+// configured and the old one as --old-key-file recovers it.
+func TestSecretRotateRecoversMixedKeys(t *testing.T) {
+	r := newRunner(t)
+	seedSecrets(t, r, secretbox.Plain)
+	r.mustRun("pw\n", "user", "create", "carol", "--password-stdin")
+	file1, _ := keyFile(t, r)
+	file2, _ := keyFile(t, r)
+	r.mustRun("", "secret", "rotate", "--new-key-file", file1)
+	r.env = map[string]string{"CROFFLE_SECRET_KEY_FILE": file1}
+	r.mustRun("", "secret", "rotate", "--new-key-file", file2)
+
+	// The running server still holds key 1 and seals carol's enrolment with it.
+	db, err := sqlite.Open(context.Background(), r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	box1, _ := secretbox.New(mustKey(t, file1))
+	db.SetSecretBox(box1)
+	carol, err := db.FindAccountByUsername(context.Background(), "carol")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.StartOTP(context.Background(), carol.ID, "SECRETcarol", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	box2, _ := secretbox.New(mustKey(t, file2))
+	if _, err := db.PrepareSecrets(context.Background(), box2); err == nil {
+		t.Fatal("a start with key 2 accepted a secret sealed with key 1")
+	}
+	_ = db.Close()
+
+	// Plain rotation with either key alone cannot open the other key's rows.
+	r.env = map[string]string{"CROFFLE_SECRET_KEY_FILE": file2}
+	if _, err := r.run("", "secret", "rotate", "--new-key-file", file1); err == nil {
+		t.Fatal("rotate from key 2 alone succeeded on a mixed database")
+	}
+	// The recovery the warning describes.
+	res := r.mustRun("", "secret", "rotate", "--new-key-file", file2, "--old-key-file", file1)
+	if !strings.Contains(res.out, "sealed 3 one-time code secret(s)") {
+		t.Fatalf("recovery output = %q", res.out)
+	}
+	db, err = sqlite.Open(context.Background(), r.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.PrepareSecrets(context.Background(), box2); err != nil {
+		t.Fatalf("a start with key 2 after the recovery: %v", err)
+	}
+	if otp, err := db.FindOTP(context.Background(), carol.ID); err != nil || otp.Secret != "SECRETcarol" {
+		t.Fatalf("carol after the recovery = %+v, %v", otp, err)
+	}
+}

@@ -24,7 +24,6 @@ type Admin interface {
 	OTPStatus(ctx context.Context, accountID string) (string, error)
 	DeleteOTP(ctx context.Context, accountID string) error
 	UpsertDevice(ctx context.Context, device store.Device) error
-	DeleteAccountSessions(ctx context.Context, accountID string) error
 }
 
 // maxPassword matches the CLI's --password-stdin limit.
@@ -227,14 +226,10 @@ func (s *server) adminSetPassword(w http.ResponseWriter, r *http.Request) {
 		s.writeSyncError(w, r, err)
 		return
 	}
-	if err := s.admin.SetAccountPassword(r.Context(), id, hash); err != nil {
-		s.adminError(w, r, err)
-		return
-	}
-	// A reset usually means the old password leaked: sign every browser out.
-	// Device tokens keep working, as with `user set-password`; revoking them
-	// is a separate step.
-	if err := s.admin.DeleteAccountSessions(r.Context(), id); err != nil {
+	// A reset usually means the old password leaked: the new password and
+	// signing every browser out happen in one transaction. Device tokens keep
+	// working, as with `user set-password`; revoking them is a separate step.
+	if err := s.admin.ResetPassword(r.Context(), id, hash); err != nil {
 		s.adminError(w, r, err)
 		return
 	}

@@ -279,14 +279,15 @@ func (c *command) userSetPassword() error {
 	if err != nil {
 		return err
 	}
-	if err := c.db.SetAccountPassword(c.ctx, account.ID, hash); err != nil {
+	// Browser sessions end with the old password, in the same transaction.
+	if err := c.db.ResetPassword(c.ctx, account.ID, hash); err != nil {
 		return err
 	}
 
 	// Existing tokens keep working on purpose: they are separate credentials,
 	// and `token revoke` is the tool for withdrawing them.
-	c.printf("password updated for %s (existing device tokens still work; revoke them with `token revoke`)\n",
-		account.Username)
+	c.printf("password updated for %s; dashboard sessions are signed out "+
+		"(existing device tokens still work; revoke them with `token revoke`)\n", account.Username)
 	return nil
 }
 

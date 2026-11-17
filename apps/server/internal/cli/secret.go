@@ -22,7 +22,7 @@ func (c *command) secret() error {
 	default:
 		return c.usage(
 			"croffle-server secret generate",
-			"croffle-server secret rotate --new-key-file <path> | --new-key-stdin")
+			"croffle-server secret rotate --new-key-file <path> | --new-key-stdin [--old-key-file <path>]")
 	}
 }
 
@@ -51,7 +51,9 @@ func (c *command) secretGenerate() error {
 // new enrolments with the old key until it restarts.
 const rotateWarning = `Stop the server before rotating. A running server keeps using the old key until
 it restarts, so a one-time code enrolled in between is sealed with the old key and
-the next start fails (run rotate again with the old key to recover).
+the next start fails. To recover from that, configure the new key and run
+  croffle-server secret rotate --new-key-file <new key> --old-key-file <old key>
+which opens secrets sealed with either key and seals them all with the new one.
 `
 
 // secretRotate re-seals every TOTP secret with a new key, in one transaction.
@@ -62,6 +64,7 @@ func (c *command) secretRotate() error {
 	fs := c.flags("rotate", false)
 	newKeyFile := fs.String("new-key-file", "", "file holding the new key")
 	newKeyStdin := fs.Bool("new-key-stdin", false, "read the new key from stdin")
+	oldKeyFile := fs.String("old-key-file", "", "another key the stored secrets may be sealed with (recovery)")
 	if err := c.parse(fs); err != nil {
 		return err
 	}
@@ -98,14 +101,37 @@ func (c *command) secretRotate() error {
 	if err != nil {
 		return fmt.Errorf("the current key: %w", err)
 	}
-	var from secretbox.Box = secretbox.Plain
+	var sources []*secretbox.AEAD
 	if currentKey != nil {
-		if from, err = secretbox.New(currentKey); err != nil {
+		box, err := secretbox.New(currentKey)
+		if err != nil {
 			return err
 		}
+		sources = append(sources, box)
 	}
-	if from.KeyID() == to.KeyID() {
+	if *oldKeyFile != "" {
+		raw, err := os.ReadFile(*oldKeyFile)
+		if err != nil {
+			return fmt.Errorf("read the old key: %w", err)
+		}
+		oldKey, err := secretbox.ParseKey(string(raw))
+		if err != nil {
+			return fmt.Errorf("the old key: %w", err)
+		}
+		box, err := secretbox.New(oldKey)
+		if err != nil {
+			return err
+		}
+		sources = append(sources, box)
+	}
+	// Re-sealing with the key everything already uses is pointless, unless an
+	// old key is given to recover secrets sealed with it.
+	if *oldKeyFile == "" && len(sources) == 1 && sources[0].KeyID() == to.KeyID() {
 		return fmt.Errorf("the new key is the current key (id %s)", to.KeyID())
+	}
+	var from secretbox.Box = secretbox.Plain
+	if len(sources) > 0 {
+		from = secretbox.Keys(sources...)
 	}
 
 	fmt.Fprint(c.errOut, rotateWarning)
