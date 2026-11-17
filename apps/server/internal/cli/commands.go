@@ -498,6 +498,16 @@ func (c *command) dbInfo() error {
 	if err != nil {
 		return err
 	}
+	// The CLI does not seal or open secrets here; report the key the server
+	// would start with, from the same configuration.
+	key, err := config.LoadSecretKey(c.getenv)
+	if err != nil {
+		return err
+	}
+	info.SecretKey = "missing"
+	if key != nil {
+		info.SecretKey = "set"
+	}
 
 	if c.asJSON {
 		return c.writeJSON(info)
@@ -515,6 +525,9 @@ func (c *command) dbInfo() error {
 		{"oldest seq", strconv.FormatInt(info.OldestSeq, 10)},
 		{"newest seq", strconv.FormatInt(info.NewestSeq, 10)},
 		{"purged through seq", strconv.FormatInt(info.PurgedThroughSeq, 10)},
+		{"secret key", info.SecretKey},
+		{"otp secrets (plain)", strconv.FormatInt(info.OTPSecretsPlain, 10)},
+		{"otp secrets (encrypted)", strconv.FormatInt(info.OTPSecretsEncrypted, 10)},
 	})
 	return nil
 }

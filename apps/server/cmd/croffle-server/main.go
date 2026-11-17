@@ -30,6 +30,7 @@ import (
 	"github.com/team-croffle/croffle/apps/server/internal/metrics"
 	"github.com/team-croffle/croffle/apps/server/internal/protocol"
 	"github.com/team-croffle/croffle/apps/server/internal/retention"
+	"github.com/team-croffle/croffle/apps/server/internal/secretbox"
 	"github.com/team-croffle/croffle/apps/server/internal/store/sqlite"
 	"github.com/team-croffle/croffle/apps/server/web"
 )
@@ -95,6 +96,27 @@ func run(args []string, getenv func(string) string, stdout, stderr io.Writer) er
 	}()
 	if db.AppliedMigrations > 0 {
 		logger.Info("schema migrated", slog.Int("applied", db.AppliedMigrations))
+	}
+
+	// One-time code secrets: seal the plain ones when a key is set, refuse to
+	// start when they are sealed and the key is missing or another one.
+	var box secretbox.Box = secretbox.Plain
+	if cfg.SecretKey != nil {
+		if box, err = secretbox.New(cfg.SecretKey); err != nil {
+			return err
+		}
+	}
+	secrets, err := db.PrepareSecrets(context.Background(), box)
+	if err != nil {
+		return err
+	}
+	if box.KeyID() == "" {
+		logger.Warn("no secret key: one-time code secrets are stored in plain text",
+			slog.Int("plain", secrets.Plain),
+			slog.String("set", "CROFFLE_SECRET_KEY or CROFFLE_SECRET_KEY_FILE"))
+	} else {
+		logger.Info(fmt.Sprintf("secret key: encrypted %d one-time code secrets", secrets.Sealed),
+			slog.String("keyId", box.KeyID()))
 	}
 
 	authService := auth.NewService(db, time.Now).WithPolicy(auth.Policy{

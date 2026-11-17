@@ -385,6 +385,11 @@ type Info struct {
 	// PurgedThroughSeq is how far retention has deleted; a client cursor below
 	// it can no longer be served and has to bootstrap.
 	PurgedThroughSeq int64 `json:"purgedThroughSeq"`
+	// SecretKey is "set" or "missing"; the counts say how many one-time code
+	// secrets are stored plain and sealed.
+	SecretKey           string `json:"secretKey"`
+	OTPSecretsPlain     int64  `json:"otpSecretsPlain"`
+	OTPSecretsEncrypted int64  `json:"otpSecretsEncrypted"`
 }
 
 // Admin is the operator-facing surface, used by the CLI and never by a request
@@ -504,8 +509,12 @@ type Store interface {
 	// whatever family; the device token itself is left alone.
 	RevokeDeviceTokens(ctx context.Context, deviceID string, at time.Time) error
 
-	// FindOTP returns ErrNotFound when the account has no enrolment.
+	// FindOTP returns ErrNotFound when the account has no enrolment. The
+	// secret comes back opened: plain, whether or not it is stored sealed.
 	FindOTP(ctx context.Context, accountID string) (*OTP, error)
+	// OTPStatus is "off", "pending" or "enabled". It never opens the secret,
+	// so it works on a server that has lost its secret key.
+	OTPStatus(ctx context.Context, accountID string) (string, error)
 	// StartOTP stores a pending enrolment, replacing an earlier pending one.
 	// It returns ErrDuplicate when the account already has one enabled.
 	StartOTP(ctx context.Context, accountID, secret string, at time.Time) error

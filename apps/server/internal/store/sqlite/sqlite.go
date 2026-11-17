@@ -18,6 +18,8 @@ import (
 	_ "modernc.org/sqlite" // database/sql driver, registered as "sqlite"
 
 	"github.com/team-croffle/croffle/apps/server/internal/store"
+
+	"github.com/team-croffle/croffle/apps/server/internal/secretbox"
 )
 
 const driverName = "sqlite"
@@ -40,6 +42,18 @@ type DB struct {
 	// can log "upgraded the schema" instead of staying silent about it.
 	AppliedMigrations int
 	closed            bool
+	// secrets seals and opens TOTP secrets; secretbox.Plain until the server
+	// is given a key (SetSecretBox).
+	secrets secretbox.Box
+}
+
+// SetSecretBox sets how TOTP secrets are sealed. Call it before serving; the
+// server does so after PrepareSecrets has checked the stored rows.
+func (db *DB) SetSecretBox(box secretbox.Box) {
+	if box == nil {
+		box = secretbox.Plain
+	}
+	db.secrets = box
 }
 
 // Compile-time check that this package still satisfies the boundary.
@@ -71,7 +85,7 @@ func Open(ctx context.Context, path string) (*DB, error) {
 	// DSN), but keeping it alive avoids re-running them on every batch.
 	write.SetConnMaxLifetime(0)
 
-	db := &DB{path: path, read: read, write: write}
+	db := &DB{path: path, read: read, write: write, secrets: secretbox.Plain}
 
 	if err := db.write.PingContext(ctx); err != nil {
 		_ = db.Close()
