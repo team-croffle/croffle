@@ -356,10 +356,13 @@ accounts in and out (`team create`, `team add-member`, `team remove-member`, or
   answers its pull with `410 cursor_too_old` (`details.reason: "team_scope"`),
   which desktop 1.3.x already turns into a snapshot. Upgrading to 0.2.0 sends no
   device to a snapshot.
-- **Leaving a team.** From then on the server does not send the team's rows to
-  the account, and a change to one of them is refused (`403 foreign_team`; the
-  desktop marks that change as failed and keeps syncing). What the devices
-  already have stays on them.
+- **Leaving a team cuts the link; nothing is deleted.** The team keeps every
+  row, including the ones the leaver created, and the leaver's devices keep the
+  copies they have. From then on the server sends none of the team's rows to
+  the account — its own shared rows included — and the account's changes to
+  them do not reach the team (`403 foreign_team`; the desktop marks that change
+  as failed and keeps syncing). Until the desktop can turn such a copy into a
+  separate schedule, an edit to it stays on that device.
 - Teams cannot be deleted yet; rename one instead.
 - A device that was in a team under 0.1.x without ever taking a snapshot after
   joining may miss that team's older rows. On that desktop, choose **Settings →
@@ -586,6 +589,8 @@ client still decides the winner by last-writer-wins.
 - The desktop (1.3.x) uses device tokens only: it does not renew tokens with
   `POST /auth/token` yet, so an expiring device token means signing in again.
 - Joining a team sends each of the account's devices to one full snapshot.
+- After leaving a team, the copies on the leaver's devices are not yet separate
+  schedules (see [Teams](#teams)).
 - Disabling an account blocks it; it does not erase its data.
 
 ---

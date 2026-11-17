@@ -282,7 +282,7 @@ func TestVisibilityBindsTeamIDsAsParameters(t *testing.T) {
 	// The IN list is built from the length of the slice, never from its
 	// contents, so a team id can never become SQL.
 	where, args := visibility("acct-1", []string{"t1", "t2"})
-	if where != `ownerId = ? OR teamId IN (?, ?)` {
+	if where != `(ownerId = ? AND teamId IS NULL) OR teamId IN (?, ?)` {
 		t.Errorf("where = %q", where)
 	}
 	if len(args) != 3 {
@@ -290,7 +290,7 @@ func TestVisibilityBindsTeamIDsAsParameters(t *testing.T) {
 	}
 
 	where, args = visibility("acct-1", nil)
-	if where != `ownerId = ?` || len(args) != 1 {
+	if where != `ownerId = ? AND teamId IS NULL` || len(args) != 1 {
 		t.Errorf("without teams: where = %q, args = %v", where, args)
 	}
 
