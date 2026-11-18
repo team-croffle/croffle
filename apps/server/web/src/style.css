@@ -227,6 +227,10 @@ form.stack {
   margin: 0 0 8px;
 }
 
+.security + .security {
+  margin-top: 28px;
+}
+
 .security .codes {
   columns: 2;
   max-width: 420px;
