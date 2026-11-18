@@ -312,7 +312,8 @@ and the server says so at start-up and on the operator screens.
 # set -C refuses to overwrite an existing file: a new key in place of the old
 # one locks out every secret sealed with it.
 umask 077; set -C
-echo "CROFFLE_SECRET_KEY=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate)" > croffle-secret.env
+key=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate) && [ -n "$key" ] &&
+  echo "CROFFLE_SECRET_KEY=$key" > croffle-secret.env
 ```
 
 Give it to the service with `env_file: [croffle-secret.env]`, as the
@@ -334,28 +335,29 @@ you can read (`600`) stops the server with `permission denied`.
 - **To change the key**: stop the server, run `secret rotate` with the old key
   still configured, switch the configuration to the new key, and start the
   server. With compose (`croffle-secret.env` still holds the old key; the new
-  one goes in on standard input):
+  one goes in on standard input). Each step runs only if the one before it
+  succeeded, so a failed rotate leaves the old key configured:
 
   ```bash
   umask 077; set -C
-  docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.new
-  docker compose stop croffle-server
-  docker compose run --rm -T croffle-server secret rotate --new-key-stdin < croffle-secret.new
-  # >| replaces the old key on purpose; keep a copy of the old one until the server is up.
-  printf 'CROFFLE_SECRET_KEY=%s\n' "$(cat croffle-secret.new)" >| croffle-secret.env
-  rm -f croffle-secret.new
-  docker compose up -d
+  cp croffle-secret.env croffle-secret.env.old   # the old key, until the server is up
+  new=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate) && [ -n "$new" ] &&
+    docker compose stop croffle-server &&
+    printf '%s\n' "$new" | docker compose run --rm -T croffle-server secret rotate --new-key-stdin &&
+    printf 'CROFFLE_SECRET_KEY=%s\n' "$new" >| croffle-secret.env &&   # >| replaces it on purpose
+    docker compose up -d
   ```
 
   A rotate while the server runs is not safe: the running server keeps the old
   key until it restarts, so a code set up in between is sealed with the old key
   and the next start fails. To recover, keep the new key configured and run
   `secret rotate --new-key-file <new> --old-key-file <old>`: it opens secrets
-  sealed with either key and seals them all with the new one. With compose, put
-  the bare old key in `croffle-secret.old` and pass both keys on standard input:
+  sealed with either key and seals them all with the new one. With compose, the
+  old key in `croffle-secret.env.old` and the new one configured, pass both on
+  standard input:
 
   ```bash
-  { cat croffle-secret.old; sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env; } |
+  { sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env.old; sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env; } |
     docker compose run --rm -T --entrypoint sh croffle-server -c 'umask 077; read -r old; read -r new
       printf "%s\n" "$old" > /tmp/old.key
       printf "%s\n" "$new" | croffle-server secret rotate --new-key-stdin --old-key-file /tmp/old.key'
