@@ -6,6 +6,7 @@ approvals:
   - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "c4f4a91", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-18", words: "V-3는 가로 해.", rev: "V-3 자동 명령에서 ./internal/auth 를 뺌(암호화는 저장소 계층에서만 하고 auth 는 바뀌지 않아 패턴에 맞는 테스트가 없음 — no tests to run)", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-19", words: "진행", rev: "c401f35", kind: change }
+  - { role: user, by: bluenyang, at: "2026-11-19", words: "두 정정 모두 승인.", rev: "V-14 1단계 명령을 대상 세 패키지로 좁힘 · 3단계 콘솔 오류에서 로그인 전 GET /dash/me 401 한 줄 제외(1차 감사 PR #140 F-1)", kind: change }
 summary_for_user: |
   [2026-11-19 변경, 작업 단위 추가 W-9 — rc.1 뒤] 로그인한 사용자가 대시보드 Security 탭에서 자기 비밀번호를 바꿉니다(`POST /dash/me/password`). 지금 비밀번호를 확인하고, 일회용 코드를 켠 계정은 코드도 받습니다(OTP 해제와 같은 확인 · 같은 시도 제한). 바꾸면 지금 이 브라우저 세션만 남고 다른 브라우저 로그인은 끊기며, 기기 토큰은 그대로입니다. 새 비밀번호 규칙은 운영자가 만들 때와 같습니다(비어 있지 않고 4096 바이트 이하). 로그에 한 줄 남기고 비밀번호는 남기지 않습니다. 새 의존성 · 마이그레이션 없음. 검증 V-14(Go 테스트 · 라이브 HTTP · 브라우저). 같은 PR 에 rc.1 확인에서 나온 문서 수정 두 가지를 조정으로 넣습니다: 서버 README 의 키 안내를 env 파일 방식으로(A-19), Docker 예시의 키 만들기가 기존 키 파일을 덮어쓰지 않게(A-20). 머지 뒤 `server-v0.2.0-rc.2`.
   [2026-11-18 변경 승인, 리뷰 1 F-2] S-7 을 사용자 답(질의서 A5)에 맞춰 바꿉니다: 팀에서 빠지면 연결이 끊어집니다. 서버는 그 팀의 행을 빠진 계정에 — 자기가 만든 행도 — 보내지 않고, 그 계정의 변경은 팀에 가지 않습니다. 행은 서버 · 팀 · 빠진 계정의 기기에 모두 남습니다. 가시성 규칙을 "공유하지 않은 내 행 또는 지금 속한 팀의 행"으로 고치고 픽스처 15 에 그 경우를 더합니다(W-5 안, 작업 단위 추가 없음). 빠진 계정의 사본을 독립 일정으로 바꾸는 일과 일정 분류는 공유 버전(1.3.2 · 0.2.1)으로 넘깁니다.
@@ -418,14 +419,14 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 - V-14 **본인 비밀번호 변경(`POST /dash/me/password`) · 다른 세션 종료 · 지금 세션 유지 · 기기 토큰 유지 · OTP 확인 · CSRF · 로그에 비밀번호 없음 (음성 확인 포함)**
   - 검증 대상: S-12, W-9
   - 실행 방법:
-    1) 자동 테스트: `go -C apps/server test -list 'TestChangePassword|TestDashChangePassword' ./internal/...` 로 대상이 있는지 기록한 뒤 `go -C apps/server test -v ./internal/... -run 'TestChangePassword|TestDashChangePassword'`.
+    1) 자동 테스트: `go -C apps/server test -list 'TestChangePassword|TestDashChangePassword' ./internal/auth ./internal/store/sqlite ./internal/httpapi` 로 대상이 있는지 기록한 뒤 `go -C apps/server test -v ./internal/auth ./internal/store/sqlite ./internal/httpapi -run 'TestChangePassword|TestDashChangePassword'`. (2026-11-19 정정: 처음 명령은 `./internal/...` 전체라 대상이 없는 패키지에서 `no tests to run` 이 나왔음)
     2) `0.0.0.0:8787` 에 띄운 로컬 서버(새 DB)에서 일반 계정 `erin` 으로: 브라우저 세션 둘(`$A`, `$B`)과 기기 토큰 `$T` 를 만든 뒤
        - 틀린 지금 비밀번호 → `401`; 빈 새 비밀번호 → `400`; `Origin: https://evil.example` 로 → `403 cross_origin`
        - `$A` 로 바른 요청 → `204`; 직후 `$A` 의 `GET /dash/me` `200`, `$B` 의 `GET /dash/me` `401`, `$T` 의 `POST /auth/whoami` `200`
        - 옛 비밀번호로 `POST /dash/login` `401`, 새 비밀번호로 `200`
        - `erin` 에 OTP 를 켠 뒤 코드 없이 → `401`, 바른 코드와 함께 → `204`
        - 서버 stdout 에서 `"password changed"` 줄을 확인하고, 쓴 비밀번호 문자열들이 로그에 `0` 건인지 셉니다.
-    3) `[수동 · Linux · Chrome]` (스크립트 브라우저) Security 탭에서 폼으로 바꾸고, 새 확인이 다르면 요청이 나가지 않는지, 성공 문구가 보이는지, 콘솔 오류 · 외부 요청이 없는지 확인합니다.
+    3) `[수동 · Linux · Chrome]` (스크립트 브라우저) Security 탭에서 폼으로 바꾸고, 새 확인이 다르면 요청이 나가지 않는지, 성공 문구가 보이는지, 콘솔 오류 · 외부 요청이 없는지 확인합니다. 단 로그인 전 세션 확인 `GET /dash/me` 의 401 리소스 오류 한 줄은 콘솔 오류에서 제외하며, 서버 로그로 그 요청임을 확인해 기록합니다(2026-11-19 정정, V-11 과 같은 기존 동작).
   - 기대 결과: 위의 상태 코드가 모두 그대로 나오고, 로그에 비밀번호가 없습니다.
   - 실패 판정: 상태 코드 하나라도 다르거나, 다른 세션이 살아 있거나 지금 세션 · 기기 토큰이 끊기거나, 로그에 비밀번호가 나오거나, `-list` 에 대상 테스트가 없으면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.2.0/v14-self-password-change/`
