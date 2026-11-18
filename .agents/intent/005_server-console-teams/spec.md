@@ -454,6 +454,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 - A-21 (2026-11-19, W-9) 틀린 지금 비밀번호 · 코드의 답을 설계에 적은 `401 invalid_credentials` 대신 로그인 · OTP 해제와 같은 `401 unauthorized` 로 · 기존 `writeAuthError` 를 그대로 써서 틀린 이유를 구분하지 않는 규칙을 지킴. 지금 비밀번호를 확인한 뒤 운영자가 그 사이 재설정했으면 바꾸지 않음(저장소가 옛 해시를 조건으로 갱신) · 확인과 저장 사이 경합 · W-9 커밋
 - A-22 (2026-11-19, W-8, 리뷰 5 지적 1 · 2) README · Docker 예시의 키 명령을 앞 단계가 성공해야 다음 단계가 돌도록 `&&` 로 묶음: 키 만들기는 키가 비어 있지 않을 때만 파일을 쓰고, 교체는 옛 설정을 `croffle-secret.env.old` 로 남긴 뒤 rotate 가 성공해야 설정을 바꾸고 서버를 시작함. 복구도 그 사본을 씀 · `echo "…$(generate)"` 는 생성이 실패해도 빈 키 파일을 만들었고(그 뒤 `set -C` 가 다시 만들기를 막음), 교체는 rotate 실패 뒤에도 설정을 새 키로 바꿨음. bash · zsh 에서 docker 대역으로 성공 · 생성 실패 · rotate 실패 · 두 번째 만들기를 확인. 리뷰 6 지적: 옛 설정 복사(`cp`)도 체인의 첫 단계로 묶음(복사 실패 때 교체가 진행돼 복구용 옛 키가 없을 수 있었음), 복사 실패를 같은 방법으로 확인
 - A-23 (2026-11-19, W-9, V-14 브라우저) Security 탭의 두 절(일회용 코드 · 비밀번호) 사이에 간격(`.security + .security`) · 첫 실행 화면에서 "Set up" 버튼과 "Password" 제목이 붙어 있었음
+- A-24 (2026-11-19, test, rc.2) rc.2 시험은 V-14 와 회귀용 V-1, 문서가 바뀐 V-13 의 해당 항목만 다시 돌림. V-2~V-12 는 다시 돌리지 않음 · W-9 · 문서 조정은 마이그레이션 · 동기화 · 팀 · 키 코드를 건드리지 않고, `dash.go` 를 함께 쓰는 운영 API 의 자동 테스트는 V-1 의 `make -C apps/server check` 안에서 통과. 판정 `.loctx/reports/server-0.2.0/test-rc2.md`
 
 ## 우려
 1. **키를 잃으면 암호화된 OTP secret 을 되살릴 수 없습니다.** 서버는 뜨지 않고(S-2), 운영자는 키 없이 시작하려면 OTP 를 쓰는 계정의 OTP 를 CLI 로 해제해야 합니다(`user otp disable` 은 `DELETE FROM account_otp` 라 secret 을 읽지 않으므로 키 없이 됩니다 — `store/sqlite/otp.go:132`. 단 W-1 의 시작 검사보다 먼저 쓸 수 있어야 하므로, CLI 명령은 시작 검사를 거치지 않습니다). README 에 백업 주의를 둡니다.
