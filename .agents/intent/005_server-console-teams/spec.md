@@ -125,7 +125,7 @@ summary_for_user: |
 - [x] W-6 (1b86743) 운영 API `/dash/admin/*` — S-8, S-4
 - [x] W-7 (c0f851b) 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
 - [x] W-8 (333ba62) README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
-- [ ] W-9 본인 비밀번호 변경(store · auth · `POST /dash/me/password` · Security 탭 · 문서 한 줄) — S-12
+- [x] W-9 (f456308) 본인 비밀번호 변경(store · auth · `POST /dash/me/password` · Security 탭 · 문서 한 줄) — S-12
 
 ## 검증 기준
 qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정했습니다(원본 `.loctx/reports/server-0.2.0/qa-checks.md`). qa-designer 가 짚은 spec 의 문제 10개는 설계에 반영했습니다(각 자리에 "qa-designer 지적 n"). PM 수정: V-13 의 "0.3" 판정을 지정한 4곳 기준으로 좁힘(0.3 계획을 가리키는 정당한 표기를 허용).
