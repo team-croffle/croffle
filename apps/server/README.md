@@ -340,7 +340,7 @@ you can read (`600`) stops the server with `permission denied`.
 
   ```bash
   umask 077; set -C
-  cp croffle-secret.env croffle-secret.env.old   # the old key, until the server is up
+  cp croffle-secret.env croffle-secret.env.old &&   # the old key, until the server is up
   new=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate) && [ -n "$new" ] &&
     docker compose stop croffle-server &&
     printf '%s\n' "$new" | docker compose run --rm -T croffle-server secret rotate --new-key-stdin &&

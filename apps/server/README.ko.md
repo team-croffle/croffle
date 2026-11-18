@@ -320,7 +320,7 @@ Compose 가 호스트에서 이 파일을 읽으므로 파일을 나만 읽게 �
 
   ```bash
   umask 077; set -C
-  cp croffle-secret.env croffle-secret.env.old   # 서버가 뜰 때까지 두는 옛 키
+  cp croffle-secret.env croffle-secret.env.old &&   # 서버가 뜰 때까지 두는 옛 키
   new=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate) && [ -n "$new" ] &&
     docker compose stop croffle-server &&
     printf '%s\n' "$new" | docker compose run --rm -T croffle-server secret rotate --new-key-stdin &&
