@@ -1,0 +1,23 @@
+# A first deployment of croffle-server with Docker Compose. Steps: README.md.
+#
+# The secret key (it encrypts one-time code secrets) lives in croffle-secret.env
+# next to this file. Compose reads that file on the host, so it can stay
+# readable by you alone (chmod 600); the server never opens a key file.
+services:
+  croffle-server:
+    # Pin a version; :latest moves with every stable release.
+    image: ghcr.io/team-croffle/croffle-server:0.2.0-rc.1
+    restart: unless-stopped
+    env_file:
+      - croffle-secret.env
+    environment:
+      CROFFLE_DB_PATH: /var/lib/croffle/server.db
+      # Only when a reverse proxy is actually in front of it:
+      # CROFFLE_TRUST_PROXY: 'true'
+    volumes:
+      - croffle-data:/var/lib/croffle
+    ports:
+      - '8787:8787'
+
+volumes:
+  croffle-data:

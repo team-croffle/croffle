@@ -6,7 +6,8 @@ status: approved
 origin: user
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-18", words: "승인", rev: "5c5cd43" }
-waivers: []
+waivers:
+  - { step: "work branch and PR (AGENTS.md: never commit on master) — the Docker Compose example in apps/server/docker", words: "apps/server/docker에 예시 파일 넣고 푸시해줘. master에 direct로", at: "2026-11-19", scope: once }
 supersedes: null
 ---
 ## 문제
