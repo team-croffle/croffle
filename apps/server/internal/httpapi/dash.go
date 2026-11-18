@@ -50,6 +50,8 @@ type dashIdentity struct {
 	// operator is read from the account on every request, so revoking it
 	// takes effect on the next request, not at the next sign-in.
 	operator bool
+	// sessionHash is the token hash of the cookie that made this request.
+	sessionHash []byte
 }
 
 func (s *server) dashRoutes(mux *http.ServeMux) {
@@ -64,6 +66,7 @@ func (s *server) dashRoutes(mux *http.ServeMux) {
 	s.dashRoute(mux, http.MethodPost, "/dash/otp/enroll", s.requireSession(s.dashOTPEnroll))
 	s.dashRoute(mux, http.MethodPost, "/dash/otp/confirm", s.requireSession(s.dashOTPConfirm))
 	s.dashRoute(mux, http.MethodPost, "/dash/otp/disable", s.requireSession(s.dashOTPDisable))
+	s.dashRoute(mux, http.MethodPost, "/dash/me/password", s.requireSession(s.dashChangePassword))
 	s.dashRoute(mux, http.MethodGet, "/dash/teams", s.requireSession(s.dashTeams))
 	s.dashRoute(mux, http.MethodGet, "/dash/rows", s.requireSession(s.dashRows))
 	s.dashRoute(mux, http.MethodGet, "/dash/commits", s.requireSession(s.dashCommits))
@@ -315,6 +318,34 @@ func (s *server) dashOTPDisable(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type changePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+	Code            string `json:"code,omitempty"`
+}
+
+// dashChangePassword lets the signed-in account change its own password. The
+// session that asked stays signed in; every other browser is signed out and
+// device tokens keep working.
+func (s *server) dashChangePassword(w http.ResponseWriter, r *http.Request) {
+	identity := sessionOf(r.Context())
+	var req changePasswordRequest
+	if !DecodeJSON(w, r, &req) {
+		return
+	}
+	err := s.auth.ChangePassword(r.Context(), identity.username, req.CurrentPassword, req.Code,
+		req.NewPassword, RemoteIP(r.Context()), identity.sessionHash)
+	if err != nil {
+		s.writeAuthError(w, r, err, slog.String("surface", "dashboard"))
+		return
+	}
+	s.logger.InfoContext(r.Context(), "password changed",
+		slog.String("account_id", identity.accountID),
+		slog.String("request_id", RequestID(r.Context())),
+	)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *server) writeOTPError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, auth.ErrOTPEnabled):
@@ -448,7 +479,8 @@ func (s *server) requireSession(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		session, err := s.dash.FindSession(r.Context(), auth.HashToken(cookie.Value), s.now())
+		sessionHash := auth.HashToken(cookie.Value)
+		session, err := s.dash.FindSession(r.Context(), sessionHash, s.now())
 		if errors.Is(err, store.ErrNotFound) {
 			// Expired or unknown: clear the cookie so the browser stops
 			// sending something that will never work again.
@@ -476,6 +508,7 @@ func (s *server) requireSession(next http.HandlerFunc) http.HandlerFunc {
 
 		identity := dashIdentity{
 			accountID: account.ID, username: account.Username, teams: teams, operator: account.Operator(),
+			sessionHash: sessionHash,
 		}
 		next(w, r.WithContext(context.WithValue(r.Context(), ctxKeySession, identity)))
 	}

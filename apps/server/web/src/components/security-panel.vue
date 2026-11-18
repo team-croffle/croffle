@@ -2,6 +2,7 @@
   import { ref } from 'vue';
 
   import { api, type Me, type OtpEnrolment } from '../api';
+  import PasswordForm from './password-form.vue';
 
   const props = defineProps<{ me: Me }>();
   const emit = defineEmits<{ changed: [] }>();
@@ -108,4 +109,5 @@
 
     <p v-if="error" class="error">{{ error }}</p>
   </section>
+  <PasswordForm :otp-enabled="props.me.otpEnabled" />
 </template>

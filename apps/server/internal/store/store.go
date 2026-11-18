@@ -572,6 +572,13 @@ type Store interface {
 	// DeleteOTP removes the enrolment and every recovery code of the account.
 	DeleteOTP(ctx context.Context, accountID string) error
 
+	// ChangePassword is the account changing its own password. It replaces
+	// oldHash with newHash and ends every dashboard session of the account but
+	// the one whose token hash is keepSession, in one transaction. When the
+	// stored hash is no longer oldHash (an operator reset it in the meantime)
+	// nothing changes and the result is ErrNotFound.
+	ChangePassword(ctx context.Context, accountID, oldHash, newHash string, keepSession []byte) error
+
 	// FindDeviceByTokenHash resolves a bearer token to its device. Revoked
 	// devices and disabled accounts are the caller's business to reject.
 	FindDeviceByTokenHash(ctx context.Context, tokenHash []byte) (*Device, error)

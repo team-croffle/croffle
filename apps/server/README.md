@@ -51,8 +51,9 @@ in with the username and password or paste the token. Internally both end up as
 the same thing — a token — so the two screens are one mechanism.
 
 Open the server URL in a browser for the dashboard. It shows the signed-in
-account's own data, and lets that account revoke its own devices and turn on
-one-time codes ([Authentication](#authentication)). An [operator](#operators)
+account's own data, and lets that account revoke its own devices, turn on
+one-time codes ([Authentication](#authentication)) and change its password
+under **Security** (every other browser is signed out; devices keep syncing). An [operator](#operators)
 also gets the operator screens: accounts, every device and token, teams, and the
 server itself — everything the commands below do.
 

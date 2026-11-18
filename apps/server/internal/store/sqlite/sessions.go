@@ -85,6 +85,27 @@ func (db *DB) DeleteSession(ctx context.Context, tokenHash []byte) error {
 	})
 }
 
+// ChangePassword sets the account's own new password and signs out every other
+// dashboard session, in one transaction; see store.Store.
+func (db *DB) ChangePassword(ctx context.Context, accountID, oldHash, newHash string, keepSession []byte) error {
+	if newHash == "" || oldHash == "" {
+		return errors.New("sqlite: empty password hash")
+	}
+	return db.withWriteTx(ctx, func(tx *sql.Tx) error {
+		if err := execOne(ctx, tx, "account", accountID,
+			`UPDATE account SET passwordHash = ? WHERE id = ? AND passwordHash = ?`,
+			newHash, accountID, oldHash); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM dash_session WHERE accountId = ? AND tokenHash <> ?`,
+			accountID, keepSession); err != nil {
+			return fmt.Errorf("sqlite: delete other sessions: %w", err)
+		}
+		return nil
+	})
+}
+
 // ResetPassword sets a new password and signs out every dashboard session of
 // the account, in one transaction. Device tokens are separate credentials and
 // stay; revoking them is a separate step.

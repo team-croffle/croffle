@@ -34,6 +34,10 @@ type Authenticator interface {
 	BeginOTP(ctx context.Context, accountID, username string) (auth.OTPEnrollment, error)
 	ConfirmOTP(ctx context.Context, accountID, code string) ([]string, error)
 	DisableOTP(ctx context.Context, username, password, code, remoteIP string) error
+
+	// ChangePassword is the account changing its own password; keepSession is
+	// the token hash of the dashboard session that asked.
+	ChangePassword(ctx context.Context, username, current, code, newPassword, remoteIP string, keepSession []byte) error
 }
 
 // IdentityOf returns the caller resolved by requireAuth. The second result is
@@ -252,6 +256,9 @@ func (s *server) writeAuthError(w http.ResponseWriter, r *http.Request, err erro
 		s.logAuth(r, slog.LevelWarn, "authentication rate limited", attrs)
 		w.Header().Set("Retry-After", strconv.Itoa(retryAfterSeconds))
 		writeError(w, http.StatusTooManyRequests, "too_many_attempts", "too many attempts, try again later")
+
+	case errors.Is(err, auth.ErrInvalidNewPassword):
+		writeError(w, http.StatusBadRequest, "invalid_request", "the new password must be 1 to 4096 bytes")
 
 	case errors.Is(err, auth.ErrMissingClientID):
 		writeError(w, http.StatusBadRequest, "invalid_request", "clientId is required")

@@ -160,6 +160,17 @@ type fakeStore struct {
 
 	otp      *store.OTP
 	recovery map[string]bool // hash -> used
+
+	keptSession []byte // ChangePassword's keepSession
+}
+
+func (f *fakeStore) ChangePassword(_ context.Context, accountID, oldHash, newHash string, keepSession []byte) error {
+	if f.account == nil || f.account.ID != accountID || f.account.PasswordHash != oldHash {
+		return store.ErrNotFound
+	}
+	f.account.PasswordHash = newHash
+	f.keptSession = keepSession
+	return nil
 }
 
 func (f *fakeStore) FindAccountByUsername(_ context.Context, username string) (*store.Account, error) {

@@ -5,6 +5,7 @@ approvals:
   - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "859785a", kind: summary }
   - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "c4f4a91", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-18", words: "V-3는 가로 해.", rev: "V-3 자동 명령에서 ./internal/auth 를 뺌(암호화는 저장소 계층에서만 하고 auth 는 바뀌지 않아 패턴에 맞는 테스트가 없음 — no tests to run)", kind: change }
+  - { role: user, by: bluenyang, at: "2026-11-19", words: "진행", rev: "c401f35", kind: change }
 summary_for_user: |
   [2026-11-19 변경, 작업 단위 추가 W-9 — rc.1 뒤] 로그인한 사용자가 대시보드 Security 탭에서 자기 비밀번호를 바꿉니다(`POST /dash/me/password`). 지금 비밀번호를 확인하고, 일회용 코드를 켠 계정은 코드도 받습니다(OTP 해제와 같은 확인 · 같은 시도 제한). 바꾸면 지금 이 브라우저 세션만 남고 다른 브라우저 로그인은 끊기며, 기기 토큰은 그대로입니다. 새 비밀번호 규칙은 운영자가 만들 때와 같습니다(비어 있지 않고 4096 바이트 이하). 로그에 한 줄 남기고 비밀번호는 남기지 않습니다. 새 의존성 · 마이그레이션 없음. 검증 V-14(Go 테스트 · 라이브 HTTP · 브라우저). 같은 PR 에 rc.1 확인에서 나온 문서 수정 두 가지를 조정으로 넣습니다: 서버 README 의 키 안내를 env 파일 방식으로(A-19), Docker 예시의 키 만들기가 기존 키 파일을 덮어쓰지 않게(A-20). 머지 뒤 `server-v0.2.0-rc.2`.
   [2026-11-18 변경 승인, 리뷰 1 F-2] S-7 을 사용자 답(질의서 A5)에 맞춰 바꿉니다: 팀에서 빠지면 연결이 끊어집니다. 서버는 그 팀의 행을 빠진 계정에 — 자기가 만든 행도 — 보내지 않고, 그 계정의 변경은 팀에 가지 않습니다. 행은 서버 · 팀 · 빠진 계정의 기기에 모두 남습니다. 가시성 규칙을 "공유하지 않은 내 행 또는 지금 속한 팀의 행"으로 고치고 픽스처 15 에 그 경우를 더합니다(W-5 안, 작업 단위 추가 없음). 빠진 계정의 사본을 독립 일정으로 바꾸는 일과 일정 분류는 공유 버전(1.3.2 · 0.2.1)으로 넘깁니다.
@@ -109,7 +110,7 @@ summary_for_user: |
 ### W-9 본인 비밀번호 변경 (`internal/store`, `internal/auth`, `internal/httpapi`, `apps/server/web`) — 2026-11-19 추가
 - store: `ChangePassword(accountID, passwordHash, keepSessionHash)` — 해시를 바꾸고 `keepSessionHash` 가 아닌 그 계정의 `dash_session` 을 한 트랜잭션에서 지웁니다(`ResetPassword` 와 같은 모양, A-7 의 경합 규칙 유지: 대시보드 로그인은 확인한 해시가 그대로일 때만 세션을 만듦).
 - auth: `ChangePassword(username, current, code, new, remoteIP)` — `DisableOTP` 처럼 `CheckPassword` 로 확인합니다(코드 없음은 `ErrInvalidCredentials`, 틀린 시도는 로그인과 같은 제한 `remoteIP|username`). 새 비밀번호는 비어 있지 않고 4096 바이트 이하(운영 API `maxPassword` 와 같음), 해시는 `HashPassword`.
-- httpapi: `POST /dash/me/password` `{currentPassword, newPassword, code?}` → `204`. 세션 필요 · CSRF 보호(`dashRoute`). 틀린 비밀번호 · 코드 `401 invalid_credentials`, 제한 `429`, 빈 · 너무 긴 새 비밀번호 `400`. 로그 `"password changed"`(account_id, request_id)만, 비밀번호 없음.
+- httpapi: `POST /dash/me/password` `{currentPassword, newPassword, code?}` → `204`. 세션 필요 · CSRF 보호(`dashRoute`). 틀린 비밀번호 · 코드 `401 unauthorized`(로그인과 같은 답, A-21), 제한 `429`, 빈 · 너무 긴 새 비밀번호 `400 invalid_request`. 로그 `"password changed"`(account_id, request_id)만, 비밀번호 없음.
 - web: `security-panel.vue` 에 "Change password" 폼(지금 · 새 · 새 확인, OTP 를 켰으면 코드). 두 새 비밀번호가 다르면 보내지 않음. 성공하면 안내 문구, 실패하면 서버 메시지.
 - 문서: README(en · ko) 대시보드 절에 한 줄, 릴리스 노트 0.2.0 에 한 줄.
 
@@ -448,6 +449,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
 - A-16 (2026-11-18, W-1, PR #138 CI · 1차 감사 F-2) 테스트 3개(`config_test.go`, `secretbox_test.go`, `secrets_test.go`)의 키 모양 고정값(13바이트로 풀리는 base64 문자열, 0x01 32바이트의 base64, 손상된 sealed 값)을 실행 중에 만들도록 바꾸고 W-1 커밋에 접어 브랜치 이력을 다시 씀 · 첫 CI 의 Gitleaks 가 `config_test.go:272` 를 `generic-api-key` 로 잡음. knowledge `2026-11-17_dependency-security-pitfalls` 의 `no-credential-literals-in-tests` 를 지키지 못한 PM 실수이고, 0.1.1 때 사용자 결정(예외 대신 이력 수정)에 따름. 옛 W-1 `678a6b8` → 새 `041c1e0`(이후 전 커밋 SHA 대응 `.loctx/reports/server-0.2.0/rewrite-sha-map.tsv`), 24 커밋 동일, 트리 차이는 세 테스트 파일뿐. 로컬 gitleaks(HEAD 기준) no leaks, 재실행 CI 통과. force-push 는 사용자가 실행("했다.")
 - A-17 (2026-11-18, W-1 · W-6, 리뷰 4 지적 1) 테스트 3개(`secretbox_test.go`, `store/sqlite/secrets_test.go`, `httpapi/live_admin_test.go`)에 남은 예시 TOTP secret 고정값(공개 문서의 예시 값, Gitleaks 는 잡지 않음)을 실행 중에 만든 값으로 바꿈. A-16 기록에 옮겨 적었던 인코딩된 테스트 값도 지움 · A-16 이 base64 키만 보고 TOTP secret 은 놓쳤음. 이력에는 W-1 `041c1e0` · W-6 `01efa88` 에 남아 있으며, 이력에서도 지울지는 사용자 결정(1차 감사 기록 `### 사용자 처리`)
 - A-18 (2026-11-19, W-8, rc.1 뒤 · 사용자 지시) 첫 배포용 Docker Compose 예시 `apps/server/docker/`(compose.yaml, README 영 · 한, 키 파일을 막는 .gitignore). 키는 Compose 가 호스트에서 읽는 env 파일(`croffle-secret.env`, 600)로 넘김 — 이미지는 uid 100 으로 실행되어, 호스트의 600 키 파일을 마운트하면 `permission denied` 로 시작하지 못함을 rc.1 이미지로 확인(compose 의 secrets uid/gid/mode 는 파일 secret 에 적용되지 않음). env 경로는 rc.1 이미지로 첫 배포 흐름(키 set · 운영자 생성 · 대시보드 로그인)까지 확인. master 직접 push 는 사용자 지시(intent waivers)
+- A-21 (2026-11-19, W-9) 틀린 지금 비밀번호 · 코드의 답을 설계에 적은 `401 invalid_credentials` 대신 로그인 · OTP 해제와 같은 `401 unauthorized` 로 · 기존 `writeAuthError` 를 그대로 써서 틀린 이유를 구분하지 않는 규칙을 지킴. 지금 비밀번호를 확인한 뒤 운영자가 그 사이 재설정했으면 바꾸지 않음(저장소가 옛 해시를 조건으로 갱신) · 확인과 저장 사이 경합 · W-9 커밋
 
 ## 우려
 1. **키를 잃으면 암호화된 OTP secret 을 되살릴 수 없습니다.** 서버는 뜨지 않고(S-2), 운영자는 키 없이 시작하려면 OTP 를 쓰는 계정의 OTP 를 CLI 로 해제해야 합니다(`user otp disable` 은 `DELETE FROM account_otp` 라 secret 을 읽지 않으므로 키 없이 됩니다 — `store/sqlite/otp.go:132`. 단 W-1 의 시작 검사보다 먼저 쓸 수 있어야 하므로, CLI 명령은 시작 검사를 거치지 않습니다). README 에 백업 주의를 둡니다.
