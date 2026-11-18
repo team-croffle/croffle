@@ -4,6 +4,7 @@ status: accepted
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "859785a", kind: summary }
   - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "c4f4a91", kind: change }
+  - { role: user, by: bluenyang, at: "2026-11-18", words: "V-3는 가로 해.", rev: "V-3 자동 명령에서 ./internal/auth 를 뺌(암호화는 저장소 계층에서만 하고 auth 는 바뀌지 않아 패턴에 맞는 테스트가 없음 — no tests to run)", kind: change }
 summary_for_user: |
   [2026-11-18 변경 승인, 리뷰 1 F-2] S-7 을 사용자 답(질의서 A5)에 맞춰 바꿉니다: 팀에서 빠지면 연결이 끊어집니다. 서버는 그 팀의 행을 빠진 계정에 — 자기가 만든 행도 — 보내지 않고, 그 계정의 변경은 팀에 가지 않습니다. 행은 서버 · 팀 · 빠진 계정의 기기에 모두 남습니다. 가시성 규칙을 "공유하지 않은 내 행 또는 지금 속한 팀의 행"으로 고치고 픽스처 15 에 그 경우를 더합니다(W-5 안, 작업 단위 추가 없음). 빠진 계정의 사본을 독립 일정으로 바꾸는 일과 일정 분류는 공유 버전(1.3.2 · 0.2.1)으로 넘깁니다.
   서버 0.2.0 을 작업 단위 8개로 나눴습니다: TOTP secret 암호화(AES-GCM, 새 의존성 없음) → 키 CLI(generate · rotate) → 운영자 역할(0006) → 다중 팀 CLI → 팀 범위 따라잡기(0007) → 운영 API `/dash/admin/*` → 대시보드 운영 화면 → 문서.
@@ -117,6 +118,8 @@ summary_for_user: |
 
 ## 검증 기준
 qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정했습니다(원본 `.loctx/reports/server-0.2.0/qa-checks.md`). qa-designer 가 짚은 spec 의 문제 10개는 설계에 반영했습니다(각 자리에 "qa-designer 지적 n"). PM 수정: V-13 의 "0.3" 판정을 지정한 4곳 기준으로 좁힘(0.3 계획을 가리키는 정당한 표기를 허용).
+> 2026-11-18 변경(사용자 "V-3는 가로 해."): V-3 자동 명령에서 `./internal/auth` 를 뺐습니다. 이 패키지는 암호화 작업에서 바뀌지 않아 패턴에 맞는 테스트가 없고(`no tests to run`), 같은 기능은 저장소 테스트 · `internal/httpapi` 의 `TestOTPEncryptLiveLoginAfterSealing`(A-15) · 라이브 단계 2~5 가 덮습니다.
+
 
 모든 검사는 `.agents/knowledge/2026-11-17_check-wording-and-raw-evidence.md`에 따라 실행합니다:
 - 명령 하나마다 별도의 원본 로그 파일(첫 줄 `$ 명령`, 본문 stdout·stderr 전체, 마지막 줄 `exit=N`)과 디렉터리별 `00-context.txt`(커밋 SHA · 시각 · `git status`)를 남깁니다.
@@ -164,7 +167,7 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
   - 검증 대상: S-1, S-10, W-1
   - 실행 방법:
     1) 자동 테스트:
-       `go -C apps/server test -v ./internal/secretbox ./internal/config ./internal/store/sqlite ./internal/auth ./internal/httpapi -run 'TestSecretBox|TestSeal|TestOpen|TestSecretKey|TestOTPEncrypt|TestMigratePlainOTP'`
+       `go -C apps/server test -v ./internal/secretbox ./internal/config ./internal/store/sqlite ./internal/httpapi -run 'TestSecretBox|TestSeal|TestOpen|TestSecretKey|TestOTPEncrypt|TestMigratePlainOTP'`
     2) 평문 DB 준비(0.1.1 방식): 임시 DB(`$TMP_DB`)에서 암호화 키 없이 서버를 띄워 계정 `alice`(`acct-1`)와 `bob`(`acct-2`)을 만들고, `alice`의 대시보드 세션에서 `POST /dash/otp/enroll` → `POST /dash/otp/confirm`으로 TOTP를 활성화하여 `account_otp.secret`에 base32 평문 시크릿 `$PLAIN_SECRET`이 저장된 것을 확인합니다.
     3) 키 설정 후 기동 및 자동 이전: 32바이트 키 `$KEY1`(base64)을 생성하여 (a) `CROFFLE_SECRET_KEY="$KEY1"`, (b) 끝에 줄바꿈(`\n`)이 포함된 키 파일 `CROFFLE_SECRET_KEY_FILE="$KEY1_FILE"` 두 방식으로 각각 서버를 기동합니다. 시작 JSON 로그와 `./apps/server/bin/croffle-server db info --json --db "$TMP_DB"`, SQLite `SELECT accountId, secret, enabledAt, lastStep FROM account_otp`를 확인합니다.
     4) 무중단 로그인 및 신규 등록 확인:
