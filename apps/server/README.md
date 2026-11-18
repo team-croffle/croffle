@@ -44,7 +44,8 @@ docker compose exec croffle-server croffle-server user create alice --password-s
 docker compose exec croffle-server croffle-server token issue alice --device-name "laptop"
 ```
 
-Also set a [secret key](#secret-key) before anyone turns on one-time codes.
+Also set a [secret key](#secret-key) before anyone turns on one-time codes; the
+[Compose example](./docker) starts with one.
 
 In the desktop app: **Settings → Sync**, enter the server URL, then either sign
 in with the username and password or paste the token. Internally both end up as
@@ -307,13 +308,21 @@ they cannot be stored as hashes. With a secret key they are stored encrypted
 and the server says so at start-up and on the operator screens.
 
 ```bash
-# Make a key and keep it outside the database volume.
-docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.key
+# Make a key in a file only you can read, outside the database volume.
+# set -C refuses to overwrite an existing file: a new key in place of the old
+# one locks out every secret sealed with it.
+umask 077; set -C
+echo "CROFFLE_SECRET_KEY=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate)" > croffle-secret.env
 ```
 
-Give it to the server as `CROFFLE_SECRET_KEY_FILE` (mounted as a Docker secret
-or a read-only file) or as `CROFFLE_SECRET_KEY`. At the next start the server
-encrypts every secret that is still plain; nobody has to set up codes again.
+Give it to the service with `env_file: [croffle-secret.env]`, as the
+[Compose example](./docker) does. Compose reads that file on the host, so it can
+stay readable by you alone. At the next start the server encrypts every secret
+that is still plain; nobody has to set up codes again.
+
+`CROFFLE_SECRET_KEY_FILE` works too, but the image runs as an unprivileged user
+(uid 100), so the mounted file has to be readable by that user: a key file only
+you can read (`600`) stops the server with `permission denied`.
 
 - **Back the key up separately from the database.** A copy of the database
   alone is then not enough to generate codes, and a lost key does not lose the
@@ -324,14 +333,17 @@ encrypts every secret that is still plain; nobody has to set up codes again.
   codes up again.
 - **To change the key**: stop the server, run `secret rotate` with the old key
   still configured, switch the configuration to the new key, and start the
-  server. With compose (the service still points at the old key):
+  server. With compose (`croffle-secret.env` still holds the old key; the new
+  one goes in on standard input):
 
   ```bash
+  umask 077; set -C
   docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.new
   docker compose stop croffle-server
-  docker compose run --rm -v "$PWD/croffle-secret.new:/new.key:ro" croffle-server \
-    secret rotate --new-key-file /new.key
-  mv croffle-secret.new croffle-secret.key   # the file the service mounts
+  docker compose run --rm -T croffle-server secret rotate --new-key-stdin < croffle-secret.new
+  # >| replaces the old key on purpose; keep a copy of the old one until the server is up.
+  printf 'CROFFLE_SECRET_KEY=%s\n' "$(cat croffle-secret.new)" >| croffle-secret.env
+  rm -f croffle-secret.new
   docker compose up -d
   ```
 
@@ -339,7 +351,15 @@ encrypts every secret that is still plain; nobody has to set up codes again.
   key until it restarts, so a code set up in between is sealed with the old key
   and the next start fails. To recover, keep the new key configured and run
   `secret rotate --new-key-file <new> --old-key-file <old>`: it opens secrets
-  sealed with either key and seals them all with the new one.
+  sealed with either key and seals them all with the new one. With compose, put
+  the bare old key in `croffle-secret.old` and pass both keys on standard input:
+
+  ```bash
+  { cat croffle-secret.old; sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env; } |
+    docker compose run --rm -T --entrypoint sh croffle-server -c 'umask 077; read -r old; read -r new
+      printf "%s\n" "$old" > /tmp/old.key
+      printf "%s\n" "$new" | croffle-server secret rotate --new-key-stdin --old-key-file /tmp/old.key'
+  ```
 
 - A server started with a key that does not match the stored secrets refuses
   to start and names the key the secrets were sealed with.

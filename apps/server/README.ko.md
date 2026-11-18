@@ -42,7 +42,8 @@ docker compose exec croffle-server croffle-server user create alice --password-s
 docker compose exec croffle-server croffle-server token issue alice --device-name "laptop"
 ```
 
-누군가 일회용 코드를 켜기 전에 [비밀 키](#비밀-키)도 설정해 두십시오.
+누군가 일회용 코드를 켜기 전에 [비밀 키](#비밀-키)도 설정해 두십시오. [Compose 예시](./docker)는
+처음부터 키를 넣고 시작합니다.
 
 데스크톱 앱에서 **설정 → 동기화**로 들어가 서버 URL을 넣고, 아이디·비밀번호로
 로그인하거나 토큰을 붙여넣으면 됩니다. 내부적으로는 둘 다 같은 것(토큰)으로
@@ -291,13 +292,20 @@ QR 코드를 읽고, 코드로 확인하고, 한 번만 보여주는 복구 코�
 저장하되 서버가 시작할 때와 운영 화면에서 그렇다고 알립니다.
 
 ```bash
-# 키를 만들어 데이터베이스 볼륨 밖에 둡니다.
-docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.key
+# 나만 읽을 수 있는 파일에, 데이터베이스 볼륨 밖에 키를 만듭니다.
+# set -C 는 이미 있는 파일을 덮어쓰지 않게 합니다. 옛 키 자리에 새 키가 들어가면
+# 옛 키로 잠긴 secret 을 모두 열 수 없게 됩니다.
+umask 077; set -C
+echo "CROFFLE_SECRET_KEY=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate)" > croffle-secret.env
 ```
 
-서버에는 `CROFFLE_SECRET_KEY_FILE`(Docker secret 이나 읽기 전용 파일로 마운트) 또는
-`CROFFLE_SECRET_KEY` 로 넘깁니다. 다음 시작 때 서버가 아직 평문인 secret 을 모두
-암호화합니다. 아무도 코드를 다시 등록하지 않아도 됩니다.
+서비스에는 [Compose 예시](./docker)처럼 `env_file: [croffle-secret.env]` 로 넘깁니다.
+Compose 가 호스트에서 이 파일을 읽으므로 파일을 나만 읽게 둘 수 있습니다. 다음 시작 때
+서버가 아직 평문인 secret 을 모두 암호화합니다. 아무도 코드를 다시 등록하지 않아도 됩니다.
+
+`CROFFLE_SECRET_KEY_FILE` 도 되지만, 이미지는 권한 없는 사용자(uid 100)로 실행되므로
+마운트한 파일을 그 사용자가 읽을 수 있어야 합니다. 나만 읽을 수 있는 키 파일(`600`)이면
+서버가 `permission denied` 로 시작하지 못합니다.
 
 - **키는 데이터베이스와 따로 백업하십시오.** 그러면 데이터베이스 사본만으로는 코드를
   만들 수 없고, 키를 잃어도 데이터베이스는 잃지 않습니다.
@@ -305,14 +313,17 @@ docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > crof
   일회용 코드를 `user otp disable`(키가 필요 없음)로 끄고, 키 없이 또는 새 키로 시작한
   뒤 다시 등록하게 하십시오.
 - **키를 바꾸려면** 서버를 멈추고, 옛 키가 설정된 채로 `secret rotate` 를 실행하고,
-  설정을 새 키로 바꾼 뒤 서버를 시작합니다. compose 라면(서비스는 아직 옛 키를 가리킴):
+  설정을 새 키로 바꾼 뒤 서버를 시작합니다. compose 라면(`croffle-secret.env` 에는 아직
+  옛 키가 있고, 새 키는 표준 입력으로 넘깁니다):
 
   ```bash
+  umask 077; set -C
   docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.new
   docker compose stop croffle-server
-  docker compose run --rm -v "$PWD/croffle-secret.new:/new.key:ro" croffle-server \
-    secret rotate --new-key-file /new.key
-  mv croffle-secret.new croffle-secret.key   # 서비스가 마운트하는 파일
+  docker compose run --rm -T croffle-server secret rotate --new-key-stdin < croffle-secret.new
+  # >| 는 일부러 옛 키를 바꿉니다. 서버가 뜰 때까지 옛 키 사본을 두십시오.
+  printf 'CROFFLE_SECRET_KEY=%s\n' "$(cat croffle-secret.new)" >| croffle-secret.env
+  rm -f croffle-secret.new
   docker compose up -d
   ```
 
@@ -320,6 +331,14 @@ docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > crof
   옛 키를 쓰므로, 그 사이에 등록한 코드는 옛 키로 잠기고 다음 시작이 실패합니다. 되돌리려면
   새 키를 설정한 채로 `secret rotate --new-key-file <새 키> --old-key-file <옛 키>` 를
   실행하십시오. 두 키 중 어느 것으로 잠긴 secret 이든 열어 모두 새 키로 잠급니다.
+  compose 라면 옛 키만 `croffle-secret.old` 에 넣고 두 키를 표준 입력으로 넘깁니다:
+
+  ```bash
+  { cat croffle-secret.old; sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env; } |
+    docker compose run --rm -T --entrypoint sh croffle-server -c 'umask 077; read -r old; read -r new
+      printf "%s\n" "$old" > /tmp/old.key
+      printf "%s\n" "$new" | croffle-server secret rotate --new-key-stdin --old-key-file /tmp/old.key'
+  ```
 
 - 저장된 secret 과 맞지 않는 키로 시작하면 서버는 시작을 거부하고, secret 을 잠근 키의
   id 를 알려 줍니다.
