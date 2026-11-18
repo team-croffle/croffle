@@ -2,6 +2,8 @@ package sqlite
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base32"
 	"encoding/base64"
 	"errors"
 	"strings"
@@ -47,21 +49,21 @@ func TestOTPEncryptLifecycle(t *testing.T) {
 	}
 	now := time.Now()
 
-	if err := db.StartOTP(ctx, "acct-1", "JBSWY3DPEHPK3PXP", now); err != nil {
+	if err := db.StartOTP(ctx, "acct-1", exampleSecret, now); err != nil {
 		t.Fatal(err)
 	}
 	stored := readSecret(t, db, "acct-1")
-	if !strings.HasPrefix(stored, "v1:"+box.KeyID()+":") || strings.Contains(stored, "JBSWY3DPEHPK3PXP") {
+	if !strings.HasPrefix(stored, "v1:"+box.KeyID()+":") || strings.Contains(stored, exampleSecret) {
 		t.Fatalf("stored secret %q is not sealed with the key", stored)
 	}
 	otp, err := db.FindOTP(ctx, "acct-1")
-	if err != nil || otp.Secret != "JBSWY3DPEHPK3PXP" {
+	if err != nil || otp.Secret != exampleSecret {
 		t.Fatalf("FindOTP = %+v, %v", otp, err)
 	}
 	if err := db.EnableOTP(ctx, "acct-1", "OTHERSECRET", 10, nil, now); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("enabling with another secret: %v", err)
 	}
-	if err := db.EnableOTP(ctx, "acct-1", "JBSWY3DPEHPK3PXP", 10, [][]byte{[]byte("h")}, now); err != nil {
+	if err := db.EnableOTP(ctx, "acct-1", exampleSecret, 10, [][]byte{[]byte("h")}, now); err != nil {
 		t.Fatalf("enabling the pending secret: %v", err)
 	}
 	if state, err := db.OTPStatus(ctx, "acct-1"); err != nil || state != "enabled" {
@@ -98,10 +100,10 @@ func TestMigratePlainOTPSealsOnStart(t *testing.T) {
 	ctx := context.Background()
 	newAccount(t, db, "acct-1", "alice")
 	now := time.Now()
-	if err := db.StartOTP(ctx, "acct-1", "JBSWY3DPEHPK3PXP", now); err != nil {
+	if err := db.StartOTP(ctx, "acct-1", exampleSecret, now); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.EnableOTP(ctx, "acct-1", "JBSWY3DPEHPK3PXP", 42, nil, now); err != nil {
+	if err := db.EnableOTP(ctx, "acct-1", exampleSecret, 42, nil, now); err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,7 +112,7 @@ func TestMigratePlainOTPSealsOnStart(t *testing.T) {
 	if err != nil || report.Plain != 1 || report.Sealed != 0 {
 		t.Fatalf("no key: %+v, %v", report, err)
 	}
-	if readSecret(t, db, "acct-1") != "JBSWY3DPEHPK3PXP" {
+	if readSecret(t, db, "acct-1") != exampleSecret {
 		t.Fatal("no key: the secret changed")
 	}
 
@@ -131,7 +133,7 @@ func TestMigratePlainOTPSealsOnStart(t *testing.T) {
 		t.Fatalf("sealing changed the enrolment: enabledAt %v, lastStep %d", enabledAt, lastStep)
 	}
 	otp, err := db.FindOTP(ctx, "acct-1")
-	if err != nil || otp.Secret != "JBSWY3DPEHPK3PXP" {
+	if err != nil || otp.Secret != exampleSecret {
 		t.Fatalf("FindOTP after sealing = %+v, %v", otp, err)
 	}
 	// A second start with the same key changes nothing.
@@ -152,7 +154,7 @@ func TestSecretBoxMissingKeyStopsStart(t *testing.T) {
 	if _, err := db.PrepareSecrets(ctx, testBox(t, 1)); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.StartOTP(ctx, "acct-1", "JBSWY3DPEHPK3PXP", time.Now()); err != nil {
+	if err := db.StartOTP(ctx, "acct-1", exampleSecret, time.Now()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -238,3 +240,14 @@ func TestSecretRotateIsAllOrNothing(t *testing.T) {
 		t.Fatal("a failed rotate changed another secret")
 	}
 }
+
+// exampleSecret is a base32 TOTP secret made when the tests start: no
+// secret-shaped literal sits in the tree (knowledge: no credential literals
+// in tests).
+var exampleSecret = func() string {
+	buf := make([]byte, 10)
+	if _, err := rand.Read(buf); err != nil {
+		panic(err)
+	}
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(buf)
+}()
