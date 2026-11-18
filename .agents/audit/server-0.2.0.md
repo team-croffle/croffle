@@ -118,6 +118,8 @@ A-15는 `internal/httpapi`의 `no tests to run`을 해소하기 위해 `TestOTPE
 PM 보완(사용자 결정이 필요 없는 지적):
 
 - F-2: spec 조정 기록 A-16 을 더함.
+- 2026-11-18 이어서, 사용자: "V-12 빠르게 하고 배포해보자 그럼". PM 은 이 말을 V-12 3-c 를 다시 하고 나서 머지 · rc 로 가라는 지시로 받고, 남은 두 질문(예시 TOTP secret 의 이력 삭제, Vue UI 범위)은 각각 "가"(이력은 다시 쓰지 않음 · UI 다듬기는 다음 서버 버전 로드맵)로 하겠다고 알렸습니다. 사용자는 이의 없이 V-12 를 진행했습니다("AlphaRetro와 AfterLeave가 생김" 뒤 로그 제출).
+- V-12 3-c 다시 실행(사용자 PC 의 1.3.1, 동기화를 끄고 팀 행 수정 · 개인 일정을 만든 뒤 한 번): 같은 회차에서 묶음 403 → 단독 403(Rejected) → 개인 일정 push 200. 판정 일치(`reports/judgement.md` V-12, `v12-desktop-131-real-sync/13-*`, `14-*`). OS · 빌드 번호는 받지 못해 V-12 의 환경 세부만 확인 불가로 남음.
 - Q-1: qa-designer 의 사전 실행은 `reports/qa-checks.md` §4 의 요약(대상 트리 `c88a17a` = spec 작성 당시의 master 계열 HEAD, 구현 전)만 있고 명령별 원본은 없습니다. 실행하지 못한 V-n 의 당시 기록도 없습니다.
 - F-1: 후속 리뷰 4(pl/code-reviewer gpt-6.1-sol, 대상 `05b6ceb..6a8a6cb` + 다시 쓴 테스트 3개, `reports/review4.md`): PASS with findings. 지적 1(남은 예시 TOTP secret 고정값, A-16 기록의 인코딩 값)은 A-17 `15d5029` 로 고침. 지적 2(최종 tree 의 게이트 기록 없음)는 최종 HEAD 에서 `run-gates.sh audit` 를 다시 돌려 남김.
 - F-3 · F-4: `reports/judgement.md` 를 조건별(기대 / 원본 파일:줄 / 판정)로 다시 씀. V-11 은 보강 재실행(`v11-dashboard-operator-ui-run2/`: 클립보드 = 토큰, pageerror · 외부 요청 · 실패 요청 0, 오류 응답은 로그인 전 `GET /dash/me 401` 뿐, 일반 계정의 자기 기기 회수). V-3 · V-4 라이브 단계를 15d5029 에서 다시 실행(`final-15d5029/`, 각 `00-context.txt` 에 SHA · 바이너리 버전 · git status). V-13 은 README 22개 항목과 릴리스 노트 절별로 영 · 한 대조. V-1 은 최종 HEAD 에서 다시 실행. V-12 는 3-c(같은 묶음의 개인 일정 accepted)와 환경 세부를 **확인 불가**로 고쳐 적음 — 처리는 사용자에게 물음.
