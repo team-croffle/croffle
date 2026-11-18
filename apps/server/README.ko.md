@@ -296,7 +296,8 @@ QR 코드를 읽고, 코드로 확인하고, 한 번만 보여주는 복구 코�
 # set -C 는 이미 있는 파일을 덮어쓰지 않게 합니다. 옛 키 자리에 새 키가 들어가면
 # 옛 키로 잠긴 secret 을 모두 열 수 없게 됩니다.
 umask 077; set -C
-echo "CROFFLE_SECRET_KEY=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate)" > croffle-secret.env
+key=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate) && [ -n "$key" ] &&
+  echo "CROFFLE_SECRET_KEY=$key" > croffle-secret.env
 ```
 
 서비스에는 [Compose 예시](./docker)처럼 `env_file: [croffle-secret.env]` 로 넘깁니다.
@@ -314,27 +315,28 @@ Compose 가 호스트에서 이 파일을 읽으므로 파일을 나만 읽게 �
   뒤 다시 등록하게 하십시오.
 - **키를 바꾸려면** 서버를 멈추고, 옛 키가 설정된 채로 `secret rotate` 를 실행하고,
   설정을 새 키로 바꾼 뒤 서버를 시작합니다. compose 라면(`croffle-secret.env` 에는 아직
-  옛 키가 있고, 새 키는 표준 입력으로 넘깁니다):
+  옛 키가 있고, 새 키는 표준 입력으로 넘깁니다). 각 단계는 앞 단계가 성공했을 때만 실행되므로,
+  rotate 가 실패하면 옛 키 설정이 그대로 남습니다:
 
   ```bash
   umask 077; set -C
-  docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate > croffle-secret.new
-  docker compose stop croffle-server
-  docker compose run --rm -T croffle-server secret rotate --new-key-stdin < croffle-secret.new
-  # >| 는 일부러 옛 키를 바꿉니다. 서버가 뜰 때까지 옛 키 사본을 두십시오.
-  printf 'CROFFLE_SECRET_KEY=%s\n' "$(cat croffle-secret.new)" >| croffle-secret.env
-  rm -f croffle-secret.new
-  docker compose up -d
+  cp croffle-secret.env croffle-secret.env.old   # 서버가 뜰 때까지 두는 옛 키
+  new=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0 secret generate) && [ -n "$new" ] &&
+    docker compose stop croffle-server &&
+    printf '%s\n' "$new" | docker compose run --rm -T croffle-server secret rotate --new-key-stdin &&
+    printf 'CROFFLE_SECRET_KEY=%s\n' "$new" >| croffle-secret.env &&   # >| 는 일부러 바꿉니다
+    docker compose up -d
   ```
 
   서버가 떠 있는 동안의 rotate 는 안전하지 않습니다. 떠 있는 서버는 다시 시작할 때까지
   옛 키를 쓰므로, 그 사이에 등록한 코드는 옛 키로 잠기고 다음 시작이 실패합니다. 되돌리려면
   새 키를 설정한 채로 `secret rotate --new-key-file <새 키> --old-key-file <옛 키>` 를
   실행하십시오. 두 키 중 어느 것으로 잠긴 secret 이든 열어 모두 새 키로 잠급니다.
-  compose 라면 옛 키만 `croffle-secret.old` 에 넣고 두 키를 표준 입력으로 넘깁니다:
+  compose 라면 옛 키는 `croffle-secret.env.old` 에, 새 키는 설정에 둔 채 두 키를 표준 입력으로
+  넘깁니다:
 
   ```bash
-  { cat croffle-secret.old; sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env; } |
+  { sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env.old; sed -n 's/^CROFFLE_SECRET_KEY=//p' croffle-secret.env; } |
     docker compose run --rm -T --entrypoint sh croffle-server -c 'umask 077; read -r old; read -r new
       printf "%s\n" "$old" > /tmp/old.key
       printf "%s\n" "$new" | croffle-server secret rotate --new-key-stdin --old-key-file /tmp/old.key'

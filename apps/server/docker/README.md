@@ -8,7 +8,8 @@ A first deployment, with the secret key from the start. Run these in this folder
 # 1. The secret key, readable by you alone. Keep a copy apart from the data
 #    volume: without it, accounts using one-time codes cannot sign in.
 umask 077; set -C   # never overwrites an existing file (file exists)
-echo "CROFFLE_SECRET_KEY=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0-rc.1 secret generate)" > croffle-secret.env
+key=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0-rc.1 secret generate) && [ -n "$key" ] &&
+  echo "CROFFLE_SECRET_KEY=$key" > croffle-secret.env
 
 # 2. Start. The log says "secret key: encrypted 0 one-time code secrets".
 docker compose up -d
