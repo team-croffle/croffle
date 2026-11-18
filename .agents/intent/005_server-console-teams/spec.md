@@ -6,6 +6,7 @@ approvals:
   - { role: user, by: bluenyang, at: "2026-11-18", words: "진행", rev: "c4f4a91", kind: change }
   - { role: user, by: bluenyang, at: "2026-11-18", words: "V-3는 가로 해.", rev: "V-3 자동 명령에서 ./internal/auth 를 뺌(암호화는 저장소 계층에서만 하고 auth 는 바뀌지 않아 패턴에 맞는 테스트가 없음 — no tests to run)", kind: change }
 summary_for_user: |
+  [2026-11-19 변경, 작업 단위 추가 W-9 — rc.1 뒤] 로그인한 사용자가 대시보드 Security 탭에서 자기 비밀번호를 바꿉니다(`POST /dash/me/password`). 지금 비밀번호를 확인하고, 일회용 코드를 켠 계정은 코드도 받습니다(OTP 해제와 같은 확인 · 같은 시도 제한). 바꾸면 지금 이 브라우저 세션만 남고 다른 브라우저 로그인은 끊기며, 기기 토큰은 그대로입니다. 새 비밀번호 규칙은 운영자가 만들 때와 같습니다(비어 있지 않고 4096 바이트 이하). 로그에 한 줄 남기고 비밀번호는 남기지 않습니다. 새 의존성 · 마이그레이션 없음. 검증 V-14(Go 테스트 · 라이브 HTTP · 브라우저). 같은 PR 에 rc.1 확인에서 나온 문서 수정 두 가지를 조정으로 넣습니다: 서버 README 의 키 안내를 env 파일 방식으로(A-19), Docker 예시의 키 만들기가 기존 키 파일을 덮어쓰지 않게(A-20). 머지 뒤 `server-v0.2.0-rc.2`.
   [2026-11-18 변경 승인, 리뷰 1 F-2] S-7 을 사용자 답(질의서 A5)에 맞춰 바꿉니다: 팀에서 빠지면 연결이 끊어집니다. 서버는 그 팀의 행을 빠진 계정에 — 자기가 만든 행도 — 보내지 않고, 그 계정의 변경은 팀에 가지 않습니다. 행은 서버 · 팀 · 빠진 계정의 기기에 모두 남습니다. 가시성 규칙을 "공유하지 않은 내 행 또는 지금 속한 팀의 행"으로 고치고 픽스처 15 에 그 경우를 더합니다(W-5 안, 작업 단위 추가 없음). 빠진 계정의 사본을 독립 일정으로 바꾸는 일과 일정 분류는 공유 버전(1.3.2 · 0.2.1)으로 넘깁니다.
   서버 0.2.0 을 작업 단위 8개로 나눴습니다: TOTP secret 암호화(AES-GCM, 새 의존성 없음) → 키 CLI(generate · rotate) → 운영자 역할(0006) → 다중 팀 CLI → 팀 범위 따라잡기(0007) → 운영 API `/dash/admin/*` → 대시보드 운영 화면 → 문서.
   intent 와 다른 점: 로드맵의 "scope별 커서"를 클라이언트 쪽 protocol 확장으로 열지 않고, 서버가 기기별로 "이 팀을 처음부터 받았는지"를 기록해 새 팀에 들어간 기기에 410 을 주는 방식으로 했습니다. 데스크톱 1.3.x 가 이미 410 이면 스냅샷을 다시 받으므로 데스크톱 수정이 없습니다. 대신 팀에 들어갈 때마다 그 계정의 기기가 전체 스냅샷을 받습니다(우려 3).
@@ -24,6 +25,7 @@ summary_for_user: |
 - S-9 데스크톱 1.3.0 · 1.3.1 은 바꾸지 않아도 0.2.0 서버와 동기화됩니다. protocol 1 의 요청 · 응답에서 빠지거나 뜻이 바뀌는 필드가 없고, `/health` 의 `protocol` 은 `{min: 1, max: 1}` 그대로입니다. 새 기능은 `features` 로 알립니다. ← 바라는 결과 5, 제약 1
 - S-10 서버는 바이너리 하나와 SQLite 하나로 뜹니다. 새 설정은 모두 선택이고, 키는 외부 서비스를 요구하지 않습니다. 새 Go 의존성은 없습니다(암호화는 표준 `crypto/aes` · `crypto/cipher`). ← 제약 2 · 3
 - S-11 README(en · ko)에 운영자 · 키(생성 · 설정 · 교체 · 백업 주의) · 팀 안내와 호환 표가 생기고, 릴리스 노트 `docs/server/release/0.2.0.md` 가 생깁니다. ← 계획 5
+- S-12 로그인한 사용자는 대시보드에서 자기 비밀번호를 바꿀 수 있습니다. 지금 비밀번호를 확인하고, 일회용 코드를 켠 계정은 코드(또는 복구 코드)도 확인합니다. 바꾸면 그 요청을 보낸 브라우저 세션만 남고 그 계정의 다른 대시보드 세션은 모두 끊기며, 기기 토큰은 그대로입니다. ← 계획 6, 질의서 6
 
 ## 설계
 
@@ -104,6 +106,13 @@ summary_for_user: |
 - `docs/server/release/0.2.0.md` 를 `.github/release-notes.md` 규약대로. en · ko 내용이 같아야 합니다.
 - 번호 재조정 전 표기로 다중 팀을 "0.3" 이라 적은 Go 주석 4곳(`internal/store/sqlite/pull.go:21`, `internal/store/store.go:59`, `internal/auth/service.go:51`, `internal/httpapi/auth.go:274`)을 바로잡습니다. 커밋된 마이그레이션(`0001_init.sql:116`)의 주석은 그대로 둡니다. (qa-designer 지적 10)
 
+### W-9 본인 비밀번호 변경 (`internal/store`, `internal/auth`, `internal/httpapi`, `apps/server/web`) — 2026-11-19 추가
+- store: `ChangePassword(accountID, passwordHash, keepSessionHash)` — 해시를 바꾸고 `keepSessionHash` 가 아닌 그 계정의 `dash_session` 을 한 트랜잭션에서 지웁니다(`ResetPassword` 와 같은 모양, A-7 의 경합 규칙 유지: 대시보드 로그인은 확인한 해시가 그대로일 때만 세션을 만듦).
+- auth: `ChangePassword(username, current, code, new, remoteIP)` — `DisableOTP` 처럼 `CheckPassword` 로 확인합니다(코드 없음은 `ErrInvalidCredentials`, 틀린 시도는 로그인과 같은 제한 `remoteIP|username`). 새 비밀번호는 비어 있지 않고 4096 바이트 이하(운영 API `maxPassword` 와 같음), 해시는 `HashPassword`.
+- httpapi: `POST /dash/me/password` `{currentPassword, newPassword, code?}` → `204`. 세션 필요 · CSRF 보호(`dashRoute`). 틀린 비밀번호 · 코드 `401 invalid_credentials`, 제한 `429`, 빈 · 너무 긴 새 비밀번호 `400`. 로그 `"password changed"`(account_id, request_id)만, 비밀번호 없음.
+- web: `security-panel.vue` 에 "Change password" 폼(지금 · 새 · 새 확인, OTP 를 켰으면 코드). 두 새 비밀번호가 다르면 보내지 않음. 성공하면 안내 문구, 실패하면 서버 메시지.
+- 문서: README(en · ko) 대시보드 절에 한 줄, 릴리스 노트 0.2.0 에 한 줄.
+
 ## 작업 단위
 각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트(`make -C apps/server check`, 대시보드를 고치면 `pnpm --dir apps/server/web build`, 공통 게이트)를 통과합니다.
 
@@ -115,6 +124,7 @@ summary_for_user: |
 - [x] W-6 (1b86743) 운영 API `/dash/admin/*` — S-8, S-4
 - [x] W-7 (c0f851b) 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
 - [x] W-8 (333ba62) README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
+- [ ] W-9 본인 비밀번호 변경(store · auth · `POST /dash/me/password` · Security 탭 · 문서 한 줄) — S-12
 
 ## 검증 기준
 qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정했습니다(원본 `.loctx/reports/server-0.2.0/qa-checks.md`). qa-designer 가 짚은 spec 의 문제 10개는 설계에 반영했습니다(각 자리에 "qa-designer 지적 n"). PM 수정: V-13 의 "0.3" 판정을 지정한 4곳 기준으로 좁힘(0.3 계획을 가리키는 정당한 표기를 허용).
@@ -403,6 +413,21 @@ qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정�
     3) 설계 W-8 이 짚은 4곳(`pull.go:21`, `store.go:59`, `service.go:51`, `auth.go:274` — 줄 번호는 구현 뒤 바뀔 수 있으므로 그 주석 문장으로 찾음)에 다중 팀 · 팀별 커서를 "0.3" 으로 가리키는 표기가 없고, `grep -rn "0\.3" apps/server/internal/` 의 나머지 결과는 `0001_init.sql:116` 과, 0.3 을 공유 권한 등 실제 0.3 계획으로 가리키는 줄뿐입니다(결과 줄마다 판정을 기록).
   - 실패 판정: 영/한 README 중 한쪽이라도 위 항목이 누락되거나 내용이 어긋나거나, 0.1.1 한계 문구가 모순되게 남아 있거나, `docs/server/release/0.2.0.md`가 없거나 템플릿을 따르지 않거나, `0001_init.sql` 밖의 `apps/server/internal/` 코드에 `"0.3"` 주석이 남아 있으면 실패입니다.
   - 증적 경로: `.loctx/reports/server-0.2.0/v13-docs-release-note-and-comments/`
+
+- V-14 **본인 비밀번호 변경(`POST /dash/me/password`) · 다른 세션 종료 · 지금 세션 유지 · 기기 토큰 유지 · OTP 확인 · CSRF · 로그에 비밀번호 없음 (음성 확인 포함)**
+  - 검증 대상: S-12, W-9
+  - 실행 방법:
+    1) 자동 테스트: `go -C apps/server test -list 'TestChangePassword|TestDashChangePassword' ./internal/...` 로 대상이 있는지 기록한 뒤 `go -C apps/server test -v ./internal/... -run 'TestChangePassword|TestDashChangePassword'`.
+    2) `0.0.0.0:8787` 에 띄운 로컬 서버(새 DB)에서 일반 계정 `erin` 으로: 브라우저 세션 둘(`$A`, `$B`)과 기기 토큰 `$T` 를 만든 뒤
+       - 틀린 지금 비밀번호 → `401`; 빈 새 비밀번호 → `400`; `Origin: https://evil.example` 로 → `403 cross_origin`
+       - `$A` 로 바른 요청 → `204`; 직후 `$A` 의 `GET /dash/me` `200`, `$B` 의 `GET /dash/me` `401`, `$T` 의 `POST /auth/whoami` `200`
+       - 옛 비밀번호로 `POST /dash/login` `401`, 새 비밀번호로 `200`
+       - `erin` 에 OTP 를 켠 뒤 코드 없이 → `401`, 바른 코드와 함께 → `204`
+       - 서버 stdout 에서 `"password changed"` 줄을 확인하고, 쓴 비밀번호 문자열들이 로그에 `0` 건인지 셉니다.
+    3) `[수동 · Linux · Chrome]` (스크립트 브라우저) Security 탭에서 폼으로 바꾸고, 새 확인이 다르면 요청이 나가지 않는지, 성공 문구가 보이는지, 콘솔 오류 · 외부 요청이 없는지 확인합니다.
+  - 기대 결과: 위의 상태 코드가 모두 그대로 나오고, 로그에 비밀번호가 없습니다.
+  - 실패 판정: 상태 코드 하나라도 다르거나, 다른 세션이 살아 있거나 지금 세션 · 기기 토큰이 끊기거나, 로그에 비밀번호가 나오거나, `-list` 에 대상 테스트가 없으면 실패입니다.
+  - 증적 경로: `.loctx/reports/server-0.2.0/v14-self-password-change/`
 
 ## 조정 기록
 - A-1 (2026-11-18, W-4) 운영자가 정하는 팀 id(`team create --id`)를 1–64자 `[a-z0-9-]` 로 제한 · 운영 API 경로(`/dash/admin/teams/{id}`)와 로그에 그대로 들어가므로. 없는 팀에 `add-member` 하면 외래 키 오류 대신 `ErrNotFound` · W-4 커밋
