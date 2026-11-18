@@ -6,7 +6,7 @@
 services:
   croffle-server:
     # Pin a version; :latest moves with every stable release.
-    image: ghcr.io/team-croffle/croffle-server:0.2.0-rc.1
+    image: ghcr.io/team-croffle/croffle-server:0.2.0-rc.2
     restart: unless-stopped
     env_file:
       - croffle-secret.env
