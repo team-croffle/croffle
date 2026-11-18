@@ -1,6 +1,8 @@
 package secretbox
 
 import (
+	"crypto/rand"
+	"encoding/base32"
 	"encoding/base64"
 	"errors"
 	"regexp"
@@ -22,21 +24,21 @@ func TestSecretBoxSealOpenRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sealed, err := box.Seal("acct-1", "JBSWY3DPEHPK3PXP")
+	sealed, err := box.Seal("acct-1", exampleSecret)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !regexp.MustCompile(`^v1:[0-9a-f]{8}:[A-Za-z0-9+/]+=*$`).MatchString(sealed) {
 		t.Fatalf("sealed value %q has the wrong shape", sealed)
 	}
-	if strings.Contains(sealed, "JBSWY3DPEHPK3PXP") {
+	if strings.Contains(sealed, exampleSecret) {
 		t.Fatal("sealed value contains the plain secret")
 	}
 	if id, _ := KeyIDOf(sealed); id != box.KeyID() {
 		t.Fatalf("key id %q, want %q", id, box.KeyID())
 	}
 	plain, err := box.Open("acct-1", sealed)
-	if err != nil || plain != "JBSWY3DPEHPK3PXP" {
+	if err != nil || plain != exampleSecret {
 		t.Fatalf("Open = %q, %v", plain, err)
 	}
 }
@@ -52,7 +54,7 @@ func TestSecretBoxSealUsesAFreshNonce(t *testing.T) {
 
 func TestSecretBoxOpenRefusesAnotherAccount(t *testing.T) {
 	box, _ := New(testKey(t, 1))
-	sealed, _ := box.Seal("acct-1", "JBSWY3DPEHPK3PXP")
+	sealed, _ := box.Seal("acct-1", exampleSecret)
 	if _, err := box.Open("acct-2", sealed); !errors.Is(err, ErrDamaged) {
 		t.Fatalf("Open with another account id: %v, want ErrDamaged", err)
 	}
@@ -60,7 +62,7 @@ func TestSecretBoxOpenRefusesAnotherAccount(t *testing.T) {
 
 func TestSecretBoxOpenRefusesTampering(t *testing.T) {
 	box, _ := New(testKey(t, 1))
-	sealed, _ := box.Seal("acct-1", "JBSWY3DPEHPK3PXP")
+	sealed, _ := box.Seal("acct-1", exampleSecret)
 	raw, _ := base64.StdEncoding.DecodeString(sealed[len("v1:")+9:])
 	raw[len(raw)-1] ^= 1
 	tampered := sealed[:len("v1:")+9] + base64.StdEncoding.EncodeToString(raw)
@@ -75,7 +77,7 @@ func TestSecretBoxOpenRefusesTampering(t *testing.T) {
 func TestSecretBoxMismatchedKeyIsNamed(t *testing.T) {
 	one, _ := New(testKey(t, 1))
 	two, _ := New(testKey(t, 2))
-	sealed, _ := one.Seal("acct-1", "JBSWY3DPEHPK3PXP")
+	sealed, _ := one.Seal("acct-1", exampleSecret)
 	_, err := two.Open("acct-1", sealed)
 	if !errors.Is(err, ErrWrongKey) || !strings.Contains(err.Error(), one.KeyID()) {
 		t.Fatalf("Open with another key: %v, want ErrWrongKey naming %s", err, one.KeyID())
@@ -84,18 +86,18 @@ func TestSecretBoxMismatchedKeyIsNamed(t *testing.T) {
 
 func TestSecretBoxOpensPlainValues(t *testing.T) {
 	box, _ := New(testKey(t, 1))
-	if plain, err := box.Open("acct-1", "JBSWY3DPEHPK3PXP"); err != nil || plain != "JBSWY3DPEHPK3PXP" {
+	if plain, err := box.Open("acct-1", exampleSecret); err != nil || plain != exampleSecret {
 		t.Fatalf("Open(plain) = %q, %v", plain, err)
 	}
 }
 
 func TestSecretBoxMissingKeyRefusesSealedValues(t *testing.T) {
 	box, _ := New(testKey(t, 1))
-	sealed, _ := box.Seal("acct-1", "JBSWY3DPEHPK3PXP")
+	sealed, _ := box.Seal("acct-1", exampleSecret)
 	if _, err := Plain.Open("acct-1", sealed); !errors.Is(err, ErrNoKey) {
 		t.Fatalf("Plain.Open(sealed): %v, want ErrNoKey", err)
 	}
-	if stored, _ := Plain.Seal("acct-1", "JBSWY3DPEHPK3PXP"); stored != "JBSWY3DPEHPK3PXP" {
+	if stored, _ := Plain.Seal("acct-1", exampleSecret); stored != exampleSecret {
 		t.Fatalf("Plain.Seal changed the value: %q", stored)
 	}
 	if Plain.KeyID() != "" {
@@ -136,3 +138,14 @@ func TestSecretGenerateKey(t *testing.T) {
 		t.Fatalf("generated key does not parse: %v", err)
 	}
 }
+
+// exampleSecret is a base32 TOTP secret made when the tests start: no
+// secret-shaped literal sits in the tree (knowledge: no credential literals
+// in tests).
+var exampleSecret = func() string {
+	buf := make([]byte, 10)
+	if _, err := rand.Read(buf); err != nil {
+		panic(err)
+	}
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(buf)
+}()

@@ -3,6 +3,8 @@ package httpapi_test
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/base32"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -237,7 +239,7 @@ func TestDashAdminAccounts(t *testing.T) {
 	wantStatus(t, "missing account", code, http.StatusNotFound, body)
 
 	// OTP off by the operator.
-	if err := s.db.StartOTP(context.Background(), carolID, "JBSWY3DPEHPK3PXP", time.Now()); err != nil {
+	if err := s.db.StartOTP(context.Background(), carolID, exampleSecret(), time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	code, body = s.do(t, http.MethodPost, "/dash/admin/accounts/"+carolID+"/otp/disable", map[string]any{}, alice, nil)
@@ -443,4 +445,14 @@ func TestDashAdminMethodNotAllowedNamesEveryMethod(t *testing.T) {
 	if res.StatusCode != http.StatusMethodNotAllowed || res.Header.Get("Allow") != "GET, POST" {
 		t.Fatalf("PUT = %d, Allow %q", res.StatusCode, res.Header.Get("Allow"))
 	}
+}
+
+// exampleSecret returns a base32 TOTP secret made at run time (knowledge: no
+// credential literals in tests).
+func exampleSecret() string {
+	buf := make([]byte, 10)
+	if _, err := rand.Read(buf); err != nil {
+		panic(err)
+	}
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(buf)
 }
