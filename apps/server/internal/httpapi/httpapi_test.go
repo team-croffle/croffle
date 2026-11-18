@@ -70,6 +70,10 @@ func (allowAnyToken) DisableOTP(context.Context, string, string, string, string)
 	return auth.ErrInvalidCredentials
 }
 
+func (allowAnyToken) ChangePassword(context.Context, string, string, string, string, string, []byte) error {
+	return auth.ErrInvalidCredentials
+}
+
 func testHandler(t *testing.T, mutate func(*Options)) http.Handler {
 	t.Helper()
 	o := Options{

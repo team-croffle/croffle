@@ -165,6 +165,12 @@ export const api = {
     }),
   otpDisable: (password: string, code: string) =>
     request<void>('dash/otp/disable', { method: 'POST', body: JSON.stringify({ password, code }) }),
+  /** Changes the signed-in account's own password; other browsers are signed out. */
+  changePassword: (currentPassword: string, newPassword: string, code = '') =>
+    request<void>('dash/me/password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword, code: code || undefined }),
+    }),
   rows: (afterTable = '', afterRowId = '', limit = 50) =>
     request<{ rows: Row[]; hasMore: boolean; serverSeq: number }>(
       `dash/rows?limit=${limit}&afterTable=${encodeURIComponent(afterTable)}&afterRowId=${encodeURIComponent(afterRowId)}`,

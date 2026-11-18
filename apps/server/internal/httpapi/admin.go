@@ -27,7 +27,7 @@ type Admin interface {
 }
 
 // maxPassword matches the CLI's --password-stdin limit.
-const maxPassword = 4096
+const maxPassword = auth.MaxPassword
 
 // newAdminID returns prefix-<16 hex>, the shape the CLI generates.
 func newAdminID(prefix string) string {

@@ -74,6 +74,10 @@ func (f *fakeAuth) ConfirmOTP(_ context.Context, _, code string) ([]string, erro
 	return f.recovery, f.otpErr
 }
 
+func (f *fakeAuth) ChangePassword(context.Context, string, string, string, string, string, []byte) error {
+	return f.otpErr
+}
+
 func (f *fakeAuth) DisableOTP(_ context.Context, _, password, code, _ string) error {
 	f.gotCode = code
 	return f.otpErr
