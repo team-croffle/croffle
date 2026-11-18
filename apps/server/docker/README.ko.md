@@ -8,7 +8,7 @@ English: [README.md](./README.md)
 # 1. 비밀 키. 나만 읽을 수 있게 만듭니다. 데이터 볼륨과 따로 사본을 두십시오.
 #    키를 잃으면 일회용 코드를 쓰는 계정이 로그인하지 못합니다.
 umask 077; set -C   # 이미 있는 파일은 덮어쓰지 않습니다 (file exists)
-key=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0-rc.1 secret generate) && [ -n "$key" ] &&
+key=$(docker run --rm ghcr.io/team-croffle/croffle-server:0.2.0-rc.2 secret generate) && [ -n "$key" ] &&
   echo "CROFFLE_SECRET_KEY=$key" > croffle-secret.env
 
 # 2. 시작. 로그에 "secret key: encrypted 0 one-time code secrets" 가 나옵니다.
