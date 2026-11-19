@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import {
+  applyCheckAnswer,
   nextUpdateStatus,
   toastsLatest,
   UPDATE_IDLE,
@@ -49,5 +50,16 @@ describe('update check status', () => {
       assert.deepEqual(seen, [{ kind: 'unsupported', reason }]);
       assert.ok(seen.every((s) => s.kind !== 'checking'));
     }
+  });
+
+  test('a late answer does not override a result that arrived first', () => {
+    const checking: UpdateCheckStatus = { kind: 'checking' };
+    const latest = nextUpdateStatus(checking, { type: 'not-available' });
+    assert.deepEqual(applyCheckAnswer(latest, { status: 'started' }), { kind: 'latest' });
+    assert.deepEqual(applyCheckAnswer(checking, { status: 'started' }), { kind: 'checking' });
+    assert.deepEqual(applyCheckAnswer(checking, { status: 'unsupported', reason: 'development' }), {
+      kind: 'unsupported',
+      reason: 'development',
+    });
   });
 });

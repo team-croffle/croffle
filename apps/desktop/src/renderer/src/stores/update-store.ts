@@ -1,5 +1,6 @@
 import {
   AppEventType,
+  applyCheckAnswer,
   nextUpdateStatus,
   toastsLatest,
   UPDATE_IDLE,
@@ -36,14 +37,19 @@ export const useUpdateStore = defineStore('update', () => {
     checkStatus.value = nextUpdateStatus(checkStatus.value, event);
   };
 
-  /** Starts a check by hand. The answer is immediate; the result arrives as events. */
+  /**
+   * Starts a check by hand. "Checking" is shown before asking main, so a second click is ignored;
+   * a result event that arrives before main's answer is kept (see applyCheckAnswer).
+   */
   async function checkNow() {
     if (isChecking()) {
       return;
     }
     manualCheck = true;
+    apply({ type: 'check', result: { status: 'started' } });
     try {
-      apply({ type: 'check', result: await croffleInternal.window.checkForUpdates() });
+      const answer = await croffleInternal.window.checkForUpdates();
+      checkStatus.value = applyCheckAnswer(checkStatus.value, answer);
     } catch (error) {
       apply({ type: 'error', message: error instanceof Error ? error.message : String(error) });
     }
