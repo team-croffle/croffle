@@ -1,7 +1,8 @@
 ---
 intent: "006"
-status: draft
-approvals: []
+status: accepted
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-19", words: "1. gemini한데 요청해. 2. 수정했어. 다시 봐줘 3. PM 해석: ㅇㅋ 재확인 후 진행", rev: "6f50d7b", kind: summary, note: "진행 on condition of the recheck; the recheck (qa-designer review, design system 1795075960-81fe) is folded into 4238b83" }
 summary_for_user: |
   1.3.2 를 8개 작업 단위로 나눕니다: W-1 토큰(시스템 값, `--croffle-*` 별칭 유지, 강조 색조는 4개 토큰만, 기본 70, Pretendard 500·600 선언) → W-2 대비·색 규칙(화면 코드 + `components/ui` 6개 파일) → W-3 테마 좌클릭 저장·부제·다가오는 일정 → W-4 알림 팝오버 → W-5 업데이트 확인(기존 호스트 전용 `window.checkForUpdates` 를 고침, 확인할 수 없는 설치는 바로 "확인할 수 없음")·버전 타일 → W-6 설정 바로 적용·확장 삭제 확인 창 → W-7 ko 영어 값·도움말 4단계 → W-8 DESIGN.md.
   검증은 V-1~V-11 입니다(V-11 릴리스 노트는 release 단계). qa-designer(gemini) 검토로 빠진 검사(S-1~S-4·S-16), grep 정규식, `components/ui` 의 오류 글자·스위치, Linux unpack 의 업데이트 확인 동작을 보강했습니다.
