@@ -5,11 +5,14 @@
   import { computed } from 'vue';
   import { useI18n } from 'vue-i18n';
 
+  import logoImg from '@/assets/logo-only.png';
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
   import { Icon } from '@/components/ui/icon';
+  import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
   import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
+  import UpdateCheck from '@/components/update-check.vue';
   import { SHORTCUT_RIGHT_SIDEBAR } from '@/composables/use-global-shortcuts';
   import { cn } from '@/lib/utils';
   import { useScheduleStore } from '@/stores/schedule-store';
@@ -265,18 +268,36 @@
     </SidebarContent>
 
     <SidebarFooter class="bg-croffle-sidebar shrink-0 flex-col items-center justify-center pb-4">
-      <div
-        class="bg-croffle-sidebar-content-disabled mb-4 flex w-full flex-col items-center justify-center rounded-xl border p-4 shadow-sm group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
-      >
-        <Icon
-          icon="lucide:home"
-          class="text-croffle-primary-strong mb-1 size-6 group-data-[collapsible=icon]:size-5"
-        />
-        <div class="text-center group-data-[collapsible=icon]:hidden">
-          <h4 class="text-xs font-bold tracking-wider">CROFFLE</h4>
-          <span class="text-croffle-text text-xs">{{ packageVersion }}</span>
-        </div>
-      </div>
+      <Popover>
+        <PopoverTrigger as-child>
+          <button
+            type="button"
+            class="bg-croffle-sidebar-content-disabled hover:bg-croffle-hover focus-visible:ring-ring/50 mb-4 flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border p-4 shadow-sm outline-none focus-visible:ring-[3px] group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
+            :aria-label="$t('rightSidebar.versionTile.title')"
+          >
+            <Icon
+              icon="lucide:info"
+              class="text-croffle-primary-strong mb-1 size-6 group-data-[collapsible=icon]:size-5"
+            />
+            <div class="text-center group-data-[collapsible=icon]:hidden">
+              <h4 class="text-xs font-bold tracking-wider">CROFFLE</h4>
+              <span class="text-croffle-text text-xs">{{ packageVersion }}</span>
+            </div>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="end" :side-offset="8" class="w-[340px]">
+          <div class="mb-3 flex items-center gap-3">
+            <img :src="logoImg" alt="" class="size-10 shrink-0" />
+            <div class="min-w-0">
+              <p class="text-sm font-semibold">Croffle</p>
+              <p class="text-muted-foreground text-xs">
+                {{ $t('rightSidebar.versionTile.version', { version: packageVersion }) }}
+              </p>
+            </div>
+          </div>
+          <UpdateCheck />
+        </PopoverContent>
+      </Popover>
     </SidebarFooter>
   </Sidebar>
 </template>

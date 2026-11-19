@@ -38,6 +38,7 @@
   } from '@/components/ui/select';
   import { Separator } from '@/components/ui/separator';
   import { Switch } from '@/components/ui/switch';
+  import UpdateCheck from '@/components/update-check.vue';
   import { extensionLoader } from '@/services/extension-loader';
   import { croffleInternal } from '@/services/host-bridge';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
@@ -52,6 +53,8 @@
   } from '@/utils/appearance';
   import { mergeWithSchemaDefaults } from '@/utils/extension-configuration-schema';
 
+  import pkg from '../../../../package.json';
+
   type Props = {
     open: boolean;
   };
@@ -65,6 +68,7 @@
   const appSettingsStore = useAppSettingsStore();
   const scheduleStore = useScheduleStore();
   const { t } = useI18n();
+  const appVersion = pkg.version;
 
   const activeTab = ref<string>('general');
   const originalSettings = ref<AppSettings | null>(null);
@@ -737,6 +741,17 @@
                       @update:checked="(v: boolean) => setGeneralBool('autoUpdate', v)"
                       @update:model-value="(v: unknown) => setGeneralBool('autoUpdate', v)"
                     />
+                  </div>
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-0.5">
+                      <Label class="text-foreground text-sm font-medium">
+                        {{ $t('settings.general.updateCheck') }}
+                      </Label>
+                      <p class="text-muted-foreground text-xs">
+                        {{ $t('settings.general.updateCheckHint', { version: appVersion }) }}
+                      </p>
+                    </div>
+                    <UpdateCheck class="w-60 shrink-0" />
                   </div>
                 </section>
 

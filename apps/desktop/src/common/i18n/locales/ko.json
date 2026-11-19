@@ -58,7 +58,9 @@
       "closeBehaviorAsk": "다음 닫기에서 묻기",
       "closeBehaviorTray": "트레이로 숨기기",
       "closeBehaviorQuit": "Croffle 종료",
-      "closeBehaviorHint": "알림은 Croffle이 실행 중일 때만 울립니다. 트레이로 숨기면 계속 실행됩니다."
+      "closeBehaviorHint": "알림은 Croffle이 실행 중일 때만 울립니다. 트레이로 숨기면 계속 실행됩니다.",
+      "updateCheck": "업데이트 확인",
+      "updateCheckHint": "지금 버전은 v{version}입니다. 자동 업데이트를 꺼 두어도 확인할 수 있습니다."
     },
     "calendar": {
       "intro": "캘린더 표시 방식을 설정합니다.",
@@ -208,7 +210,11 @@
     "emptySelected": "이 날 일정이 없습니다",
     "upcoming": "다가오는 일정",
     "emptyUpcoming": "다가오는 일정이 없습니다",
-    "upcomingOpenHint": "더블클릭하면 일정을 엽니다"
+    "upcomingOpenHint": "더블클릭하면 일정을 엽니다",
+    "versionTile": {
+      "title": "버전 정보",
+      "version": "버전 {version}"
+    }
   },
   "titleBar": {
     "toggleTheme": "테마 전환",
@@ -382,7 +388,17 @@
     "alreadyLatest": "이미 최신 버전입니다.",
     "failed": "업데이트 실패",
     "errorFallback": "업데이트 중 오류가 발생했습니다.",
-    "viewReleaseNotes": "릴리스 노트 보기"
+    "viewReleaseNotes": "릴리스 노트 보기",
+    "check": {
+      "button": "업데이트 확인",
+      "openUpdate": "업데이트 창 열기",
+      "checking": "확인 중…",
+      "latest": "최신 버전입니다.",
+      "available": "새 버전 v{version}이 있습니다.",
+      "failed": "확인하지 못했습니다: {message}",
+      "unsupportedDevelopment": "개발 빌드에서는 업데이트를 확인할 수 없습니다.",
+      "unsupportedPackage": "이 설치 형식에서는 업데이트를 확인할 수 없습니다."
+    }
   },
   "extensions": {
     "loadFailed": "확장을 불러오지 못했습니다",

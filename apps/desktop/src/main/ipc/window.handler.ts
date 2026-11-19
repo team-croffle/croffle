@@ -28,8 +28,8 @@ export function registerWindowIpcHandlers() {
     windowService.exitApp();
   });
 
-  ipcMain.handle('window:checkForUpdates', async (event) => {
+  ipcMain.handle('window:checkForUpdates', (event) => {
     validateSender(event);
-    await windowService.checkForUpdates();
+    return windowService.checkForUpdates();
   });
 }

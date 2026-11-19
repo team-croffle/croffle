@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { AppCloseBehavior, AppEventType } from '@croffledev/common';
+import { AppCloseBehavior, AppEventType, type UpdateCheckStart } from '@croffledev/common';
 import type { AppSettings } from '@croffledev/croffle-types';
 import type { BrowserWindow } from 'electron';
 import { app, Menu, Tray, shell } from 'electron';
@@ -26,6 +26,8 @@ class WindowService {
   );
   private pendingUpdateInfo: UpdateInfo | null = null;
   private installOnQuit = false;
+  /** A check started by hand shows a skipped version too (the user asked). */
+  private manualCheck = false;
 
   constructor() {
     logger.info('WindowService', 'Initializing Service...');
@@ -175,7 +177,9 @@ class WindowService {
 
     autoUpdater.on('checking-for-update', () => logger.info('Updater', 'Checking...'));
     autoUpdater.on('update-available', (info) => {
-      if (this.getSkippedVersion() === info.version) {
+      const manual = this.manualCheck;
+      this.manualCheck = false;
+      if (!manual && this.getSkippedVersion() === info.version) {
         logger.info('Updater', `Version ${info.version} is skipped by user.`);
         return;
       }
@@ -198,6 +202,7 @@ class WindowService {
     });
 
     autoUpdater.on('update-not-available', () => {
+      this.manualCheck = false;
       eventService.emit(AppEventType.UPDATE_NOT_AVAILABLE);
     });
 
@@ -222,6 +227,7 @@ class WindowService {
     });
 
     autoUpdater.on('error', (err) => {
+      this.manualCheck = false;
       logger.error('Updater', 'Error:', err);
       eventService.emit(AppEventType.UPDATE_ERROR, err);
     });
@@ -247,14 +253,33 @@ class WindowService {
     });
   }
 
-  public async checkForUpdates(): Promise<void> {
+  /**
+   * "Check for updates" from the version tile or Settings. Runs whatever the auto-update
+   * setting says. Answers at once: the result arrives as the UPDATE_* events.
+   * An install that cannot update (development build, or not an updatable package such as a
+   * bare Linux folder, where electron-updater would return null without any event) says so.
+   */
+  public checkForUpdates(): UpdateCheckStart {
     if (!app.isPackaged) {
-      return;
+      return { status: 'unsupported', reason: 'development' };
     }
-    if (!settingService.get().general.autoUpdate) {
-      return;
+    if (!autoUpdater.isUpdaterActive()) {
+      return { status: 'unsupported', reason: 'not-updatable' };
     }
-    await autoUpdater.checkForUpdates(); // Notify제거: Event를 통해 모달로 처리함
+    logger.info('Updater', 'Manual update check');
+    this.manualCheck = true;
+    autoUpdater
+      .checkForUpdates()
+      .then((result) => {
+        if (result === null) {
+          this.manualCheck = false;
+          eventService.emit(AppEventType.UPDATE_ERROR, new Error('Update check did not run'));
+        }
+      })
+      .catch(() => {
+        // electron-updater also emits 'error', which reports it.
+      });
+    return { status: 'started' };
   }
 
   // Update를 스킵한 버전 정보 조회
