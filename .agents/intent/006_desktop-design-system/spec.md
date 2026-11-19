@@ -270,6 +270,9 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
 - A-7 (2026-11-19, W-5) 수동 확인은 사용자가 건너뛰기로 한 버전도 "새 버전"으로 보입니다. `checkForUpdates()` 가 `null` 을 돌려주면 "실패"로 알립니다 · 건너뛴 버전이면 electron-updater 이벤트가 렌더러에 오지 않아 "확인 중"에 멈춥니다(S-12 "멈추지 않습니다") · 0fe0860
 - A-8 (2026-11-19, W-6) 문구 키를 더했습니다: `settings.errors.notANumber`, `settings.extensions.uninstallTitle` · `uninstall`. 저장은 바뀐 뒤 250ms 를 모아 한 번 합니다(색 선택을 끄는 동안 저장이 몰리지 않게) · c80a644
 - A-9 (2026-11-19, W-8) DESIGN.md 의 검사 grep 을 `apps/desktop/scripts/check-ui-tokens.sh` 로 옮겼습니다 · V-10 6 은 DESIGN.md 에 `amber` 가 없기를 기대하는데, 팔레트 이름을 나열한 검사 명령이 그 줄에 걸립니다. V-4 a ~ c 와 같은 명령입니다 · 5eb9a5d
+- A-10 (2026-11-19, W-6, 리뷰 1 F-1 · F-2) 설정 화면은 화면이 바꾼 칸만 최신 저장값 위에 얹어 저장합니다(`mergeEdits`). 다른 곳의 저장(`SETTINGS_UPDATE`)을 바로 받아들이고, 저장은 차례로 하나씩 하며, 창을 닫을 때 기다리던 저장을 바로 보내고 다시 열 때 고친 내용을 버리지 않습니다. 테스트 `screen edits do not overwrite a change saved elsewhere` 를 더했습니다 · 318b3c0
+- A-11 (2026-11-19, W-5, 리뷰 1 F-5) 수동 확인은 main 에 묻기 전에 "확인 중"으로 두고, main 의 답은 아직 확인 중일 때의 "확인할 수 없음"만 반영합니다(`applyCheckAnswer`). 테스트 `a late answer does not override a result that arrived first` 를 더했습니다 · bb7c3b2
+- A-12 (2026-11-19, W-3 · W-4, 리뷰 1 F-3 · F-4 · F-6) 다가오는 일정 · 알림 항목을 열 때 그 일정을 달력 store 에 넣어 보기 창이 찾게 합니다. 알림 목록은 팝오버를 열 때와 1분마다 다시 읽습니다. 다가오는 일정은 조회에 성공한 뒤에만 날짜를 기록해 실패하면 다음 틱에 다시 읽습니다 · c7bcf95
 
 ## 우려
 - **확장 화면 색이 바뀝니다.** `--croffle-*` 값이 바뀌므로, 이 변수를 읽는 확장의 화면 색이 1.3.2 에서 달라집니다. 이름은 그대로라 깨지지는 않습니다. 릴리스 노트에 적습니다.
