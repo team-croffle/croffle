@@ -882,7 +882,7 @@
                         {{ $t('settings.general.updateCheckHint', { version: appVersion }) }}
                       </p>
                     </div>
-                    <UpdateCheck class="w-60 shrink-0" />
+                    <UpdateCheck label="now" class="w-60 shrink-0" />
                   </div>
                 </section>
 
