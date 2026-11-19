@@ -9,8 +9,7 @@
     applySetting,
     CalendarWeekStartDay,
     extensionInstallErrorCode,
-    mergeEdits,
-    SettingsDraft,
+    PendingPatches,
   } from '@croffledev/common';
   import type { ConfigurationTabContribution, ExtensionInfo } from '@croffledev/common';
   import type { AppSettings } from '@croffledev/croffle-types';
@@ -195,8 +194,8 @@
     loadError.value = null;
     try {
       const loaded = await croffle.settings.getAll();
-      screenDraft = new SettingsDraft(loaded);
-      showDraft();
+      patches = new PendingPatches(loaded);
+      showPatches();
       await loadAllExtensionSettings();
     } catch (error) {
       toast.error(t('settings.errors.load', { error: JSON.stringify(error) }));
@@ -323,12 +322,6 @@
     }
   });
 
-  /** Saves and reads back what main stored (settings apply as soon as they change). */
-  const saveSettings = async (next: AppSettings) => {
-    await croffleInternal.settings.update(next);
-    return croffle.settings.getAll();
-  };
-
   const reapplyPersistedAppearance = (value: AppSettings) => {
     appSettingsStore.setThemeDraft(value.general.theme);
     appSettingsStore.setAccentHueDraft(value.appearance?.accentHue ?? DEFAULT_ACCENT_HUE);
@@ -337,58 +330,55 @@
   const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
   /**
-   * The screen's edits and the latest stored settings (see SettingsDraft): only the fields the
-   * screen changed are saved, over the latest stored values, so a change saved elsewhere (the
-   * title bar's theme button) is not overwritten, and an edit made while a save runs is kept.
+   * App settings apply as soon as a control changes: only that field is sent, and main merges it
+   * into what it has stored. The screen shows the latest stored settings with the patches still
+   * saving on top (see PendingPatches), so a change saved elsewhere is never taken for an edit,
+   * and a failed patch shows the latest stored value again.
    */
-  let screenDraft: SettingsDraft<AppSettings> | null = null;
+  let patches: PendingPatches<AppSettings> | null = null;
 
-  const showDraft = () => {
-    if (screenDraft) {
-      originalSettings.value = cloneSettings(screenDraft.stored);
-      settings.value = cloneSettings(screenDraft.screen);
+  const showPatches = () => {
+    if (patches) {
+      originalSettings.value = cloneSettings(patches.stored);
+      settings.value = patches.view();
     }
   };
 
-  /** Takes the latest stored settings and keeps the screen's unsaved edits on top. */
-  const rebase = (latest: AppSettings) => {
-    if (!screenDraft) {
+  const receiveStored = (latest: AppSettings) => {
+    if (!patches) {
       return;
     }
-    if (settings.value) {
-      screenDraft.screen = cloneSettings(settings.value);
-    }
-    screenDraft.rebase(latest);
-    showDraft();
+    patches.receive(latest);
+    showPatches();
   };
 
   const refreshFromStore = async () => {
     try {
-      rebase(await croffle.settings.getAll());
+      receiveStored(await croffle.settings.getAll());
     } catch (error) {
       toast.error(t('settings.errors.load', { error: errorMessage(error) }));
     }
   };
 
-  /** Applies the app settings on screen. A failed save puts back the values it tried to save. */
-  const persistSettings = async () => {
-    if (!screenDraft || !settings.value) {
+  /** Saves one changed field. */
+  const edit = async <S extends keyof AppSettings>(
+    section: S,
+    field: keyof AppSettings[S] & string,
+    value: AppSettings[S][keyof AppSettings[S]],
+  ) => {
+    if (!patches) {
       return;
     }
-    screenDraft.screen = cloneSettings(settings.value);
-    const next = screenDraft.beginSave();
-    if (!next) {
-      return;
-    }
-    const result = await applySetting(cloneSettings(screenDraft.stored), next, saveSettings);
-    if (settings.value) {
-      screenDraft.screen = cloneSettings(settings.value);
-    }
-    screenDraft.endSave(next, result.value);
-    showDraft();
-    if (!result.ok) {
-      const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
-      toast.error(t('settings.errors.save', { error: reason }));
+    const { id, patch } = patches.edit(section, field, value);
+    showPatches();
+    try {
+      const latest = await croffleInternal.settings.update(patch);
+      patches.settle(id, latest);
+      showPatches();
+    } catch (error) {
+      patches.settle(id);
+      showPatches();
+      toast.error(t('settings.errors.save', { error: errorMessage(error) }));
       if (settings.value) {
         reapplyPersistedAppearance(settings.value);
       }
@@ -413,8 +403,7 @@
       if (!result.ok) {
         const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
         toast.error(t('settings.errors.save', { error: reason }));
-        const current = extensionDrafts.value[compositeId] ?? snapshot;
-        extensionDrafts.value[compositeId] = mergeEdits(result.value, snapshot, current);
+        extensionDrafts.value[compositeId] = JSON.parse(JSON.stringify(result.value));
       }
     }
   };
@@ -428,14 +417,25 @@
 
   // A short pause groups quick changes (dragging the colour picker) into one save.
   const PERSIST_DELAY_MS = 250;
-  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+  let accentTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingAccentHue: number | null = null;
+
+  /** The colour picker previews at once and saves the hue after a short pause. */
+  const sendAccent = async () => {
+    if (pendingAccentHue === null) {
+      return;
+    }
+    const hue = pendingAccentHue;
+    pendingAccentHue = null;
+    await edit('appearance', 'accentHue', hue);
+  };
   let extensionTimer: ReturnType<typeof setTimeout> | null = null;
 
   const flushPending = () => {
-    if (persistTimer) {
-      clearTimeout(persistTimer);
-      persistTimer = null;
-      void enqueue(persistSettings);
+    if (accentTimer) {
+      clearTimeout(accentTimer);
+      accentTimer = null;
+      void sendAccent();
     }
     if (extensionTimer) {
       clearTimeout(extensionTimer);
@@ -443,20 +443,6 @@
       void enqueue(persistExtensionDrafts);
     }
   };
-
-  watch(
-    settings,
-    () => {
-      if (persistTimer) {
-        clearTimeout(persistTimer);
-      }
-      persistTimer = setTimeout(() => {
-        persistTimer = null;
-        void enqueue(persistSettings);
-      }, PERSIST_DELAY_MS);
-    },
-    { deep: true },
-  );
 
   watch(
     extensionDrafts,
@@ -476,15 +462,21 @@
   let offSettingsUpdate: (() => void) | null = null;
   onMounted(() => {
     offSettingsUpdate = croffle.event.on(AppEventType.SETTINGS_UPDATE, (payload) => {
-      if (originalSettings.value) {
-        rebase(payload as AppSettings);
-      }
+      receiveStored(payload as AppSettings);
     });
   });
   onBeforeUnmount(() => {
     offSettingsUpdate?.();
     flushPending();
   });
+
+  /** A select changed one field (the value is the option's string). */
+  const onSelect = (section: 'general' | 'calendar', field: string, value: unknown) => {
+    if (typeof value !== 'string') {
+      return;
+    }
+    void edit(section, field as never, value as never);
+  };
 
   // Switch 이벤트값 정규화(checked/modelValue 둘 다 대응)
   const asBool = (v: unknown): boolean => {
@@ -501,18 +493,15 @@
     key: 'autoUpdate' | 'startOnSystemBoot' | 'startMinimized',
     v: unknown,
   ) => {
-    if (!settings.value) {
-      return;
-    }
-    settings.value.general[key] = asBool(v);
+    void edit('general', key, asBool(v));
   };
 
   const onThemeChange = (theme: unknown) => {
     if (!settings.value || typeof theme !== 'string') {
       return;
     }
-    settings.value.general.theme = theme as AppSettingTheme;
     appSettingsStore.setThemeDraft(theme as AppSettingTheme);
+    void edit('general', 'theme', theme as AppSettingTheme);
   };
 
   const ensureAppearance = () => {
@@ -537,6 +526,14 @@
         : hexToHue(hex);
     draft.appearance.accentHue = hue;
     appSettingsStore.setAccentHueDraft(hue);
+    pendingAccentHue = hue;
+    if (accentTimer) {
+      clearTimeout(accentTimer);
+    }
+    accentTimer = setTimeout(() => {
+      accentTimer = null;
+      void sendAccent();
+    }, PERSIST_DELAY_MS);
   };
 
   const onAccentColorInput = (event: Event) => {
@@ -550,24 +547,18 @@
   const isAccentPresetSelected = (hex: string) => huesMatch(hexToHue(hex), currentAccentHue.value);
 
   const onReminderMinutesChange = (v: unknown) => {
-    if (!settings.value || v === null) {
+    if (v === null) {
       return;
     }
-    settings.value.notifications.defaultReminderMinutes = Number(v);
+    void edit('notifications', 'defaultReminderMinutes', Number(v));
   };
 
   const onAppAlertSwitch = (v: unknown) => {
-    if (!settings.value) {
-      return;
-    }
-    settings.value.notifications.enabled = asBool(v);
+    void edit('notifications', 'enabled', asBool(v));
   };
 
   const onShowWeekNumbersSwitch = (v: unknown) => {
-    if (!settings.value) {
-      return;
-    }
-    settings.value.calendar.showWeekNumbers = asBool(v);
+    void edit('calendar', 'showWeekNumbers', asBool(v));
   };
 
   const languageOptions = computed(() => [
@@ -582,10 +573,10 @@
   ]);
 
   const onCloseBehaviorChange = (value: unknown) => {
-    if (!settings.value || typeof value !== 'string') {
+    if (typeof value !== 'string') {
       return;
     }
-    settings.value.general.closeBehavior = value as AppCloseBehavior;
+    void edit('general', 'closeBehavior', value as AppCloseBehavior);
   };
 
   const themeOptions = computed(() => [
@@ -768,7 +759,10 @@
                         {{ $t('settings.general.language') }}
                       </Label>
                     </div>
-                    <Select v-model="settings.general.language">
+                    <Select
+                      :model-value="settings.general.language"
+                      @update:model-value="(v: unknown) => onSelect('general', 'language', v)"
+                    >
                       <SelectTrigger id="settings-language" class="w-60 shrink-0">
                         <SelectValue :placeholder="$t('settings.general.languagePlaceholder')" />
                       </SelectTrigger>
@@ -988,7 +982,10 @@
                       {{ $t('settings.calendar.defaultView') }}
                     </Label>
                   </div>
-                  <Select v-model="settings.calendar.defaultView">
+                  <Select
+                    :model-value="settings.calendar.defaultView"
+                    @update:model-value="(v: unknown) => onSelect('calendar', 'defaultView', v)"
+                  >
                     <SelectTrigger id="settings-default-view" class="w-60 shrink-0">
                       <SelectValue :placeholder="$t('settings.calendar.defaultViewPlaceholder')" />
                     </SelectTrigger>
@@ -1010,7 +1007,10 @@
                       {{ $t('settings.calendar.weekStart') }}
                     </Label>
                   </div>
-                  <Select v-model="settings.calendar.weekStartDay">
+                  <Select
+                    :model-value="settings.calendar.weekStartDay"
+                    @update:model-value="(v: unknown) => onSelect('calendar', 'weekStartDay', v)"
+                  >
                     <SelectTrigger id="settings-week-start" class="w-60 shrink-0">
                       <SelectValue :placeholder="$t('settings.calendar.weekStartPlaceholder')" />
                     </SelectTrigger>
@@ -1032,7 +1032,10 @@
                       {{ $t('settings.calendar.timeFormat') }}
                     </Label>
                   </div>
-                  <Select v-model="settings.calendar.timeFormat">
+                  <Select
+                    :model-value="settings.calendar.timeFormat"
+                    @update:model-value="(v: unknown) => onSelect('calendar', 'timeFormat', v)"
+                  >
                     <SelectTrigger id="settings-time-format" class="w-60 shrink-0">
                       <SelectValue :placeholder="$t('settings.calendar.timeFormatPlaceholder')" />
                     </SelectTrigger>

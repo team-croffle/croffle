@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import {
-  applySetting,
-  mergeEdits,
-  parseNumberInput,
-  SettingsDraft,
-} from '../src/common/settings-apply.ts';
+import { applySetting, parseNumberInput, PendingPatches } from '../src/common/settings-apply.ts';
 
 type Prefs = { weekNumbers: boolean; days: number };
 const STORED: Prefs = { weekNumbers: false, days: 7 };
+
+type App = { general: { theme: string; language: string }; calendar: { weekNumbers: boolean } };
+const APP: App = { general: { theme: 'light', language: 'ko' }, calendar: { weekNumbers: false } };
+const withTheme = (theme: string): App => ({ ...APP, general: { ...APP.general, theme } });
 
 describe('settings apply immediately', () => {
   test('invalid input is rejected without calling save', async () => {
@@ -45,45 +44,56 @@ describe('settings apply immediately', () => {
     assert.deepEqual(result.value, STORED);
     assert.equal(result.ok === false && result.reason === 'failed' && result.error, failure);
 
-    const saved = await applySetting(STORED, { ...STORED, weekNumbers: true }, async (v) => v);
-    assert.deepEqual(saved, { ok: true, value: { ...STORED, weekNumbers: true } });
+    // In the settings screen a failed patch is dropped: the field shows the stored value again.
+    const patches = new PendingPatches(APP);
+    const { id, patch } = patches.edit('calendar', 'weekNumbers', true);
+    assert.deepEqual(patch, { calendar: { weekNumbers: true } });
+    assert.equal(patches.view().calendar.weekNumbers, true);
+    patches.settle(id);
+    assert.deepEqual(patches.view(), APP);
   });
 
   test('screen edits do not overwrite a change saved elsewhere', () => {
-    const base = { general: { theme: 'light', language: 'ko' }, calendar: { weekNumbers: false } };
-    // The title bar saved dark meanwhile; the screen changed week numbers only.
-    const latest = { ...base, general: { ...base.general, theme: 'dark' } };
-    const edited = { ...base, calendar: { weekNumbers: true } };
-    assert.deepEqual(mergeEdits(latest, base, edited), {
+    const patches = new PendingPatches(APP);
+    const { patch } = patches.edit('calendar', 'weekNumbers', true);
+    // Only the changed field is sent; main merges it into what it stored (dark, from the title bar).
+    assert.deepEqual(patch, { calendar: { weekNumbers: true } });
+    patches.receive(withTheme('dark'));
+    assert.deepEqual(patches.view(), {
       general: { theme: 'dark', language: 'ko' },
       calendar: { weekNumbers: true },
     });
-    // No edits: the latest stored values come through unchanged.
-    assert.deepEqual(mergeEdits(latest, base, base), latest);
   });
 
   test('an edit made while saving is kept, even one back to the old value', () => {
-    const draft = new SettingsDraft({ weekNumbers: false, theme: 'light' });
-    draft.screen = { ...draft.screen, weekNumbers: true };
-    const saving = draft.beginSave();
-    assert.deepEqual(saving, { weekNumbers: true, theme: 'light' });
-    // While saving, the user turns it back off; then the save's own SETTINGS_UPDATE arrives.
-    draft.screen = { ...draft.screen, weekNumbers: false };
-    draft.rebase({ weekNumbers: true, theme: 'light' });
-    assert.equal(draft.screen.weekNumbers, false);
-    draft.endSave(saving!, { weekNumbers: true, theme: 'light' });
-    assert.equal(draft.screen.weekNumbers, false);
-    // The next save stores the latest edit.
-    assert.deepEqual(draft.beginSave(), { weekNumbers: false, theme: 'light' });
+    const patches = new PendingPatches(APP);
+    const first = patches.edit('calendar', 'weekNumbers', true);
+    const second = patches.edit('calendar', 'weekNumbers', false);
+    // The first save reports back before the second finishes.
+    patches.settle(first.id, { ...APP, calendar: { weekNumbers: true } });
+    assert.equal(patches.view().calendar.weekNumbers, false);
+    patches.settle(second.id, APP);
+    assert.equal(patches.view().calendar.weekNumbers, false);
   });
 
-  test('a failed save puts back only the fields it tried to save', () => {
-    const draft = new SettingsDraft({ weekNumbers: false, theme: 'light' });
-    draft.screen = { ...draft.screen, weekNumbers: true };
-    const saving = draft.beginSave()!;
-    draft.screen = { ...draft.screen, theme: 'dark' };
-    draft.endSave(saving, draft.stored);
-    assert.deepEqual(draft.screen, { weekNumbers: false, theme: 'dark' });
-    assert.deepEqual(draft.beginSave(), { weekNumbers: false, theme: 'dark' });
+  test('changes saved elsewhere during a save are never taken as edits', () => {
+    const patches = new PendingPatches(APP);
+    const { id } = patches.edit('calendar', 'weekNumbers', true);
+    patches.receive(withTheme('dark'));
+    patches.receive(withTheme('light'));
+    patches.settle(id, { ...withTheme('light'), calendar: { weekNumbers: true } });
+    assert.deepEqual(patches.view(), { ...APP, calendar: { weekNumbers: true } });
+    const next = patches.edit('general', 'language', 'en');
+    assert.deepEqual(next.patch, { general: { language: 'en' } });
+  });
+
+  test('a failed save keeps the latest stored values received meanwhile', () => {
+    const patches = new PendingPatches(APP);
+    const { id } = patches.edit('calendar', 'weekNumbers', true);
+    // Another window stored weekNumbers = true while this patch was saving; then this one fails.
+    patches.receive({ ...APP, calendar: { weekNumbers: true } });
+    patches.settle(id);
+    assert.equal(patches.view().calendar.weekNumbers, true);
+    assert.deepEqual(patches.stored, { ...APP, calendar: { weekNumbers: true } });
   });
 });
