@@ -1,9 +1,15 @@
-import { type AppSettingTheme, AppEventType, lookOf, type LookPreview } from '@croffledev/common';
+import {
+  type AppSettingTheme,
+  lookOf,
+  type LookPreview,
+  type StoredSettings,
+} from '@croffledev/common';
 import type { AppSettings } from '@croffledev/croffle-types';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
 import { setI18nLocale } from '@/i18n';
+import { croffleInternal } from '@/services/host-bridge';
 import { applyAppearance, DEFAULT_ACCENT_HUE } from '@/utils/appearance';
 
 import { useThemeStore } from './theme-store';
@@ -12,7 +18,9 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
   const settings = ref<AppSettings | null>(null);
   const isReady = ref(false);
   /** The settings screen's theme or colour not stored yet. Shown over every stored value. */
-  const preview: LookPreview = {};
+  let preview: LookPreview = {};
+  /** main's revision of `settings`; an older or equal one is ignored (see StoredSettings). */
+  let revision = -1;
   let unsubscribe: (() => void) | null = null;
 
   /** Applies stored settings with the preview on top — the only place the look is applied. */
@@ -35,21 +43,25 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     }
   };
 
+  const receive = (stored: StoredSettings) => {
+    if (stored.revision <= revision) {
+      return;
+    }
+    revision = stored.revision;
+    settings.value = stored.settings;
+    applyToUi(stored.settings);
+  };
+
   const load = async () => {
-    const loaded = await croffle.settings.getAll();
-    settings.value = loaded;
-    applyToUi(loaded);
+    receive(await croffleInternal.settings.getStored());
     isReady.value = true;
   };
 
   const initialize = async () => {
-    await load();
     unsubscribe?.();
-    unsubscribe = croffle.event.on(AppEventType.SETTINGS_UPDATE, (payload) => {
-      const updated = payload as AppSettings;
-      settings.value = updated;
-      applyToUi(updated);
-    });
+    // Subscribe first so nothing stored between the read and the subscription is missed.
+    unsubscribe = croffleInternal.settings.onStored(receive);
+    await load();
   };
 
   const dispose = () => {
@@ -75,6 +87,12 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     reapply();
   };
 
+  /** Replaces the whole preview at once (one repaint); `{}` shows what is stored. */
+  const setPreview = (next: LookPreview) => {
+    preview = { ...next };
+    reapply();
+  };
+
   return {
     settings,
     isReady,
@@ -84,5 +102,7 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     setThemeDraft,
     setAccentHueDraft,
     endPreview,
+    setPreview,
+    receive,
   };
 });

@@ -34,7 +34,7 @@ export interface CroffleInternalBridge {
 
 export interface CroffleInternalAPI {
   window: InternalWindowApi;
-  settings: Pick<InternalSettingsApi, 'update'>;
+  settings: Pick<InternalSettingsApi, 'update' | 'getStored' | 'onStored'>;
   extensions: {
     info: Pick<InternalExtensionInfoApi, 'install' | 'installFromLocal' | 'toggle' | 'uninstall'>;
     configuration: ExtensionConfigurationApi;

@@ -37,22 +37,31 @@ export function parseNumberInput(raw: string): number | null {
 
 /**
  * App settings while they apply immediately. Each control sends only the field it changed
- * (main merges a patch into what it has stored); the screen shows the latest stored settings
- * with the patches that have not finished laid on top.
- * - Stored settings come in one way only, `receive` (main's SETTINGS_UPDATE, sent before the
- *   save's reply, or a read): a reply never brings back an older stored value.
+ * (main merges a patch into what it has stored and answers with the revision it made); the
+ * screen shows the latest stored settings with the patches that are not stored yet on top.
+ * - Stored settings carry main's revision; an older or equal one is ignored, so the order in
+ *   which replies and broadcasts arrive does not matter.
+ * - A patch ends when stored settings of at least its revision arrive (`confirm`), or when its
+ *   save fails (`settle`); a failed field then shows the latest stored value.
  * - A change saved elsewhere only replaces `stored`; it is never taken for an edit.
- * - A failed patch is dropped, so its field shows the latest stored value again.
  * - An edit made while an earlier patch is saving is its own patch and stays on screen.
- * - A patch may be held back (the colour picker) and revised until it is sent; it shows meanwhile.
+ * - A patch may be held back (the colour picker) and revised until it is sent.
  */
 export class PendingPatches<T extends object> {
-  private pending: { id: number; section: keyof T; field: string; value: unknown }[] = [];
+  private pending: {
+    id: number;
+    section: keyof T;
+    field: string;
+    value: unknown;
+    storedAt: number | null;
+  }[] = [];
   private nextId = 1;
   public stored: T;
+  public revision: number;
 
-  public constructor(stored: T) {
+  public constructor(stored: T, revision = 0) {
     this.stored = stored;
+    this.revision = revision;
   }
 
   /** Records an edit; returns its id and the patch to send. */
@@ -62,14 +71,14 @@ export class PendingPatches<T extends object> {
     value: T[S][keyof T[S]],
   ): { id: number; patch: Partial<T> } {
     const id = this.nextId++;
-    this.pending.push({ id, section, field, value });
+    this.pending.push({ id, section, field, value, storedAt: null });
     return { id, patch: this.patchOf(id) };
   }
 
   /** Changes the value of a patch not sent yet; returns the patch as it is now. */
   public revise(id: number, value: unknown): Partial<T> {
     const entry = this.pending.find((p) => p.id === id);
-    if (entry) {
+    if (entry && entry.storedAt === null) {
       entry.value = value;
     }
     return this.patchOf(id);
@@ -79,19 +88,35 @@ export class PendingPatches<T extends object> {
     return this.pending.some((p) => p.id === id);
   }
 
-  /** Whether a patch of this field is still unfinished. */
-  public pendingFor(section: keyof T, field: string): boolean {
-    return this.pending.some((p) => p.section === section && p.field === field);
+  /** Main stored the patch as `revision`; it ends once stored settings that new arrive. */
+  public confirm(id: number, revision: number): void {
+    const entry = this.pending.find((p) => p.id === id);
+    if (entry) {
+      entry.storedAt = revision;
+    }
+    this.drop();
   }
 
-  /** The patch finished (saved or failed); its field now shows what is stored. */
+  /** The patch's save failed: it ends now and its field shows what is stored. */
   public settle(id: number): void {
     this.pending = this.pending.filter((p) => p.id !== id);
   }
 
-  /** The latest stored settings arrived. */
-  public receive(latest: T): void {
+  /** Stored settings arrived; returns false when they are not newer than what is held. */
+  public receive(latest: T, revision: number): boolean {
+    if (revision <= this.revision) {
+      return false;
+    }
     this.stored = latest;
+    this.revision = revision;
+    this.drop();
+    return true;
+  }
+
+  /** The newest unfinished value of a field, if any (what the screen previews). */
+  public pendingValue(section: keyof T, field: string): { value: unknown } | null {
+    const last = this.pending.findLast((p) => p.section === section && p.field === field);
+    return last ? { value: last.value } : null;
   }
 
   /** What the screen shows: the latest stored settings with unfinished patches on top. */
@@ -101,6 +126,10 @@ export class PendingPatches<T extends object> {
       (out[p.section] as Record<string, unknown>)[p.field] = p.value;
     }
     return out;
+  }
+
+  private drop(): void {
+    this.pending = this.pending.filter((p) => p.storedAt === null || p.storedAt > this.revision);
   }
 
   private patchOf(id: number): Partial<T> {

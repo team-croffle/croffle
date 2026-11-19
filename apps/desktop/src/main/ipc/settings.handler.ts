@@ -1,14 +1,20 @@
-import { AppEventType } from '@croffledev/common';
+import { AppEventType, SETTINGS_STORED_CHANNEL, type StoredSettings } from '@croffledev/common';
 import type { AppSettings } from '@croffledev/croffle-types';
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 
 import { eventService } from '../event-bus/event-service';
 import { settingService } from '../setting/setting-service';
 import { validateSettings } from '../utils/settings-validator';
+import { validateSender } from './validate-sender';
 
 export const registerSettingsIpcHandlers = (): void => {
   ipcMain.handle('settings:getAll', async (): Promise<AppSettings> => {
     return settingService.get();
+  });
+
+  ipcMain.handle('settings:getStored', (event): StoredSettings => {
+    validateSender(event);
+    return settingService.getStored();
   });
 
   ipcMain.handle(
@@ -24,11 +30,18 @@ export const registerSettingsIpcHandlers = (): void => {
 
   ipcMain.handle(
     'settings:update',
-    async (_, partialSettings: Partial<AppSettings>): Promise<AppSettings> => {
+    async (event, partialSettings: Partial<AppSettings>): Promise<StoredSettings> => {
+      validateSender(event);
       validateSettings(partialSettings);
       const newSettings = settingService.update(partialSettings);
+      const stored = settingService.getStored();
       eventService.emit(AppEventType.SETTINGS_UPDATE, newSettings);
-      return newSettings;
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send(SETTINGS_STORED_CHANNEL, stored);
+        }
+      }
+      return stored;
     },
   );
 };

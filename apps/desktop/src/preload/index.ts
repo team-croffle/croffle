@@ -74,6 +74,8 @@ const internalApi = {
   window: windowApi,
   settings: {
     update: settingsApi.update,
+    getStored: settingsApi.getStored,
+    onStored: settingsApi.onStored,
   },
   extensions: {
     info: {
