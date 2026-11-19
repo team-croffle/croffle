@@ -4,6 +4,7 @@ status: accepted
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-19", words: "1. gemini한데 요청해. 2. 수정했어. 다시 봐줘 3. PM 해석: ㅇㅋ 재확인 후 진행", rev: "6f50d7b", kind: summary, note: "진행 on condition of the recheck; the recheck (qa-designer review, design system 1795075960-81fe) is folded into 4238b83" }
   - { role: user, by: bluenyang, at: "2026-11-20", words: "F-7. 승인", rev: "84e9404", kind: change, note: "S-16 and V-8 9: adding is right-click menu or the add button; double-clicking a date opens that day (review1 F-7, PM wrote the spec wrongly)" }
+  - { role: user, by: bluenyang, at: "2026-11-20", words: "정정 3건은 승인", rev: "383c2bf", kind: change, note: "V-4 c regex, V-8 run conditions (isolated dev run), V-9 log location and evidence file names; judged on the same raw output (test/judgement.md)" }
 summary_for_user: |
   1.3.2 를 8개 작업 단위로 나눕니다: W-1 토큰(시스템 값, `--croffle-*` 별칭 유지, 강조 색조는 4개 토큰만, 기본 70, Pretendard 500·600 선언) → W-2 대비·색 규칙(화면 코드 + `components/ui` 6개 파일) → W-3 테마 좌클릭 저장·부제·다가오는 일정 → W-4 알림 팝오버 → W-5 업데이트 확인(기존 호스트 전용 `window.checkForUpdates` 를 고침, 확인할 수 없는 설치는 바로 "확인할 수 없음")·버전 타일 → W-6 설정 바로 적용·확장 삭제 확인 창 → W-7 ko 영어 값·도움말 4단계 → W-8 DESIGN.md.
   검증은 V-1~V-11 입니다(V-11 릴리스 노트는 release 단계). qa-designer(gemini) 검토로 빠진 검사(S-1~S-4·S-16), grep 정규식, `components/ui` 의 오류 글자·스위치, Linux unpack 의 업데이트 확인 동작을 보강했습니다.
@@ -130,7 +131,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     - 기대: `./app.vue` 의 닫기 버튼 1줄(`hover:bg-red-600 hover:text-red-100 dark:hover:bg-red-700`)만 남고 `exit=0`.
   - b) `grep -rn 'text-destructive-foreground' --include='*.vue' --include='*.ts' .` (`ui/` 포함)
     - 기대: 나오는 줄마다 같은 요소 또는 같은 variant 문자열에 `bg-destructive` 가 있습니다(`components/ui/button/index.ts` · `badge/index.ts` 의 destructive 변형). 바탕 없이 쓰는 줄(`sync-panel.vue`, `ContextMenuItem.vue`, `CalendarCellTrigger.vue`, `RangeCalendarCellTrigger.vue`)은 0줄입니다.
-  - c) `grep -rnE '\bconfirm\(' --include='*.vue' --include='*.ts' --exclude-dir=ui .`
+  - c) `grep -rnE '(^|[^.[:alnum:]_])confirm\(' --include='*.vue' --include='*.ts' --exclude-dir=ui .` (점이나 식별자 뒤가 아닌 `confirm(` 만; 2026-11-20 정정, 처음 문구 `\bconfirm\(` 는 메서드 `patches.confirm(` 도 잡음)
     - 기대: 출력 없음, `exit=1`.
   - d) `grep -nE 'var\(--croffle-primary(-strong)?\)' components/calendar.vue`
     - 기대: 달력 제목, 오늘 숫자, 더보기 호버의 글자색 줄이 `var(--croffle-primary-strong)` 이고, 글자색(`color:`)에 `var(--croffle-primary)` 를 쓰는 줄이 0줄입니다. 바탕(`background`)에 쓰는 `var(--croffle-primary)` 는 허용하며 판정에 줄마다 적습니다.
@@ -171,7 +172,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     - `settings save failure restores the stored value`
   - 실패: `✖` 또는 이름 없음.
   - 사전 실행: 구현 뒤. 이 모듈들은 Electron · DOM 없이 불러올 수 있어야 합니다(설계).
-- **V-8 화면 확인 (S-5 · S-7 ~ S-14 · S-16, W-2 ~ W-7)** — `pnpm dev` 로 띄운 앱에서 라이트와 다크 각각 아래 9개를 확인합니다.
+- **V-8 화면 확인 (S-5 · S-7 ~ S-14 · S-16, W-2 ~ W-7)** — `pnpm dev` 와 같은 개발 실행(렌더러는 프로젝트 설정의 Vite 개발 서버, 메인은 미패키지 실행)을 격리된 cwd · user-data 로 띄운 앱에서 라이트와 다크 각각 아래 9개를 확인합니다(2026-11-20 정정: `pnpm dev` 는 실제 `~/.config/Croffle` 과 작업 폴더를 쓰고 화면에 창을 띄움).
   - PM 이 Playwright `_electron` 으로 하거나 사용자가 하며, 누가 무엇으로 했는지와 조건별 결과를 `v8-screens.txt` 에 적습니다.
   - 스크린샷 18장(`screens/1-light.png` … `9-dark.png`)을 남기고 `ls -l .loctx/reports/1.3.2/test/screens/` 를 `v8-screens-ls.txt` 에 남깁니다.
   1. 종(S-7):
@@ -208,7 +209,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
   - (가) `./apps/desktop/dist/linux-unpacked/croffle`
   - (나) `APPIMAGE=/tmp/croffle.AppImage ./apps/desktop/dist/linux-unpacked/croffle`
   - 두 경우 모두 설정 › 일반 › 업데이트의 자동 업데이트를 끈 채 "지금 확인"을 누르고, 버전 타일 팝오버도 엽니다.
-  - 관찰은 `v9-manual.txt` 에, 해당 실행 구간의 `~/.config/Croffle/logs/main.log` 는 `v9-main-log.txt` 에 남깁니다.
+  - 관찰과 해당 실행의 로그 발췌는 `v9-ga.txt` · `v9-na.txt` 에 남깁니다. 로그는 실행에 쓴 user-data 의 `logs/main.log` 입니다(2026-11-20 정정: 격리된 `--user-data-dir` 로 실행).
   - 기대:
     1. 빌드가 `exit=0` 입니다.
     2. 두 경우 모두 버튼이 켜져 있습니다.
