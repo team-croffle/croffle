@@ -691,6 +691,13 @@
     return t(`priority.${priority}`);
   });
 
+  /** Priority on the status tokens: low success, medium warning, high destructive. */
+  const viewPriority = computed(() =>
+    priorityOptions.value.find((o) => o.value === (viewedSchedule.value?.priority ?? 'medium'))!,
+  );
+  const viewPriorityClass = computed(() => viewPriority.value.active);
+  const viewPriorityDot = computed(() => viewPriority.value.dot);
+
   const headerIcon = computed(() => {
     if (isViewMode.value) {
       return 'lucide:calendar';
@@ -723,20 +730,20 @@
     {
       value: 'low' as const,
       label: t('priority.low'),
-      active: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700',
-      iconClass: 'text-emerald-600',
+      active: 'border border-success bg-success/14 text-foreground',
+      dot: 'bg-success',
     },
     {
       value: 'medium' as const,
       label: t('priority.medium'),
-      active: 'border-amber-500/40 bg-amber-500/10 text-amber-700',
-      iconClass: 'text-amber-600',
+      active: 'border border-warning bg-warning/14 text-foreground',
+      dot: 'bg-warning',
     },
     {
       value: 'high' as const,
       label: t('priority.high'),
-      active: 'border-rose-500/40 bg-rose-500/10 text-rose-700',
-      iconClass: 'text-rose-600',
+      active: 'border border-destructive bg-destructive/14 text-foreground',
+      dot: 'bg-destructive',
     },
   ]);
 </script>
@@ -754,7 +761,7 @@
       <DialogHeader class="space-y-3 border-b px-6 pt-6 pb-5 text-left">
         <div class="flex items-start gap-3 pr-6">
           <div
-            class="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl"
+            class="bg-primary/10 text-croffle-primary-strong flex size-10 shrink-0 items-center justify-center rounded-xl"
           >
             <Icon :icon="headerIcon" class="size-5" />
           </div>
@@ -821,7 +828,14 @@
               <div class="min-w-0">
                 <dt class="sr-only">{{ $t('schedule.priority') }}</dt>
                 <dd>
-                  <Badge variant="secondary">{{ viewPriorityLabel }}</Badge>
+                  <Badge variant="outline" class="text-foreground gap-1" :class="viewPriorityClass">
+                    <span
+                      class="size-1.5 rounded-full"
+                      :class="viewPriorityDot"
+                      aria-hidden="true"
+                    />
+                    {{ viewPriorityLabel }}
+                  </Badge>
                 </dd>
               </div>
             </div>
@@ -1064,11 +1078,12 @@
                     class="flex cursor-pointer flex-col items-center gap-1.5 rounded-lg px-2 py-2.5 text-xs font-medium transition-all"
                     :class="
                       form.priority === option.value
-                        ? cn('bg-background shadow-sm ring-1 ring-black/5', option.active)
+                        ? cn('bg-background shadow-sm', option.active)
                         : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
                     "
                     @click="form.priority = option.value"
                   >
+                    <span class="size-1.5 rounded-full" :class="option.dot" aria-hidden="true" />
                     {{ option.label }}
                   </button>
                 </div>

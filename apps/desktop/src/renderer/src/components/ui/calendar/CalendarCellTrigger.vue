@@ -32,7 +32,7 @@
         // Disabled
         'data-[disabled]:text-muted-foreground data-[disabled]:opacity-50',
         // Unavailable
-        'data-[unavailable]:text-destructive-foreground data-[unavailable]:line-through',
+        'data-[unavailable]:text-destructive data-[unavailable]:line-through',
         // Outside months
         'data-[outside-view]:text-muted-foreground',
         props.class,
