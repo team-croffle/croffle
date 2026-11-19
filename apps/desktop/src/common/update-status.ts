@@ -52,3 +52,18 @@ export function nextUpdateStatus(
 export function toastsLatest(manual: boolean): boolean {
   return !manual;
 }
+
+/**
+ * The main process's answer to a check started by hand, applied after the state was already set
+ * to "checking". Only "unsupported" changes it, and only while still checking: a result event
+ * that arrived before the answer is kept.
+ */
+export function applyCheckAnswer(
+  status: UpdateCheckStatus,
+  answer: UpdateCheckStart,
+): UpdateCheckStatus {
+  if (answer.status === 'unsupported' && status.kind === 'checking') {
+    return { kind: 'unsupported', reason: answer.reason };
+  }
+  return status;
+}
