@@ -4,6 +4,11 @@ Rules for the renderer UI (`src/renderer/src`). Follow them for every new or cha
 screen needs something these rules do not cover, extend this file in the same change instead of
 adding a one-off class.
 
+The values come from the shared design system **"croffle"** (themes **Croffle Light** and
+**Croffle Dark**), which the desktop app, the Server WebUI, the mobile app and pipit-hub use:
+<https://claude.ai/artifact/9RJ3iMqwtduoMasBnMe4ky> (read `project/README.md`, then
+`project/tokens.json`). This file is how the desktop app applies it.
+
 The short version: **use the parts in `components/ui` as they are, and style with tokens.** Almost
 every inconsistency this file was written to remove came from a screen overriding a part's height,
 radius, color or focus ring with its own classes.
@@ -11,28 +16,54 @@ radius, color or focus ring with its own classes.
 ## Tokens
 
 Colors come from CSS variables in `src/renderer/src/index.css`. Screens use the Tailwind names of
-those variables and never a palette color (`neutral-200`, `red-500`) or a hex value.
+those variables and never a palette color (`neutral-200`, `emerald-500`), a hex value
+or an `rgba()`.
 
-| Use                        | Class                                                     |
-| -------------------------- | --------------------------------------------------------- |
-| Accent (primary actions)   | `bg-primary` / `text-primary` / `text-primary-foreground` |
-| Page and dialog background | `bg-background`, app shell `bg-croffle-bg`                |
-| Raised surface             | `bg-card`                                                 |
-| Subtle fill, hover         | `bg-muted`, `bg-accent`                                   |
-| Text                       | `text-foreground`, secondary `text-muted-foreground`      |
-| Borders                    | `border-border` (the default of `border`), `border-input` |
-| Focus ring                 | `ring-ring` (applied by the parts)                        |
-| Danger                     | `bg-destructive`, `text-destructive`                      |
+| Use                                           | Class                                                         |
+| --------------------------------------------- | ------------------------------------------------------------- |
+| Accent fill (the main action, active)         | `bg-primary` with `text-primary-foreground` on it             |
+| Accent as lettering (title, today, link)      | `text-croffle-primary-strong`                                 |
+| Page and window background                    | `bg-background` (app shell `bg-croffle-bg`)                   |
+| Raised surface                                | `bg-card`; menus and popovers `bg-popover`                    |
+| Sidebars                                      | `bg-sidebar` (`bg-croffle-sidebar`)                           |
+| Quiet fill, hover                             | `bg-muted`; hover `bg-accent` (`bg-croffle-hover`)            |
+| Text                                          | `text-foreground`, secondary `text-muted-foreground`          |
+| Decorative lines                              | `border-border` (the default of `border`)                     |
+| Control edges (inputs, selects, switch track) | `border-input` / `bg-input` — at least 3:1                    |
+| Focus ring                                    | `ring-ring` (applied by the parts)                            |
+| Danger fill                                   | `bg-destructive` with `text-destructive-foreground` on it     |
+| Error text                                    | `text-destructive`                                            |
+| Status                                        | `success`, `warning`, `info`, `destructive` (+ `-foreground`) |
 
-- `--primary`, `--ring`, `--sidebar-ring`, `--border` and `--input` are wired to the Croffle tokens
-  (`--croffle-primary`, `--croffle-border`), which follow the accent color the user picks in
-  Settings. Anything painted with `primary` changes with that setting; a hex value does not.
-- `--croffle-*` variables are visible to extensions. Do not rename them or change their values.
+- **Contrast.** Every text pair holds 4.5:1 in both themes and control edges 3:1;
+  `test/tokens-contrast.test.ts` checks it from `index.css`. Labels on `primary` are
+  `primary-foreground`, never white. Status colors used as lettering go on `background`, `card` or
+  `sidebar` (not on `muted`, where `warning` falls under 4.5:1).
+- **Error text** is `text-destructive`. `destructive-foreground` is only for text placed over a
+  `bg-destructive` fill (shadcn convention).
+- **Status** is a dot and a word, never color alone, and never the accent. Priority: 낮음
+  `success`, 보통 `warning`, 높음 `destructive` (`border-… bg-…/14` with a `bg-…` dot).
+- **Warnings** (insecure option, beta notice, clock skew) use `warning`: `text-warning`, or a
+  notice box `border-warning bg-warning/10 text-foreground`.
+- **Dark surfaces rise in lightness:** `background` < `card` = `popover`.
 - Light and dark come from the tokens. A screen should not need a `dark:` color class.
-- Error text is `text-destructive-foreground` (readable in dark); `text-destructive` is for
-  destructive actions.
-- Allowed exceptions: the window close button's red hover in the title bar, and warning notices,
-  which use Tailwind's `amber-*` with a `dark:` pair until there is a warning token.
+- The only allowed palette color is the window close button's red hover in the title bar.
+
+### `--croffle-*` names
+
+Extensions read the `--croffle-*` variables, so **their names stay**. Their values are aliases of
+the tokens above (`--croffle-bg` → `--background`, `--croffle-text` → `--muted-foreground`,
+`--croffle-red` → `--destructive`, …); a value changes when the design system changes. Never rename
+or remove one; add a new one only with an alias. New screen code uses the semantic names.
+
+### Accent color setting
+
+Settings › General › Accent color changes only `--croffle-accent-hue`, which tints the accent
+family: `primary`, `ring`, `accent-foreground` (= `croffle-primary-strong`) and
+`croffle-today-bg`, at fixed lightness and chroma. Every other token (backgrounds, sidebars,
+borders, hover) stays fixed. The default hue is 70; the dark theme adds a small offset so
+the default gives the design system's dark values. The lightness is chosen so that every hue keeps
+4.5:1.
 
 ## Controls
 
@@ -46,13 +77,17 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 
 - Use `Button`, `Input`, `Textarea`, `Select`, `Switch`, `Badge` from `components/ui`. Do not write
   a bare `<button>` or `<input>`. Exceptions: color swatches, the options of the priority picker,
-  the small remove button inside a `Badge`, the three window buttons, and `<input type="color">`.
+  the small remove button inside a `Badge`, the three window buttons, `<input type="color">`, the
+  rows of a list inside a popover (notifications) and the version tile.
 - Keep the focus ring of a part. A composite control (the time field, the tags input) shows the
   same ring on its wrapper with `focus-within:`.
 - These rules are about how a screen uses a part. What a generated part draws inside itself (the
   day buttons of the date picker, the items of a select list or a menu) keeps the part's own sizes.
 - Do not override a part's height, horizontal padding, font weight, radius, border color or focus
   ring from a screen. If a size is missing, add a variant to the part.
+- A part in `components/ui` is changed in place only when tokens alone cannot meet these rules
+  (1.3.2: the destructive variants of `button` and `badge`, the error text of the context menu
+  and the calendars, the switch, the popover's radius and shadow).
 - A trigger that shows a value and opens a picker (the date fields) is
   `Button variant="outline"` with `w-full justify-between font-normal`, so it reads as a field.
 - A toggle is `Button variant="outline"` with `aria-pressed`; the part styles the pressed state.
@@ -71,6 +106,7 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 | A delete action inside a row or footer | `ghost` with `text-destructive`     |
 | Low-emphasis action                    | `ghost`                             |
 
+- One accent fill per area; everything else there is `outline` or `ghost`.
 - Width comes from the label and the size's padding. Never add `px-*` to make a button wider.
 - Dialog footer buttons have `min-w-20` (80px), sit right-aligned with `gap-2`, and the main action
   is the rightmost one.
@@ -87,29 +123,44 @@ those variables and never a palette color (`neutral-200`, `red-500`) or a hex va
 - Number inputs are `w-24`.
 - A fixed-width control in a row also gets `shrink-0`, so a long label wraps instead of squeezing it.
 - Labels are `Label` with `text-sm font-medium`; hints are `text-xs text-muted-foreground`.
+- An invalid value shows its reason under the field in `text-xs text-destructive` with
+  `role="alert"`, and the field gets `aria-invalid`.
 
 ## Radius
 
-`--radius` is 10px. Use three steps only.
+`--radius` is 12px. Use these steps.
 
 | Step    | Value | Class          | For                                                      |
 | ------- | ----- | -------------- | -------------------------------------------------------- |
-| Control | 8px   | `rounded-md`   | buttons, inputs, selects, badges, list and nav items     |
-| Surface | 14px  | `rounded-xl`   | cards, dialogs, panels                                   |
+| Small   | 8px   | `rounded-sm`   | small chips, week numbers                                |
+| Control | 10px  | `rounded-md`   | buttons, inputs, selects, badges, list and nav items     |
+| Large   | 12px  | `rounded-lg`   | calendar events                                          |
+| Surface | 16px  | `rounded-xl`   | cards, dialogs, popovers, menus                          |
+| 2xl     | 20px  | `rounded-2xl`  | today and selected calendar cells                        |
+| 3xl     | 24px  | `rounded-3xl`  | the calendar card (the app's main surface)               |
 | Round   | —     | `rounded-full` | avatars, swatches, status dots, the collapsed add button |
 
-Menus and popovers (select lists, context menus, the date picker) keep the part's 8px.
+In `<style>` blocks use the variables (`var(--radius-md)`), not pixel values.
 
-Exceptions: the calendar card is the app's main surface and uses 24px (`--radius-3xl`); calendar
-events use `--radius-lg`. In `<style>` blocks use the variables (`var(--radius-md)`), not pixel
-values.
+## Shadows
 
-## Dialogs and cards
+One set, tinted with the ink color in light and deep black in dark (`--elevation-*` in
+`index.css`, used through the Tailwind classes):
+
+| Class            | For                                                                              |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `shadow-xs`      | inputs and outline buttons (the parts)                                           |
+| `shadow-sm`      | cards on the page                                                                |
+| `shadow-surface` | the one main surface of a screen (calendar card; `var(--shadow-surface)` in CSS) |
+| `shadow-lg`      | dialogs, popovers, menus                                                         |
+
+## Dialogs, popovers and cards
 
 | Kind                               | Width                      |
 | ---------------------------------- | -------------------------- |
-| Confirmation, notice, help, update | `sm:max-w-md`              |
-| Form (schedule)                    | `sm:max-w-lg`              |
+| Confirmation, notice, help, update | `sm:max-w-md` (448px)      |
+| Form (schedule)                    | `sm:max-w-lg` (512px)      |
+| Popover (notifications, version)   | `w-[340px]`                |
 | Settings                           | its own full-window layout |
 
 - A dialog keeps the part's defaults: `rounded-xl`, `shadow-lg`, title `text-lg font-semibold`,
@@ -118,8 +169,37 @@ values.
   `border-t bg-muted/20 px-6 py-4`.
 - A card is `rounded-xl border bg-card` (add `shadow-sm` when it sits on the page background), or
   the `Card` part. An inset option group inside a form is `rounded-xl border bg-muted/30`.
+- A popover is `rounded-xl shadow-lg` (the part's default): a header with the title and at most one
+  text action, then rows of a 16px icon, a sentence and a meta line. Empty: one calm sentence.
+
+## Behaviour
+
+- **Settings apply immediately.** There is no Save/Cancel footer. Switches and selects save when
+  changed; a text or number field saves when it is left or Enter is pressed; an invalid value is
+  not saved and says why under the field; a failed save shows an error toast and puts the stored
+  value back.
+- **Irreversible actions** (deleting an extension, changing the sync server, importing) ask with
+  the app's confirm dialog (`uiStore.openConfirm`, `destructive` confirm button), never the
+  browser's `confirm()`.
+- **Notifications** open from the bell as a popover: reminders that went off during this run
+  (newest first, unread in `font-semibold`, kept in memory only) and those due in the next 24
+  hours. The bell shows the unread count; only "모두 읽음" marks them read. A row opens its
+  schedule.
+- **Updates** can be checked by hand from the version tile and Settings › General › Updates; both
+  show the same state: checking, 최신 버전, 새 버전 (opens the update dialog), 실패, or "cannot
+  check" for a development build or an install that cannot update. A check started by hand shows
+  its result in place, without a toast.
+- **The theme button** saves on left-click (light ↔ dark); right-click offers 라이트 / 다크 / 시스템.
+- **Nav subtitles** add information ("오늘 일정 3개"); they never repeat the title in another
+  language.
+- **Every panel that loads data** has a loading, an error and an empty state; an empty state is one
+  calm sentence.
+- **Help text** describes what the app actually does and changes in the same change as the
+  behaviour.
 
 ## Type
+
+Body text is Pretendard (400 · 500 · 600 · 700, bundled); the wordmark is Fredoka.
 
 | Text                                   | Class                                  |
 | -------------------------------------- | -------------------------------------- |
@@ -135,15 +215,16 @@ values.
 Icons are sized with `size-*` (`size-4` = 16px by default, `size-5` for sidebar rail icons), not
 `h-* w-*`.
 
+## Copy
+
+Korean is the primary language; every string is in both `ko.json` and `en.json` under the same key,
+and `ko.json` has no English sentences (`test/i18n-catalogs.test.ts`). Help and empty states use
+해요체; notices and errors use 합니다체. Say what happened, then what to do.
+
 ## Checking a change
 
-There is no lint rule for these. Before finishing UI work, search the screens you touched for the
-things this file forbids:
-
-```sh
-cd apps/desktop/src/renderer/src
-grep -rnE '(bg|text|border|ring)-(neutral|gray|zinc|slate)-[0-9]+|\[#[0-9A-Fa-f]{3,8}\]' --include='*.vue' --exclude-dir=ui .
-grep -rnE '<(button|input)\b' --include='*.vue' --exclude-dir=ui .
-```
-
-and look at the screen in both light and dark.
+`pnpm -r test` runs the token contrast and catalog checks. Before finishing UI work, also run
+`apps/desktop/scripts/check-ui-tokens.sh`, which lists the palette colors, hex and `rgba()` values,
+`text-destructive-foreground` uses and browser `confirm()` calls in the screens; only the title bar
+close button's red hover and `text-destructive-foreground` over `bg-destructive` may remain. Then
+look at the screen in both light and dark.
