@@ -93,8 +93,14 @@
   --card-foreground: var(--foreground);
   --popover: #ffffff;
   --popover-foreground: var(--foreground);
-  /* Lightness 0.534 (system #98641b is 0.547) keeps primary-foreground at 4.5:1 for every hue. */
-  --primary: oklch(0.534 0.1074 var(--croffle-accent-hue));
+  /*
+   * The system's lightness (0.5469, #98641b at the default hue 70), lowered by up to 0.0095 only
+   * around hue 185 so primary-foreground keeps 4.5:1 for every accent hue (A-20).
+   */
+  --primary: oklch(
+    calc(0.5469 - 0.0095 * max(0, cos((var(--croffle-accent-hue) - 185) * 1deg))) 0.1074
+      var(--croffle-accent-hue)
+  );
   --primary-foreground: #fffaf0;
   --secondary: #f3eee2;
   --secondary-foreground: #3a3327;
@@ -146,7 +152,10 @@
   --croffle-red: var(--destructive);
   --croffle-blue: var(--info);
   --croffle-green: var(--success);
-  --croffle-today-bg: oklch(0.534 0.1074 var(--croffle-accent-hue) / 0.16);
+  --croffle-today-bg: oklch(
+    calc(0.5469 - 0.0095 * max(0, cos((var(--croffle-accent-hue) - 185) * 1deg))) 0.1074
+      var(--croffle-accent-hue) / 0.16
+  );
   --croffle-day-select-bg: rgba(60, 110, 165, 0.14);
   --croffle-muted: var(--muted-foreground);
   --croffle-disabled: var(--muted);

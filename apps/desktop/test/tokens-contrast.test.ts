@@ -8,10 +8,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
 
+import { contrast, oklchToSrgb, srgbToOklchL, type Rgb } from './support/color.ts';
+
 const ROOT = join(import.meta.dirname, '..');
 const CSS = readFileSync(join(ROOT, 'src/renderer/src/index.css'), 'utf8');
 
 type Vars = Map<string, string>;
+
+/** One line, single spaces, no space just inside parentheses (the formatter wraps long values). */
+const normalize = (v: string) =>
+  v.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')').trim();
 
 /** Declarations of the first top-level block whose selector is exactly `selector`. */
 function block(selector: string): Vars {
@@ -27,7 +33,7 @@ function block(selector: string): Vars {
     }
     const name = d.slice(0, i).trim();
     if (name.startsWith('--')) {
-      vars.set(name, d.slice(i + 1).trim());
+      vars.set(name, normalize(d.slice(i + 1)));
     }
   }
   return vars;
@@ -44,36 +50,6 @@ const DARK_OWN = block('.dark');
 /** `.dark` overrides `:root`; anything it does not set comes from `:root`. */
 const DARK: Vars = new Map([...LIGHT, ...DARK_OWN]);
 
-type Rgb = [number, number, number];
-
-const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-const linearToSrgb = (c: number) => {
-  const x = Math.min(1, Math.max(0, c));
-  return x <= 0.0031308 ? x * 12.92 : 1.055 * x ** (1 / 2.4) - 0.055;
-};
-
-function oklchToSrgb(l: number, c: number, h: number): Rgb {
-  const a = c * Math.cos((h * Math.PI) / 180);
-  const b = c * Math.sin((h * Math.PI) / 180);
-  const l3 = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const m3 = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const s3 = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
-  // Out-of-gamut channels are clipped, as the browser shows them.
-  return [
-    linearToSrgb(4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3),
-    linearToSrgb(-1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3),
-    linearToSrgb(-0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3),
-  ];
-}
-
-function srgbToOklchL([r, g, b]: Rgb): number {
-  const [lr, lg, lb] = [r, g, b].map(srgbToLinear) as Rgb;
-  const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
-  const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
-  const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
-  return 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
-}
-
 /** Resolves a token to sRGB, following `var()` and evaluating `calc(var(--croffle-accent-hue) + n)`. */
 function resolve(vars: Vars, name: string, hue: number, depth = 0): Rgb {
   assert.ok(depth < 10, `var loop at ${name}`);
@@ -88,11 +64,24 @@ function resolve(vars: Vars, name: string, hue: number, depth = 0): Rgb {
   if (hex) {
     return [0, 2, 4].map((i) => Number.parseInt(hex[1]!.slice(i, i + 2), 16) / 255) as Rgb;
   }
-  const ok = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+(.+?)\s*(\/\s*[\d.]+)?\)$/.exec(v);
+  const ok = /^oklch\(\s*(calc\(.+?\)\)\)|[\d.]+)\s+([\d.]+)\s+(.+?)\s*(\/\s*[\d.]+)?\)$/.exec(v);
   if (ok) {
-    return oklchToSrgb(Number(ok[1]), Number(ok[2]), hueOf(ok[3]!, hue));
+    return oklchToSrgb(lightnessOf(ok[1]!, hue), Number(ok[2]), hueOf(ok[3]!, hue));
   }
   throw new Error(`cannot resolve ${name}: ${v}`);
+}
+
+/** The accent dip: `calc(L - k * max(0, cos((var(--croffle-accent-hue) - c) * 1deg)))`. */
+const DIP =
+  /^calc\(([\d.]+) - ([\d.]+) \* max\(0, cos\(\(var\(--croffle-accent-hue\) - ([\d.]+)\) \* 1deg\)\)\)$/;
+
+function lightnessOf(expr: string, hue: number): number {
+  const m = DIP.exec(expr);
+  if (!m) {
+    return Number(expr);
+  }
+  const [base, dip, center] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return base - dip * Math.max(0, Math.cos(((hue - center) * Math.PI) / 180));
 }
 
 function hueOf(expr: string, hue: number): number {
@@ -105,16 +94,6 @@ function hueOf(expr: string, hue: number): number {
   }
   return Number(expr);
 }
-
-const luminance = (rgb: Rgb) => {
-  const [r, g, b] = rgb.map(srgbToLinear) as Rgb;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-const contrast = (a: Rgb, b: Rgb) => {
-  const [hi, lo] = [luminance(a), luminance(b)].toSorted((x, y) => y - x) as [number, number];
-  return (hi + 0.05) / (lo + 0.05);
-};
 
 const DEFAULT_HUE = Number(LIGHT.get('--croffle-accent-hue'));
 
@@ -277,12 +256,22 @@ describe('design system tokens', () => {
     assert.match(appearance, /export const DEFAULT_ACCENT_HUE = 70;/);
     const settings = readFileSync(join(ROOT, 'src/main/setting/setting-service.ts'), 'utf8');
     assert.match(settings, /accentHue: 70,/);
-    // The settings preview uses the lightness and chroma of --primary in Croffle Light.
-    const primary = /^oklch\(([\d.]+) ([\d.]+) var\(--croffle-accent-hue\)\)$/.exec(
+    // --primary in Croffle Light: the system's lightness at the default hue, the same formula and
+    // chroma as the settings preview (appearance.ts).
+    const primary = /^oklch\((calc\(.+?\)\)\)) ([\d.]+) var\(--croffle-accent-hue\)\)$/.exec(
       LIGHT.get('--primary') ?? '',
     );
-    assert.ok(primary, '--primary is not oklch(L C var(--croffle-accent-hue))');
-    assert.match(appearance, new RegExp(`PREVIEW_LIGHTNESS = ${primary[1]};`));
+    assert.ok(primary, '--primary is not oklch(calc(…) C var(--croffle-accent-hue))');
+    const dip = DIP.exec(primary[1]!);
+    assert.ok(dip, '--primary lightness is not the accent dip formula');
+    assert.equal(
+      lightnessOf(primary[1]!, DEFAULT_HUE),
+      0.5469,
+      'default hue is not the system value',
+    );
+    assert.match(appearance, new RegExp(`ACCENT_LIGHTNESS = ${dip[1]};`));
+    assert.match(appearance, new RegExp(`ACCENT_DIP = ${dip[2]};`));
+    assert.match(appearance, new RegExp(`ACCENT_DIP_CENTER = ${dip[3]};`));
     assert.match(appearance, new RegExp(`PREVIEW_CHROMA = ${primary[2]};`));
   });
 

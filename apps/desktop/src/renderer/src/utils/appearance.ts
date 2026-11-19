@@ -7,9 +7,19 @@ export type AppearanceOverrides = {
 
 const ACCENT_HUE_VAR = '--croffle-accent-hue';
 
-/** oklch lightness and chroma of --primary in Croffle Light (index.css). */
-export const PREVIEW_LIGHTNESS = 0.534;
+/**
+ * --primary in Croffle Light (index.css): the system's lightness, lowered by up to ACCENT_DIP
+ * around ACCENT_DIP_CENTER so its label keeps 4.5:1 for every hue; fixed chroma.
+ */
+export const ACCENT_LIGHTNESS = 0.5469;
+export const ACCENT_DIP = 0.0095;
+export const ACCENT_DIP_CENTER = 185;
 export const PREVIEW_CHROMA = 0.1074;
+
+/** The lightness --primary has at `hue` (same formula as index.css). */
+export const accentLightness = (hue: number): number =>
+  ACCENT_LIGHTNESS -
+  ACCENT_DIP * Math.max(0, Math.cos(((hue - ACCENT_DIP_CENTER) * Math.PI) / 180));
 
 /** Clamp hue to the CSS hue range. */
 export const normalizeAccentHue = (hue: number): number => {
@@ -62,7 +72,7 @@ export const hexToHue = (hex: string): number => {
 export const hueToPreviewHex = (hue: number): string => {
   const h = normalizeAccentHue(hue);
   // Same lightness/chroma as --primary in Croffle Light (index.css)
-  const l = PREVIEW_LIGHTNESS;
+  const l = accentLightness(h);
   const c = PREVIEW_CHROMA;
   const [r, g, b] = oklchToSrgb(l, c, h);
   return rgbToHex(r, g, b);
