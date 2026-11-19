@@ -35,71 +35,54 @@ export function parseNumberInput(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-type Plain = Record<string, unknown>;
-const isPlain = (v: unknown): v is Plain =>
-  typeof v === 'object' && v !== null && !Array.isArray(v) && !(v instanceof Date);
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
-
 /**
- * The screen's edits laid over the latest stored settings: a field the screen changed (edited
- * differs from base) takes the screen's value; every other field keeps `latest`, so a change
- * saved elsewhere meanwhile (the title bar's theme button) is not overwritten.
+ * App settings while they apply immediately. Each control sends only the field it changed
+ * (main merges a patch into what it has stored); the screen shows the latest stored settings
+ * with the patches that have not finished laid on top.
+ * - A change saved elsewhere only replaces `stored`; it is never taken for an edit.
+ * - A failed patch is dropped, so its field shows the latest stored value again.
+ * - An edit made while an earlier patch is saving is its own patch and stays on screen.
  */
-export function mergeEdits<T>(latest: T, base: T, edited: T): T {
-  if (isPlain(latest) && isPlain(base) && isPlain(edited)) {
-    const out: Plain = { ...latest };
-    for (const key of new Set([...Object.keys(latest), ...Object.keys(edited)])) {
-      out[key] = mergeEdits(latest[key], base[key], edited[key]);
-    }
-    return out as T;
-  }
-  return same(edited, base) ? latest : edited;
-}
+export class PendingPatches<T extends object> {
+  private pending: { id: number; section: keyof T; field: string; value: unknown }[] = [];
+  private nextId = 1;
 
-const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-
-/**
- * The settings screen's state while settings apply immediately.
- * - `stored`: the latest stored settings (from saves and from changes saved elsewhere);
- * - `base`: what the screen's values were last set from; the screen's edits are where `screen`
- *   differs from it;
- * - while a save runs, the values being saved count as the base, so an edit made meanwhile
- *   (even one back to the old value) is kept and saved next.
- */
-export class SettingsDraft<T> {
   public stored: T;
-  public base: T;
-  public screen: T;
-  private saving: T | null = null;
 
-  public constructor(initial: T) {
-    this.stored = copy(initial);
-    this.base = copy(initial);
-    this.screen = copy(initial);
+  public constructor(stored: T) {
+    this.stored = stored;
   }
 
-  /** Settings stored elsewhere (or this screen's own save, reported back) arrived. */
-  public rebase(latest: T): void {
-    this.screen = copy(mergeEdits(latest, this.saving ?? this.base, this.screen));
-    this.stored = copy(latest);
-    this.base = copy(latest);
+  /** Records an edit; returns its id and the patch to send. */
+  public edit<S extends keyof T>(
+    section: S,
+    field: keyof T[S] & string,
+    value: T[S][keyof T[S]],
+  ): { id: number; patch: Partial<T> } {
+    const id = this.nextId++;
+    this.pending.push({ id, section, field, value });
+    return { id, patch: { [section]: { [field]: value } } as unknown as Partial<T> };
   }
 
-  /** What to save now, or null when the screen has no edits. Marks it as being saved. */
-  public beginSave(): T | null {
-    const next = mergeEdits(this.stored, this.base, this.screen);
-    if (same(next, this.stored)) {
-      return null;
+  /** The patch finished. On success `latest` is what main stored after it. */
+  public settle(id: number, latest?: T): void {
+    this.pending = this.pending.filter((p) => p.id !== id);
+    if (latest) {
+      this.stored = latest;
     }
-    this.saving = copy(next);
-    return copy(next);
   }
 
-  /** The save ended; `result` is what is stored now (the old values if it failed). */
-  public endSave(saved: T, result: T): void {
-    this.screen = copy(mergeEdits(result, saved, this.screen));
-    this.stored = copy(result);
-    this.base = copy(result);
-    this.saving = null;
+  /** Settings stored elsewhere (or a save reported back) arrived. */
+  public receive(latest: T): void {
+    this.stored = latest;
+  }
+
+  /** What the screen shows: the latest stored settings with unfinished patches on top. */
+  public view(): T {
+    const out = JSON.parse(JSON.stringify(this.stored)) as T;
+    for (const p of this.pending) {
+      (out[p.section] as Record<string, unknown>)[p.field] = p.value;
+    }
+    return out;
   }
 }
