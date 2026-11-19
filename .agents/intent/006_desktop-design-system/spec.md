@@ -273,6 +273,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
 - A-10 (2026-11-19, W-6, 리뷰 1 F-1 · F-2) 설정 화면은 화면이 바꾼 칸만 최신 저장값 위에 얹어 저장합니다(`mergeEdits`). 다른 곳의 저장(`SETTINGS_UPDATE`)을 바로 받아들이고, 저장은 차례로 하나씩 하며, 창을 닫을 때 기다리던 저장을 바로 보내고 다시 열 때 고친 내용을 버리지 않습니다. 테스트 `screen edits do not overwrite a change saved elsewhere` 를 더했습니다 · 318b3c0
 - A-11 (2026-11-19, W-5, 리뷰 1 F-5) 수동 확인은 main 에 묻기 전에 "확인 중"으로 두고, main 의 답은 아직 확인 중일 때의 "확인할 수 없음"만 반영합니다(`applyCheckAnswer`). 테스트 `a late answer does not override a result that arrived first` 를 더했습니다 · bb7c3b2
 - A-12 (2026-11-19, W-3 · W-4, 리뷰 1 F-3 · F-4 · F-6) 다가오는 일정 · 알림 항목을 열 때 그 일정을 달력 store 에 넣어 보기 창이 찾게 합니다. 알림 목록은 팝오버를 열 때와 1분마다 다시 읽습니다. 다가오는 일정은 조회에 성공한 뒤에만 날짜를 기록해 실패하면 다음 틱에 다시 읽습니다 · c7bcf95
+- A-13 (2026-11-19, W-6, 리뷰 2 G-1 · G-2) 설정 화면의 편집 상태를 순수 클래스 `SettingsDraft`(`src/common/settings-apply.ts`)로 옮겼습니다. 저장이 도는 동안은 저장 중인 값을 기준으로 삼아, 그 사이의 편집(이전 값으로 되돌린 것 포함)을 지키고 다음에 저장합니다. 실패하면 저장하려던 칸만 되돌립니다. 테스트 `an edit made while saving is kept, even one back to the old value` · `a failed save puts back only the fields it tried to save` 를 더했습니다. 확장 구성 폼의 key 에 탭 id 를 넣었습니다 · 7203f17
 
 ## 우려
 - **확장 화면 색이 바뀝니다.** `--croffle-*` 값이 바뀌므로, 이 변수를 읽는 확장의 화면 색이 1.3.2 에서 달라집니다. 이름은 그대로라 깨지지는 않습니다. 릴리스 노트에 적습니다.
