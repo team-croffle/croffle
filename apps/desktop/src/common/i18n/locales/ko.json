@@ -194,7 +194,8 @@
     "help": "도움말",
     "calendar": {
       "title": "캘린더",
-      "subtitle": "Calendar"
+      "subtitle": "오늘 일정 {count}개",
+      "subtitleEmpty": "오늘 일정 없음"
     }
   },
   "rightSidebar": {
@@ -206,12 +207,13 @@
     "emptyToday": "오늘 일정이 없습니다",
     "emptySelected": "이 날 일정이 없습니다",
     "upcoming": "다가오는 일정",
-    "emptyUpcoming": "다가오는 일정이 없습니다"
+    "emptyUpcoming": "다가오는 일정이 없습니다",
+    "upcomingOpenHint": "더블클릭하면 일정을 엽니다"
   },
   "titleBar": {
     "toggleTheme": "테마 전환",
     "toggleLeftSidebar": "왼쪽 사이드바 열기/닫기",
-    "themeMenuHint": "클릭: 전환 · 우클릭: 라이트 / 다크 / 시스템 선택"
+    "themeMenuHint": "클릭: 라이트 ↔ 다크 · 우클릭: 라이트 / 다크 / 시스템 (둘 다 설정에 저장)"
   },
   "closeModal": {
     "title": "Croffle을 닫을까요?",

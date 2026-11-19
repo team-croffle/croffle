@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import type { UpcomingOccurrence } from '@croffledev/common';
   import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
   import { computed } from 'vue';
@@ -13,13 +14,33 @@
   import { cn } from '@/lib/utils';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
+  import { useUpcomingStore } from '@/stores/upcoming-store';
   import { occurrencesOnDate, type ScheduleOccurrence } from '@/utils/schedule-occurrences';
 
   import pkg from '../../../../package.json';
 
   const uiStore = useUiStore();
   const scheduleStore = useScheduleStore();
+  const upcomingStore = useUpcomingStore();
+  upcomingStore.start();
   const { t, locale } = useI18n();
+
+  /** "11월 20일 (금) 오후 3:00", all-day: date only (app language). */
+  const upcomingLabel = (occurrence: UpcomingOccurrence) =>
+    new Intl.DateTimeFormat(locale.value === 'ko' ? 'ko-KR' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+      ...(occurrence.schedule.isAllDay ? {} : { hour: 'numeric', minute: '2-digit' }),
+    }).format(occurrence.start);
+
+  const openUpcoming = (occurrence: UpcomingOccurrence) => {
+    const detail =
+      occurrence.occurrenceStart === null
+        ? undefined
+        : { start: occurrence.start, end: occurrence.end, isOverride: occurrence.isOverride };
+    uiStore.openScheduleModal('view', occurrence.schedule.id, detail);
+  };
 
   const { rightSidebarOpen, selectedDate } = storeToRefs(uiStore);
 
@@ -202,8 +223,42 @@
               <span>{{ $t('rightSidebar.upcoming') }}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent class="text-croffle-text flex min-h-25 items-center justify-center text-sm">
+          <CardContent
+            v-if="upcomingStore.upcoming.length === 0"
+            class="text-croffle-text flex min-h-25 items-center justify-center text-sm"
+          >
             {{ $t('rightSidebar.emptyUpcoming') }}
+          </CardContent>
+          <CardContent v-else class="px-2 pb-2">
+            <ul class="flex flex-col gap-0.5">
+              <li
+                v-for="occurrence in upcomingStore.upcoming"
+                :key="`${occurrence.schedule.id}:${occurrence.start.getTime()}`"
+              >
+                <div
+                  role="button"
+                  tabindex="0"
+                  class="hover:bg-croffle-hover focus-visible:ring-ring/50 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none focus-visible:ring-[3px]"
+                  :title="$t('rightSidebar.upcomingOpenHint')"
+                  @dblclick="openUpcoming(occurrence)"
+                  @keydown.enter="openUpcoming(occurrence)"
+                >
+                  <span
+                    class="size-2 shrink-0 rounded-full"
+                    :style="{ backgroundColor: occurrence.schedule.colorLabel }"
+                    aria-hidden="true"
+                  />
+                  <span class="min-w-0 flex-1">
+                    <span class="text-foreground block truncate text-sm">
+                      {{ occurrence.schedule.title }}
+                    </span>
+                    <span class="text-muted-foreground block text-xs">
+                      {{ upcomingLabel(occurrence) }}
+                    </span>
+                  </span>
+                </div>
+              </li>
+            </ul>
           </CardContent>
         </Card>
       </div>

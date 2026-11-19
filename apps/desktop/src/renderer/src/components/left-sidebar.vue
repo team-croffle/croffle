@@ -18,8 +18,9 @@
     SidebarGroupContent,
   } from '@/components/ui/sidebar';
   import { DEFAULT_MENU_ITEMS } from '@/data/default-menus';
-  import { translateOrRaw } from '@/i18n';
+  import { i18n, translateOrRaw as tr } from '@/i18n';
   import { useUiStore } from '@/stores/ui-store';
+  import { useUpcomingStore } from '@/stores/upcoming-store';
   import { useViewStore } from '@/stores/view-store';
 
   import HelpModal from './help-modal.vue';
@@ -31,6 +32,19 @@
   const isHelpModalOpen = ref(false);
 
   const route = useRoute();
+  const upcomingStore = useUpcomingStore();
+  upcomingStore.start();
+
+  /** Subtitles add information: the calendar shows today's count; others show what they were given. */
+  const subtitleOf = (item: FeatureView): string => {
+    if (item.id === 'calendar') {
+      const count = upcomingStore.todayCount;
+      return count === 0
+        ? String(i18n.global.t('sidebar.calendar.subtitleEmpty'))
+        : String(i18n.global.t('sidebar.calendar.subtitle', { count }));
+    }
+    return item.subtitle ? tr(item.subtitle) : '';
+  };
   const viewStore = useViewStore();
 
   // 메뉴 아이템을 computed로 정의하여, store된 state를 반영하도록 함.
@@ -111,7 +125,7 @@
                   { 'bg-primary hover:bg-primary': item.active },
                   leftSidebarOpen ? 'mr-2 ml-0' : 'mx-0 justify-center',
                 ]"
-                :tooltip="translateOrRaw(item.title)"
+                :tooltip="tr(item.title)"
               >
                 <router-link
                   :to="item.url"
@@ -136,14 +150,15 @@
                       class="text-croffle-text text-sm leading-tight font-medium"
                       :class="{ 'text-primary-foreground': item.active }"
                     >
-                      {{ translateOrRaw(item.title) }}
+                      {{ tr(item.title) }}
                     </span>
 
                     <span
+                      v-if="subtitleOf(item)"
                       class="text-croffle-text text-xs leading-none"
-                      :class="{ 'text-primary-foreground/80': item.active }"
+                      :class="{ 'text-primary-foreground': item.active }"
                     >
-                      {{ translateOrRaw(item.subtitle) }}
+                      {{ subtitleOf(item) }}
                     </span>
                   </div>
                 </router-link>

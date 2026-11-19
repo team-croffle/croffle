@@ -7,6 +7,7 @@ export * from './models';
 export * from './recurrence';
 export * from './recurrence-exceptions';
 export * from './reminder';
+export * from './upcoming';
 export {
   allOutboxTriggerSql,
   OUTBOX_TRIGGER_COUNT,
