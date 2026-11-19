@@ -5,13 +5,14 @@
     AppSettingTheme,
     CalendarTimeFormat,
     CalendarView,
-    AppEventType,
     applySetting,
     CalendarWeekStartDay,
     extensionInstallErrorCode,
     PendingPatches,
+    type ConfigurationTabContribution,
+    type ExtensionInfo,
+    type StoredSettings,
   } from '@croffledev/common';
-  import type { ConfigurationTabContribution, ExtensionInfo } from '@croffledev/common';
   import type { AppSettings } from '@croffledev/croffle-types';
   import { ref, onBeforeUnmount, onMounted, watch, computed } from 'vue';
   import { useI18n } from 'vue-i18n';
@@ -193,8 +194,8 @@
     isLoadingSettings.value = true;
     loadError.value = null;
     try {
-      const loaded = await croffle.settings.getAll();
-      patches = new PendingPatches(loaded);
+      const loaded = await croffleInternal.settings.getStored();
+      patches = new PendingPatches(loaded.settings, loaded.revision);
       showPatches();
       await loadAllExtensionSettings();
     } catch (error) {
@@ -333,34 +334,33 @@
   let patches: PendingPatches<AppSettings> | null = null;
 
   const showPatches = () => {
-    if (patches) {
-      originalSettings.value = cloneSettings(patches.stored);
-      settings.value = patches.view();
-    }
-  };
-
-  const receiveStored = (latest: AppSettings) => {
     if (!patches) {
       return;
     }
-    patches.receive(latest);
-    showPatches();
-    const waiting = storedWaiters;
-    storedWaiters = [];
-    waiting.forEach((resolve) => resolve());
+    originalSettings.value = cloneSettings(patches.stored);
+    settings.value = patches.view();
+    // The app-wide look previews the newest unsent theme and colour, else shows what is stored.
+    const theme = patches.pendingValue('general', 'theme');
+    const accent = patches.pendingValue('appearance', 'accentHue');
+    appSettingsStore.setPreview({
+      ...(theme ? { theme: theme.value as AppSettingTheme } : {}),
+      ...(accent ? { accentHue: accent.value as number } : {}),
+    });
   };
 
-  /** Resolves on the next stored settings received (or after `ms`, whichever is first). */
-  let storedWaiters: (() => void)[] = [];
-  const nextStored = (ms: number) =>
-    new Promise<void>((resolve) => {
-      storedWaiters.push(resolve);
-      setTimeout(resolve, ms);
-    });
+  /** Stored settings arrived (broadcast, reply or read); older revisions are ignored. */
+  const receiveStored = (stored: StoredSettings) => {
+    // The app-wide store takes it first (it ignores revisions it has), so the look it paints
+    // when a preview ends is already the stored one.
+    appSettingsStore.receive(stored);
+    if (patches?.receive(stored.settings, stored.revision)) {
+      showPatches();
+    }
+  };
 
   const refreshFromStore = async () => {
     try {
-      receiveStored(await croffle.settings.getAll());
+      receiveStored(await croffleInternal.settings.getStored());
     } catch (error) {
       toast.error(t('settings.errors.load', { error: errorMessage(error) }));
     }
@@ -381,36 +381,22 @@
   };
 
   /**
-   * Sends one patch. Main stores it and broadcasts SETTINGS_UPDATE before replying, so the stored
-   * value arrives through `receiveStored`; the reply only ends the patch.
+   * Sends one patch. The reply carries the revision main stored it as; the patch stays on screen
+   * until stored settings of that revision arrive (the reply's own, or the broadcast).
    */
   const send = async (id: number, patch: Partial<AppSettings>) => {
     if (!patches) {
       return;
     }
-    // Main broadcasts SETTINGS_UPDATE before it replies, but the two may reach this window in
-    // either order: wait (briefly) for the stored value so the field never flickers back.
-    const stored = nextStored(STORED_WAIT_MS);
     try {
-      await croffleInternal.settings.update(patch);
-      await stored;
+      const stored = await croffleInternal.settings.update(patch);
+      patches.confirm(id, stored.revision);
+      receiveStored(stored);
     } catch (error) {
+      patches.settle(id);
       toast.error(t('settings.errors.save', { error: errorMessage(error) }));
     }
-    patches.settle(id);
     showPatches();
-    // A previewed theme or colour now shows what is stored (the new value, or the old on failure),
-    // unless a newer unsent one of the same field is still on screen.
-    for (const [section, field, key] of [
-      ['general', 'theme', 'theme'],
-      ['appearance', 'accentHue', 'accentHue'],
-    ] as const) {
-      if ((patch as Record<string, Record<string, unknown>>)[section]?.[field] !== undefined) {
-        if (!patches.pendingFor(section, field)) {
-          appSettingsStore.endPreview(key);
-        }
-      }
-    }
   };
 
   /** Applies extension configuration that changed on screen. */
@@ -448,8 +434,6 @@
 
   // A short pause groups quick changes (dragging the colour picker) into one save.
   const PERSIST_DELAY_MS = 250;
-  /** How long a saved patch waits for its SETTINGS_UPDATE before it ends anyway. */
-  const STORED_WAIT_MS = 1000;
   let accentTimer: ReturnType<typeof setTimeout> | null = null;
   /** The colour patch shown on screen but not sent yet (the picker is still moving). */
   let accentPatchId: number | null = null;
@@ -496,9 +480,7 @@
   // Settings saved elsewhere (title bar theme, another window) reach the screen at once.
   let offSettingsUpdate: (() => void) | null = null;
   onMounted(() => {
-    offSettingsUpdate = croffle.event.on(AppEventType.SETTINGS_UPDATE, (payload) => {
-      receiveStored(payload as AppSettings);
-    });
+    offSettingsUpdate = croffleInternal.settings.onStored(receiveStored);
   });
   onBeforeUnmount(() => {
     offSettingsUpdate?.();
@@ -535,7 +517,6 @@
     if (!settings.value || typeof theme !== 'string') {
       return;
     }
-    appSettingsStore.setThemeDraft(theme as AppSettingTheme);
     void edit('general', 'theme', theme as AppSettingTheme);
   };
 
@@ -554,7 +535,6 @@
       accentPatchId = patches.edit('appearance', 'accentHue', hue).id;
     }
     showPatches();
-    appSettingsStore.setAccentHueDraft(hue);
     if (accentTimer) {
       clearTimeout(accentTimer);
     }

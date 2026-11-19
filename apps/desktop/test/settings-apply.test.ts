@@ -50,7 +50,7 @@ describe('settings apply immediately', () => {
     assert.equal(result.ok === false && result.reason === 'failed' && result.error, failure);
 
     // In the settings screen a failed patch is dropped: the field shows the stored value again.
-    const patches = new PendingPatches(APP);
+    const patches = new PendingPatches(APP, 1);
     const { id, patch } = patches.edit('calendar', 'weekNumbers', true);
     assert.deepEqual(patch, { calendar: { weekNumbers: true } });
     assert.equal(patches.view().calendar.weekNumbers, true);
@@ -59,11 +59,11 @@ describe('settings apply immediately', () => {
   });
 
   test('screen edits do not overwrite a change saved elsewhere', () => {
-    const patches = new PendingPatches(APP);
+    const patches = new PendingPatches(APP, 1);
     const { patch } = patches.edit('calendar', 'weekNumbers', true);
     // Only the changed field is sent; main merges it into what it stored (dark, from the title bar).
     assert.deepEqual(patch, { calendar: { weekNumbers: true } });
-    patches.receive(withTheme('dark'));
+    patches.receive(withTheme('dark'), 2);
     assert.deepEqual(patches.view(), {
       general: { theme: 'dark', language: 'ko' },
       calendar: { weekNumbers: true },
@@ -71,64 +71,96 @@ describe('settings apply immediately', () => {
   });
 
   test('an edit made while saving is kept, even one back to the old value', () => {
-    const patches = new PendingPatches(APP);
+    const patches = new PendingPatches(APP, 1);
     const first = patches.edit('calendar', 'weekNumbers', true);
     const second = patches.edit('calendar', 'weekNumbers', false);
-    // The first save is stored and reported back before the second finishes.
-    patches.receive({ ...APP, calendar: { weekNumbers: true } });
-    patches.settle(first.id);
+    patches.confirm(first.id, 2);
+    patches.receive({ ...APP, calendar: { weekNumbers: true } }, 2);
     assert.equal(patches.view().calendar.weekNumbers, false);
-    patches.receive(APP);
-    patches.settle(second.id);
+    patches.confirm(second.id, 3);
+    patches.receive(APP, 3);
     assert.equal(patches.view().calendar.weekNumbers, false);
+    assert.deepEqual(patches.view(), APP);
   });
 
   test('changes saved elsewhere during a save are never taken as edits', () => {
-    const patches = new PendingPatches(APP);
+    const patches = new PendingPatches(APP, 1);
     const { id } = patches.edit('calendar', 'weekNumbers', true);
-    patches.receive(withTheme('dark'));
-    patches.receive(withTheme('light'));
-    patches.receive({ ...withTheme('light'), calendar: { weekNumbers: true } });
-    patches.settle(id);
+    patches.receive(withTheme('dark'), 2);
+    patches.receive(withTheme('light'), 3);
+    patches.confirm(id, 4);
+    patches.receive({ ...withTheme('light'), calendar: { weekNumbers: true } }, 4);
     assert.deepEqual(patches.view(), { ...APP, calendar: { weekNumbers: true } });
     const next = patches.edit('general', 'language', 'en');
     assert.deepEqual(next.patch, { general: { language: 'en' } });
   });
 
   test('a failed save keeps the latest stored values received meanwhile', () => {
-    const patches = new PendingPatches(APP);
+    const patches = new PendingPatches(APP, 1);
     const { id } = patches.edit('calendar', 'weekNumbers', true);
     // Another window stored weekNumbers = true while this patch was saving; then this one fails.
-    patches.receive({ ...APP, calendar: { weekNumbers: true } });
+    patches.receive({ ...APP, calendar: { weekNumbers: true } }, 2);
     patches.settle(id);
     assert.equal(patches.view().calendar.weekNumbers, true);
     assert.deepEqual(patches.stored, { ...APP, calendar: { weekNumbers: true } });
   });
 
   test('a late reply never brings back an older stored value', () => {
-    const patches = new PendingPatches(APP);
+    const patches = new PendingPatches(APP, 1);
     const { id } = patches.edit('calendar', 'weekNumbers', true);
-    // Main stored this patch, then the title bar stored dark; the reply to the patch comes last.
-    patches.receive({ ...APP, calendar: { weekNumbers: true } });
-    patches.receive({ ...withTheme('dark'), calendar: { weekNumbers: true } });
-    patches.settle(id);
+    patches.receive({ ...withTheme('dark'), calendar: { weekNumbers: true } }, 3);
+    // An older broadcast and the reply for revision 2 arrive last.
+    assert.equal(patches.receive({ ...APP, calendar: { weekNumbers: true } }, 2), false);
+    patches.confirm(id, 2);
     assert.deepEqual(patches.view(), { ...withTheme('dark'), calendar: { weekNumbers: true } });
+  });
+
+  test('a patch stays until stored settings of its revision arrive, in either order', () => {
+    // Reply first: the patch stays on screen until the broadcast of its revision.
+    const a = new PendingPatches(APP, 1);
+    const first = a.edit('calendar', 'weekNumbers', true);
+    a.confirm(first.id, 2);
+    a.receive(withTheme('dark'), 1);
+    assert.equal(a.view().calendar.weekNumbers, true);
+    a.receive({ ...APP, calendar: { weekNumbers: true } }, 2);
+    assert.equal(a.pendingValue('calendar', 'weekNumbers'), null);
+    // Another field's broadcast first does not end it either.
+    const b = new PendingPatches(APP, 1);
+    const colour = b.edit('calendar', 'weekNumbers', true);
+    b.receive(withTheme('dark'), 2);
+    assert.equal(b.view().calendar.weekNumbers, true);
+    b.confirm(colour.id, 3);
+    b.receive({ ...withTheme('dark'), calendar: { weekNumbers: true } }, 3);
+    assert.equal(b.pendingValue('calendar', 'weekNumbers'), null);
   });
 
   test('a held-back colour shows on screen until it is sent', () => {
     type Look = { appearance: { accentHue: number }; calendar: { weekNumbers: boolean } };
-    const patches = new PendingPatches<Look>({
-      appearance: { accentHue: 70 },
-      calendar: { weekNumbers: false },
-    });
+    const patches = new PendingPatches<Look>(
+      { appearance: { accentHue: 70 }, calendar: { weekNumbers: false } },
+      1,
+    );
     const colour = patches.edit('appearance', 'accentHue', 120);
     patches.revise(colour.id, 200);
-    // Another field changes and is stored before the colour is sent.
     const week = patches.edit('calendar', 'weekNumbers', true);
-    patches.receive({ appearance: { accentHue: 70 }, calendar: { weekNumbers: true } });
-    patches.settle(week.id);
+    patches.confirm(week.id, 2);
+    patches.receive({ appearance: { accentHue: 70 }, calendar: { weekNumbers: true } }, 2);
     assert.equal(patches.view().appearance.accentHue, 200);
     assert.deepEqual(patches.revise(colour.id, 200), { appearance: { accentHue: 200 } });
+  });
+
+  test('the preview is the newest unfinished value; a later failure falls back to an earlier one', () => {
+    type Look = { appearance: { accentHue: number } };
+    const patches = new PendingPatches<Look>({ appearance: { accentHue: 70 } }, 1);
+    const a = patches.edit('appearance', 'accentHue', 100);
+    const b = patches.edit('appearance', 'accentHue', 200);
+    assert.deepEqual(patches.pendingValue('appearance', 'accentHue'), { value: 200 });
+    patches.settle(b.id);
+    assert.deepEqual(patches.pendingValue('appearance', 'accentHue'), { value: 100 });
+    assert.equal(patches.view().appearance.accentHue, 100);
+    patches.confirm(a.id, 2);
+    patches.receive({ appearance: { accentHue: 100 } }, 2);
+    assert.equal(patches.pendingValue('appearance', 'accentHue'), null);
   });
 
   test('a previewed colour or theme survives a settings event', () => {

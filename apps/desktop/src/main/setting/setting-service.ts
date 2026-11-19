@@ -8,6 +8,7 @@ import {
   CalendarTimeFormat,
   CalendarView,
   CalendarWeekStartDay,
+  type StoredSettings,
 } from '@croffledev/common';
 import type { AppSettings } from '@croffledev/croffle-types';
 import { is } from '@electron-toolkit/utils';
@@ -43,6 +44,8 @@ const DEFAULT_SETTINGS: AppSettings = {
 class SettingService {
   private settings: AppSettings;
   private filePath: string;
+  /** Goes up by one on every store (see StoredSettings). */
+  private revision = 0;
 
   constructor() {
     this.filePath = is.dev
@@ -104,6 +107,11 @@ class SettingService {
     return this.settings[typedKey];
   }
 
+  /** The stored settings with their revision. */
+  public getStored(): StoredSettings {
+    return { revision: this.revision, settings: this.settings };
+  }
+
   public update(partialSettings: Partial<AppSettings>): AppSettings {
     const updatedSettings = {
       ...this.settings,
@@ -128,6 +136,7 @@ class SettingService {
     };
 
     this.saveSettings(updatedSettings);
+    this.revision += 1;
     applyPersisted(updatedSettings);
     return updatedSettings;
   }
