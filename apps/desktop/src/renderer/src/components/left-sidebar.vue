@@ -24,6 +24,7 @@
   import { useViewStore } from '@/stores/view-store';
 
   import HelpModal from './help-modal.vue';
+  import NotificationPopover from './notification-popover.vue';
   // import { testMockPlugin } from '@/test/testPluginMenu';
 
   const uiStore = useUiStore();
@@ -171,13 +172,7 @@
 
     <SidebarFooter class="bg-croffle-sidebar border-t p-3">
       <div class="flex items-center justify-around gap-2" :class="{ 'flex-col': !leftSidebarOpen }">
-        <SidebarMenuButton
-          size="rail"
-          class="hover:bg-croffle-hover bg-transparent [--sidebar-accent:transparent]"
-          :tooltip="$t('sidebar.notifications')"
-        >
-          <Icon icon="lucide:bell" class="text-croffle-text size-5" />
-        </SidebarMenuButton>
+        <NotificationPopover />
 
         <SidebarMenuButton
           size="rail"

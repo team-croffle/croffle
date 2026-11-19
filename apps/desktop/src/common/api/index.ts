@@ -5,6 +5,7 @@ import type {
   ExtensionStorageApi,
   InternalExtensionInfoApi,
 } from './extensions';
+import type { InternalNotificationsApi } from './notifications';
 import type { InternalSettingsApi } from './settings';
 import type { InternalSyncApi } from './sync';
 import type { InternalWindowApi } from './window';
@@ -12,6 +13,7 @@ import type { InternalWindowApi } from './window';
 export * from './calendar';
 export * from './enums';
 export * from './extensions';
+export * from './notifications';
 export * from './settings';
 export * from './sync';
 export * from './window';
@@ -43,4 +45,5 @@ export interface CroffleInternalAPI {
     schedules: Pick<InternalSchedulesApi, 'exportSchedulesToFile' | 'importScheduleFromFile'>;
   };
   sync: InternalSyncApi;
+  notifications: InternalNotificationsApi;
 }

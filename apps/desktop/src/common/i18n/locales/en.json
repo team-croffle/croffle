@@ -414,5 +414,15 @@
     "view": "View",
     "prev": "Previous",
     "next": "Next"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "fired": "Reminded",
+    "upcoming": "Coming up",
+    "empty": "No new notifications",
+    "firedMeta": "Starts {start} · reminded {at}",
+    "upcomingMeta": "Starts {start} · reminds {at}",
+    "bellUnread": "Notifications, {count} unread"
   }
 }

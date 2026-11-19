@@ -414,5 +414,15 @@
     "view": "보기",
     "prev": "이전",
     "next": "다음"
+  },
+  "notifications": {
+    "title": "알림",
+    "markAllRead": "모두 읽음",
+    "fired": "울린 알림",
+    "upcoming": "곧 울릴 알림",
+    "empty": "새 알림이 없습니다",
+    "firedMeta": "{start} 시작 · {at}에 알림",
+    "upcomingMeta": "{start} 시작 · {at}에 알림 예정",
+    "bellUnread": "알림, 읽지 않음 {count}개"
   }
 }

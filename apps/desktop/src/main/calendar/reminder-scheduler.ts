@@ -7,12 +7,14 @@ import {
   formatReminderBody,
   legacyReminderDedupKey,
   reminderDedupKey,
+  type NotificationItem,
   type ReminderCandidate,
 } from '@croffledev/common';
 import { app } from 'electron';
 
 import { eventService } from '../event-bus/event-service';
 import { logger } from '../logger';
+import { notificationService } from '../notification/notification-service';
 import { settingService } from '../setting/setting-service';
 import { showNotification } from '../window/os-notification';
 import { windowService } from '../window/window-service';
@@ -48,6 +50,9 @@ class ReminderScheduler {
     }
     this.started = true;
     this.loadFired();
+    notificationService.setPendingSource(() =>
+      this.candidates.filter((c) => !this.hasFired(c)).map((c) => this.toItem(c)),
+    );
     this.registerListeners();
     this.pollTimer = setInterval(() => {
       void this.tick();
@@ -83,6 +88,7 @@ class ReminderScheduler {
     if (!settings.notifications.enabled) {
       this.candidates = [];
       this.clearNextTimer();
+      notificationService.notifyChanged();
       logger.debug('ReminderScheduler', 'Notifications disabled — queue cleared');
       return;
     }
@@ -104,6 +110,7 @@ class ReminderScheduler {
     this.pruneFired(now);
     await this.tick();
     this.armNextTimer();
+    notificationService.notifyChanged();
     logger.debug('ReminderScheduler', `Queue rebuilt: ${this.candidates.length} candidate(s)`);
   }
 
@@ -170,6 +177,7 @@ class ReminderScheduler {
 
   private fire(candidate: ReminderCandidate, key: string): void {
     this.fired.add(key);
+    notificationService.recordFired(this.toItem(candidate));
     try {
       const language = settingService.get().general.language;
       showNotification(candidate.title, formatReminderBody(candidate, language), () => {
@@ -203,6 +211,18 @@ class ReminderScheduler {
     this.nextTimer = setTimeout(() => {
       void this.tick().then(() => this.armNextTimer());
     }, delay);
+  }
+
+  private toItem(candidate: ReminderCandidate): NotificationItem {
+    return {
+      id: this.keyOf(candidate),
+      scheduleId: candidate.scheduleId,
+      title: candidate.title,
+      occurrenceStart: candidate.occurrenceStart.getTime(),
+      remindAt: candidate.remindAt.getTime(),
+      reminderMinutes: candidate.reminderMinutes,
+      isAllDay: candidate.isAllDay,
+    };
   }
 
   private keyOf(candidate: ReminderCandidate): string {

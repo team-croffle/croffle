@@ -21,6 +21,7 @@ import { extensionInfoApi } from './api/extensions/info';
 import { extensionSessionApi } from './api/extensions/session';
 import { extensionStorageApi } from './api/extensions/storage';
 import { httpApi } from './api/http';
+import { notificationsApi } from './api/notifications';
 import { osApi } from './api/os';
 import { settingsApi } from './api/settings';
 import { syncApi } from './api/sync';
@@ -92,6 +93,7 @@ const internalApi = {
     },
   },
   sync: syncApi,
+  notifications: notificationsApi,
 } satisfies CroffleInternalAPI;
 
 /** Handed out once (see `CroffleInternalBridge`); the renderer host takes it at startup. */
