@@ -82,7 +82,6 @@
       "showWeekNumbersHint": "Show week numbers on the calendar.",
       "data": "Data",
       "dataIntro": "Back up your schedules to a JSON file or bring them in from one.",
-      "dataHint": "These actions run immediately and are not affected by Save or Cancel.",
       "export": "Export",
       "exportHint": "Save all schedules to a JSON file.",
       "exportDone": "Exported {count} schedules to {path}",
@@ -119,7 +118,9 @@
       "configHeading": "{name} configuration",
       "githubPlaceholder": "owner/repo or GitHub URL",
       "githubHint": "Add {'@'}tag or /tree/branch to pick a version; otherwise the default branch is used.",
-      "selectZipTitle": "Install extension from a zip file"
+      "selectZipTitle": "Install extension from a zip file",
+      "uninstallTitle": "Delete extension",
+      "uninstall": "Delete"
     },
     "sync": {
       "intro": "Sync your schedules between devices through your own Croffle Server. Croffle works fully without it.",
@@ -185,7 +186,8 @@
         "manifestMissing": "croffle-manifest.json was not found at the root of the extension.",
         "manifestInvalid": "croffle-manifest.json is invalid or missing required fields (id, name, version, author).",
         "incompatibleEngine": "This extension needs a newer version of Croffle."
-      }
+      },
+      "notANumber": "Enter a number."
     }
   },
   "sidebar": {
