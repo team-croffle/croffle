@@ -42,7 +42,7 @@
       title: t('help.ready.title'),
       description: t('help.ready.description'),
       content: t('help.ready.content'),
-      icon: 'lucide:party-popper',
+      icon: 'lucide:bell',
     },
   ]);
 
