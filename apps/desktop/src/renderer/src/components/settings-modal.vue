@@ -10,6 +10,7 @@
     CalendarWeekStartDay,
     extensionInstallErrorCode,
     mergeEdits,
+    SettingsDraft,
   } from '@croffledev/common';
   import type { ConfigurationTabContribution, ExtensionInfo } from '@croffledev/common';
   import type { AppSettings } from '@croffledev/croffle-types';
@@ -194,9 +195,8 @@
     loadError.value = null;
     try {
       const loaded = await croffle.settings.getAll();
-      originalSettings.value = loaded;
-      base.value = cloneSettings(loaded);
-      settings.value = cloneSettings(loaded);
+      screenDraft = new SettingsDraft(loaded);
+      showDraft();
       await loadAllExtensionSettings();
     } catch (error) {
       toast.error(t('settings.errors.load', { error: JSON.stringify(error) }));
@@ -337,20 +337,29 @@
   const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
   /**
-   * `originalSettings` is the latest stored settings; `base` is what the screen was last set from.
-   * The screen's edits are the fields where `settings` differs from `base`; only those are saved,
-   * laid over the latest stored values (mergeEdits), so a change saved elsewhere (the title bar's
-   * theme button) is never overwritten by a stale screen.
+   * The screen's edits and the latest stored settings (see SettingsDraft): only the fields the
+   * screen changed are saved, over the latest stored values, so a change saved elsewhere (the
+   * title bar's theme button) is not overwritten, and an edit made while a save runs is kept.
    */
-  const base = ref<AppSettings | null>(null);
+  let screenDraft: SettingsDraft<AppSettings> | null = null;
+
+  const showDraft = () => {
+    if (screenDraft) {
+      originalSettings.value = cloneSettings(screenDraft.stored);
+      settings.value = cloneSettings(screenDraft.screen);
+    }
+  };
 
   /** Takes the latest stored settings and keeps the screen's unsaved edits on top. */
   const rebase = (latest: AppSettings) => {
-    const edited = settings.value ?? latest;
-    const from = base.value ?? latest;
-    originalSettings.value = cloneSettings(latest);
-    base.value = cloneSettings(latest);
-    settings.value = cloneSettings(mergeEdits(latest, from, edited));
+    if (!screenDraft) {
+      return;
+    }
+    if (settings.value) {
+      screenDraft.screen = cloneSettings(settings.value);
+    }
+    screenDraft.rebase(latest);
+    showDraft();
   };
 
   const refreshFromStore = async () => {
@@ -361,27 +370,28 @@
     }
   };
 
-  /** Applies the app settings on screen. A failed save puts the stored values back. */
+  /** Applies the app settings on screen. A failed save puts back the values it tried to save. */
   const persistSettings = async () => {
-    const stored = originalSettings.value;
-    if (!settings.value || !stored || !base.value) {
+    if (!screenDraft || !settings.value) {
       return;
     }
-    const edited = cloneSettings(settings.value);
-    const next = mergeEdits(stored, base.value, edited);
-    if (sameJson(next, stored)) {
+    screenDraft.screen = cloneSettings(settings.value);
+    const next = screenDraft.beginSave();
+    if (!next) {
       return;
     }
-    const result = await applySetting(stored, next, saveSettings);
-    // Edits made while saving stay on screen and are saved by the next run.
-    const current = settings.value ?? edited;
-    originalSettings.value = cloneSettings(result.value);
-    base.value = cloneSettings(result.value);
-    settings.value = cloneSettings(mergeEdits(result.value, edited, current));
+    const result = await applySetting(cloneSettings(screenDraft.stored), next, saveSettings);
+    if (settings.value) {
+      screenDraft.screen = cloneSettings(settings.value);
+    }
+    screenDraft.endSave(next, result.value);
+    showDraft();
     if (!result.ok) {
       const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
       toast.error(t('settings.errors.save', { error: reason }));
-      reapplyPersistedAppearance(settings.value);
+      if (settings.value) {
+        reapplyPersistedAppearance(settings.value);
+      }
     }
   };
 
@@ -1353,7 +1363,7 @@
                 </p>
                 <ConfigSchemaForm
                   v-for="section in activeExtensionTab.sections"
-                  :key="section.id"
+                  :key="`${activeTab}:${section.id}`"
                   v-model:values="activeExtensionDraft"
                   :items="section.items"
                   :section-title="section.title"
