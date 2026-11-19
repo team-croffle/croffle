@@ -399,7 +399,8 @@
       "available": "Version v{version} is available.",
       "failed": "Could not check: {message}",
       "unsupportedDevelopment": "A development build cannot check for updates.",
-      "unsupportedPackage": "This kind of install cannot check for updates."
+      "unsupportedPackage": "This kind of install cannot check for updates.",
+      "now": "Check now"
     }
   },
   "extensions": {

@@ -8,6 +8,9 @@
   import { useUpdateStore } from '@/stores/update-store';
 
   /** "Check for updates": the button and its state. Same store in the version tile and Settings. */
+  /** `now`: the Settings row's "지금 확인"; default: the version tile's "업데이트 확인". */
+  const props = defineProps<{ label?: 'check' | 'now' }>();
+
   const updateStore = useUpdateStore();
   const { checkStatus } = storeToRefs(updateStore);
   const { t } = useI18n();
@@ -65,7 +68,11 @@
         :class="{ 'animate-spin': checkStatus.kind === 'checking' }"
       />
       {{
-        checkStatus.kind === 'available' ? $t('update.check.openUpdate') : $t('update.check.button')
+        checkStatus.kind === 'available'
+          ? $t('update.check.openUpdate')
+          : props.label === 'now'
+            ? $t('update.check.now')
+            : $t('update.check.button')
       }}
     </Button>
     <p v-if="statusText" class="text-xs" :class="statusClass" role="status" aria-live="polite">
