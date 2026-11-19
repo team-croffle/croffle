@@ -52,12 +52,14 @@
     if (!schedule) {
       return;
     }
+    // The viewer reads the calendar's store, which holds only the month on screen.
+    scheduleStore.upsertSchedule(schedule);
     uiStore.openScheduleModal('view', schedule.id, occurrenceOf(item, schedule));
   };
 </script>
 
 <template>
-  <Popover v-model:open="open">
+  <Popover v-model:open="open" @update:open="(value: boolean) => value && store.refresh()">
     <PopoverTrigger as-child>
       <SidebarMenuButton
         size="rail"

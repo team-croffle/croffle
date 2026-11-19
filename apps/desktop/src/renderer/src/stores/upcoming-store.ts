@@ -27,16 +27,18 @@ export const useUpcomingStore = defineStore('upcoming', () => {
   let timer: ReturnType<typeof setInterval> | null = null;
   let loadedDay = '';
 
+  /** Reads today and the next days. The day is recorded only on success, so the tick retries. */
   const load = async () => {
     const start = dayjs().startOf('day');
-    loadedDay = start.format('YYYY-MM-DD');
     try {
       schedules.value = await croffle.calendar.schedules.getAll({
         start: start.toISOString(),
         end: start.add(UPCOMING_DAYS + 1, 'day').toISOString(),
       });
+      loadedDay = start.format('YYYY-MM-DD');
     } catch {
-      // The calendar reports load errors; the sidebar keeps the last list.
+      // Keep the last list; the next tick (TICK_MS) tries again.
+      loadedDay = '';
     }
   };
 
