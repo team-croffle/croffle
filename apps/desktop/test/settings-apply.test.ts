@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { applySetting, parseNumberInput } from '../src/common/settings-apply.ts';
+import { applySetting, mergeEdits, parseNumberInput } from '../src/common/settings-apply.ts';
 
 type Prefs = { weekNumbers: boolean; days: number };
 const STORED: Prefs = { weekNumbers: false, days: 7 };
@@ -42,5 +42,18 @@ describe('settings apply immediately', () => {
 
     const saved = await applySetting(STORED, { ...STORED, weekNumbers: true }, async (v) => v);
     assert.deepEqual(saved, { ok: true, value: { ...STORED, weekNumbers: true } });
+  });
+
+  test('screen edits do not overwrite a change saved elsewhere', () => {
+    const base = { general: { theme: 'light', language: 'ko' }, calendar: { weekNumbers: false } };
+    // The title bar saved dark meanwhile; the screen changed week numbers only.
+    const latest = { ...base, general: { ...base.general, theme: 'dark' } };
+    const edited = { ...base, calendar: { weekNumbers: true } };
+    assert.deepEqual(mergeEdits(latest, base, edited), {
+      general: { theme: 'dark', language: 'ko' },
+      calendar: { weekNumbers: true },
+    });
+    // No edits: the latest stored values come through unchanged.
+    assert.deepEqual(mergeEdits(latest, base, base), latest);
   });
 });
