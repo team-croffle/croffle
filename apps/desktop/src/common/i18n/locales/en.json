@@ -40,7 +40,7 @@
       "themeDark": "Dark",
       "themeSystem": "Match system",
       "accentColor": "Accent color",
-      "accentColorHint": "Applies to accent UI, background, and sidebar tones.",
+      "accentColorHint": "Changes the colour of main buttons, focus rings, today and accent text. Backgrounds and sidebars stay as they are.",
       "accentColorAria": "Accent color {color}",
       "customAccentColor": "Custom color",
       "customAccentColorAria": "Custom accent color",
@@ -362,22 +362,22 @@
     "welcome": {
       "title": "Welcome!",
       "description": "Welcome to Croffle.",
-      "content": "Use the left sidebar and calendar to manage your schedules.\nSee today and upcoming events in one place."
+      "content": "Manage your schedules from the left sidebar and the calendar.\nThe right sidebar shows today and what is coming up in the next 7 days."
     },
     "addTodo": {
       "title": "Add a schedule",
-      "description": "Create a schedule with one click.",
-      "content": "Click a date on the calendar to create a new event.\nYou can also drag to move dates!"
+      "description": "Right-click a date or use the add button.",
+      "content": "Right-click a date and choose 'Add schedule', or press 'Add schedule' in the right sidebar.\nDouble-click a date to see that day, and drag a schedule to move it to another day."
     },
     "theme": {
-      "title": "Set your theme",
-      "description": "Pick colors that suit you.",
-      "content": "Change Croffle's main color in Settings\nto make the workspace yours."
+      "title": "Theme and settings",
+      "description": "Changes are saved as you make them.",
+      "content": "The theme button in the title bar switches light and dark; right-click it to follow the system.\nSettings and the accent colour apply at once, with no Save button."
     },
     "ready": {
       "title": "You're ready!",
-      "description": "That's everything you need.",
-      "content": "Add your first schedule and plan the day with Croffle!"
+      "description": "Check notifications and updates too.",
+      "content": "The bell at the bottom left shows reminders that went off and those coming up.\nThe version tile at the bottom of the right sidebar checks for a new version."
     }
   },
   "update": {

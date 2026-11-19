@@ -40,7 +40,7 @@
       "themeDark": "다크",
       "themeSystem": "시스템 설정 따름",
       "accentColor": "강조 색상",
-      "accentColorHint": "앱의 포인트·배경·사이드바 톤에 함께 적용됩니다.",
+      "accentColorHint": "주 버튼·포커스 링·오늘 표시·강조 글자의 색이 바뀝니다. 배경과 사이드바는 그대로입니다.",
       "accentColorAria": "강조 색상 {color}",
       "customAccentColor": "직접 선택",
       "customAccentColorAria": "사용자 지정 강조 색상",
@@ -171,8 +171,8 @@
     "errors": {
       "load": "설정 로드 실패: {error}",
       "extensionsList": "확장 목록 로드 실패: {error}",
-      "install": "Failed to install extension: {error}",
-      "installLocal": "Failed to install local extension: {error}",
+      "install": "확장을 설치하지 못했습니다: {error}",
+      "installLocal": "로컬 확장을 설치하지 못했습니다: {error}",
       "toggle": "확장 토글 실패: {error}",
       "uninstall": "확장 삭제 실패: {error}",
       "export": "일정 내보내기 실패: {error}",
@@ -360,24 +360,24 @@
     "next": "다음",
     "done": "확인",
     "welcome": {
-      "title": "환영합니다!",
-      "description": "크로플(CROFFLE)에 오신 것을 환영해요.",
-      "content": "왼쪽 사이드바와 캘린더로 일정을 관리할 수 있습니다.\n오늘부터 다가올 일정까지 한곳에서 살펴보세요."
+      "title": "환영해요!",
+      "description": "크로플(Croffle)에 오신 것을 환영해요.",
+      "content": "왼쪽 사이드바와 달력에서 일정을 관리해요.\n오른쪽 사이드바에서 오늘 일정과 앞으로 7일 동안의 다가오는 일정을 볼 수 있어요."
     },
     "addTodo": {
       "title": "일정 추가하기",
-      "description": "클릭 한 번으로 일정을 등록하세요.",
-      "content": "달력의 날짜를 클릭하면 새 일정을 바로 만들 수 있습니다.\n드래그해서 날짜를 옮기는 것도 가능해요!"
+      "description": "날짜를 오른쪽 클릭하거나 추가 버튼을 눌러요.",
+      "content": "달력의 날짜를 오른쪽 클릭해 '일정 추가'를 고르거나, 오른쪽 사이드바의 '새 일정 추가'를 눌러요.\n날짜를 두 번 누르면 그날 일정을 볼 수 있고, 일정은 끌어서 다른 날로 옮길 수 있어요."
     },
     "theme": {
-      "title": "나만의 테마 설정",
-      "description": "취향에 맞는 색상으로 꾸며보세요.",
-      "content": "설정 메뉴에서 크로플의 메인 색상을 변경하여\n본인만의 작업 환경을 만들 수 있습니다."
+      "title": "테마와 설정",
+      "description": "바꾸는 즉시 저장돼요.",
+      "content": "제목 표시줄의 테마 버튼을 누르면 라이트와 다크가 바뀌고, 오른쪽 클릭하면 시스템 설정을 따르게 할 수도 있어요.\n설정과 강조 색상도 저장 버튼 없이 바로 적용돼요."
     },
     "ready": {
-      "title": "준비 완료!",
-      "description": "이제 모든 준비가 끝났습니다.",
-      "content": "지금 바로 첫 일정을 등록하고\n크로플과 함께 멋진 하루를 계획해 보세요!"
+      "title": "준비됐어요!",
+      "description": "알림과 업데이트도 확인해 보세요.",
+      "content": "왼쪽 아래 종을 누르면 울린 알림과 곧 울릴 알림을 볼 수 있어요.\n오른쪽 사이드바 아래의 버전 정보에서 새 버전을 직접 확인할 수 있어요."
     }
   },
   "update": {
