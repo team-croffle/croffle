@@ -16,6 +16,7 @@ import { app } from 'electron';
 
 import { logger } from '../logger';
 import { applyPersisted } from './setting-applies';
+import { commitSettings, mergeSettingsPatch } from './settings-commit';
 
 const DEFAULT_SETTINGS: AppSettings = {
   general: {
@@ -82,9 +83,15 @@ class SettingService {
     }
   }
 
+  /** Writes the file; throws when it cannot. */
+  private writeFile(settings: AppSettings): void {
+    writeFileSync(this.filePath, JSON.stringify(settings, null, 2), 'utf-8');
+  }
+
+  /** First start only: a missing file gets the defaults (a failed write is logged, not fatal). */
   private saveSettings(settings: AppSettings): void {
     try {
-      writeFileSync(this.filePath, JSON.stringify(settings, null, 2), 'utf-8');
+      this.writeFile(settings);
       this.settings = settings;
       logger.info('Settings', 'Settings saved successfully.');
     } catch (err) {
@@ -112,33 +119,26 @@ class SettingService {
     return { revision: this.revision, settings: this.settings };
   }
 
+  /**
+   * Stores a patch. The settings and their revision change only when the file was written;
+   * otherwise this throws (the IPC call fails, nothing is applied or broadcast).
+   */
   public update(partialSettings: Partial<AppSettings>): AppSettings {
-    const updatedSettings = {
-      ...this.settings,
-      ...partialSettings,
-      general: {
-        ...this.settings.general,
-        ...partialSettings.general,
-      },
-      appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        ...this.settings.appearance,
-        ...partialSettings.appearance,
-      },
-      calendar: {
-        ...this.settings.calendar,
-        ...partialSettings.calendar,
-      },
-      notifications: {
-        ...this.settings.notifications,
-        ...partialSettings.notifications,
-      },
-    };
-
-    this.saveSettings(updatedSettings);
-    this.revision += 1;
-    applyPersisted(updatedSettings);
-    return updatedSettings;
+    const next = mergeSettingsPatch(this.settings, partialSettings, DEFAULT_SETTINGS.appearance);
+    try {
+      const state = commitSettings(
+        { settings: this.settings, revision: this.revision },
+        next,
+        (settings) => this.writeFile(settings),
+      );
+      this.settings = state.settings;
+      this.revision = state.revision;
+    } catch (err) {
+      logger.error('Settings', 'Failed to save settings.', err);
+      throw err;
+    }
+    applyPersisted(next);
+    return next;
   }
 }
 
