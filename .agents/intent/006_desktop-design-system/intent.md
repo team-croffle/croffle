@@ -2,9 +2,10 @@
 id: "006"
 slug: desktop-design-system
 version: "1.3.2"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-19", words: "1. 가. 2. 가 승인", rev: "3b5fb6e" }
 waivers:
   - { step: "previous loop closed before the next intent — server 0.2.0 retro branch `chore/server-0.2.0-retro` (5 commits) is not merged yet and `.loctx/reports/server-0.2.0/` is not cleaned up", words: "1.3.2 intent 시작", at: "2026-11-19", scope: once }
 supersedes: null
@@ -70,16 +71,15 @@ supersedes: null
 - 서버 WebUI 디자인은 서버 0.3.1 입니다.
 
 ## 열린 질문
-1. **알림 팝오버에 무엇을 보여 줄까요?** 지금은 울린 알림을 저장하지 않습니다(리마인더는 `main/calendar/reminder-scheduler.ts` 가 OS 알림으로 띄우기만 합니다).
-   - 가) 곧 울릴 알림(DB 에서 조회) + 이번 실행 중에 울린 알림(메모리, 앱을 끄면 사라짐). 마이그레이션이 없습니다. **(PM 추천)**
-   - 나) 가) + 울린 알림을 DB 에 저장해 다시 켜도 남김. 새 마이그레이션과 읽음 상태가 필요합니다.
-   - 다) 곧 울릴 알림만.
-2. **범위를 한 버전에 다 담을까요?** 인계 문서의 후보 1–5 전부입니다.
-   - 가) 전부 1.3.2. spec 에서 작업 단위를 토큰 · 대비 / 셸 동작 / 설정 · 업데이트 / 문서로 나눕니다. **(PM 추천)**
-   - 나) 토큰 · 대비 · 문서만 1.3.2 로 하고, 동작 개선은 따로 냅니다(이 경우 로드맵 순서가 바뀝니다).
+—
 
 ## 질의서 기록
-—
+2026-11-19, 사용자 답:
+
+| 질문 | 답 | 반영 |
+|---|---|---|
+| 1. 알림 팝오버의 내용 — 가) 곧 울릴 알림(DB 조회) + 이번 실행 중 울린 알림(메모리) / 나) 가) + 울린 알림 DB 저장 / 다) 곧 울릴 알림만 | "1. 가." | 계획 3. 마이그레이션 없음, 앱을 끄면 울린 알림 목록은 사라짐. |
+| 2. 범위 — 가) 후보 1–5 전부 1.3.2 / 나) 토큰 · 대비 · 문서만 | "2. 가" | 계획 1–5 전부. 작업 단위는 spec 에서 나눔. |
 
 ### 에이전트가 정한 것
 - **다가오는 일정의 범위**: 지금부터 7일 안의 일정을 최대 5개 보여 주고, 반복 일정은 펼친 발생으로 셉니다. 대안: 개수만(다음 5개). 이유: 오른쪽 사이드바 칸이 작고, 먼 일정은 달력에서 봅니다. 사용자가 다르게 원하면 바꿉니다.
