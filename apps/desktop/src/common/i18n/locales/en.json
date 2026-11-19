@@ -362,12 +362,12 @@
     "welcome": {
       "title": "Welcome!",
       "description": "Welcome to Croffle.",
-      "content": "Manage your schedules from the left sidebar and the calendar.\nThe right sidebar shows today and what is coming up in the next 7 days."
+      "content": "Manage your schedules from the left sidebar and the calendar.\nThe right sidebar shows the schedules of the day you pick."
     },
     "addTodo": {
       "title": "Add a schedule",
       "description": "Right-click a date or use the add button.",
-      "content": "Right-click a date and choose 'Add schedule', or press 'Add schedule' in the right sidebar.\nDouble-click a date to see that day, and drag a schedule to move it to another day."
+      "content": "Right-click a date and choose 'Add schedule', or press 'Add schedule' in the right sidebar.\nDouble-click a date to see that day, and drag a schedule to move it to another day.\n'Upcoming' lists what is coming up in the next 7 days."
     },
     "theme": {
       "title": "Theme and settings",

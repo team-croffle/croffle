@@ -3,6 +3,7 @@ intent: "006"
 status: accepted
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-19", words: "1. gemini한데 요청해. 2. 수정했어. 다시 봐줘 3. PM 해석: ㅇㅋ 재확인 후 진행", rev: "6f50d7b", kind: summary, note: "진행 on condition of the recheck; the recheck (qa-designer review, design system 1795075960-81fe) is folded into 4238b83" }
+  - { role: user, by: bluenyang, at: "2026-11-20", words: "F-7. 승인", rev: "84e9404", kind: change, note: "S-16 and V-8 9: adding is right-click menu or the add button; double-clicking a date opens that day (review1 F-7, PM wrote the spec wrongly)" }
 summary_for_user: |
   1.3.2 를 8개 작업 단위로 나눕니다: W-1 토큰(시스템 값, `--croffle-*` 별칭 유지, 강조 색조는 4개 토큰만, 기본 70, Pretendard 500·600 선언) → W-2 대비·색 규칙(화면 코드 + `components/ui` 6개 파일) → W-3 테마 좌클릭 저장·부제·다가오는 일정 → W-4 알림 팝오버 → W-5 업데이트 확인(기존 호스트 전용 `window.checkForUpdates` 를 고침, 확인할 수 없는 설치는 바로 "확인할 수 없음")·버전 타일 → W-6 설정 바로 적용·확장 삭제 확인 창 → W-7 ko 영어 값·도움말 4단계 → W-8 DESIGN.md.
   검증은 V-1~V-11 입니다(V-11 릴리스 노트는 release 단계). qa-designer(gemini) 검토로 빠진 검사(S-1~S-4·S-16), grep 정규식, `components/ui` 의 오류 글자·스위치, Linux unpack 의 업데이트 확인 동작을 보강했습니다.
@@ -52,7 +53,7 @@ summary_for_user: |
   - 동기화 패널은 이미 자기 버튼(연결 · 로그인)으로 동작하므로 바꾸지 않습니다.
 - S-14 (사용자 "앱의 확인 모달로 변경") — 확장 삭제는 `confirm()` 대신 앱의 `confirm-modal`(destructive 확인 버튼)로 묻습니다.
 - S-15 (사용자 "i18n을 사용하여 번역") — ko 카탈로그의 `settings.errors.install` · `installLocal` 을 한국어로 바꿉니다. 같은 검사로 ko 카탈로그에 남은 다른 영어 문장도 찾아 고칩니다. en 카탈로그에는 같은 키가 그대로 있습니다.
-- S-16 (사용자 "실제 동작에 맞춰서 수정") — 도움말의 각 항목 문구를 이 버전의 실제 동작에 맞춥니다. 단계는 지금처럼 4개(`welcome` · `addTodo` · `theme` · `ready`)이고 키도 유지합니다. `addTodo` 는 일정 추가(날짜 더블클릭 · 우클릭 · 추가 버튼; 지금 문구의 "클릭"은 틀림)와 다가오는 일정, `theme` 은 테마 좌클릭 저장 · 우클릭 메뉴와 설정 바로 적용, `ready` 는 알림 종과 업데이트 확인을 담습니다. 문구는 해요체입니다(시스템 "Voice").
+- S-16 (사용자 "실제 동작에 맞춰서 수정") — 도움말의 각 항목 문구를 이 버전의 실제 동작에 맞춥니다. 단계는 지금처럼 4개(`welcome` · `addTodo` · `theme` · `ready`)이고 키도 유지합니다. `addTodo` 는 일정 추가(우클릭 메뉴 · 추가 버튼; 날짜 더블클릭은 그날 보기; 지금 문구의 "클릭"은 틀림)와 다가오는 일정, `theme` 은 테마 좌클릭 저장 · 우클릭 메뉴와 설정 바로 적용, `ready` 는 알림 종과 업데이트 확인을 담습니다. 문구는 해요체입니다(시스템 "Voice").
 - S-17 (계획 5) — `apps/desktop/DESIGN.md` 를 시스템에 맞춰 다시 씁니다.
   - 토큰 표: 상태 토큰, `croffle-primary-strong`.
   - `--croffle-*` 규칙: "이름은 유지, 값은 의미 토큰의 별칭".
@@ -200,7 +201,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
      - (잘못된 값 · 저장 실패는 V-7 로 봅니다.)
   7. 확장 삭제(S-14): 확장이 하나 이상 설치된 상태에서 삭제를 누르면 앱 확인 창(destructive 버튼)이 뜹니다. 취소하면 남고, 확인하면 지워집니다.
   8. 강조 색상(S-3 · S-5): 색조를 200 으로 바꾸면 주 버튼 · 오늘 칸 · 포커스 링 · 달력 제목 · 오늘 숫자만 바뀌고, 배경 · 사이드바 바탕 · 테두리 · 호버는 그대로입니다.
-  9. 도움말(S-16): 4단계를 모두 넘기면 문구가 해요체이고, 일정 추가(더블클릭 · 우클릭 · 추가 버튼), 다가오는 일정, 테마 좌클릭 저장, 설정 바로 적용, 알림 종, 업데이트 확인과 맞습니다.
+  9. 도움말(S-16): 4단계를 모두 넘기면 문구가 해요체이고, 일정 추가(우클릭 메뉴 · 추가 버튼; 날짜 더블클릭은 그날 보기), 다가오는 일정, 테마 좌클릭 저장, 설정 바로 적용, 알림 종, 업데이트 확인과 맞습니다.
   - 실패: 하위 조건 하나라도 다르거나 미확인, 또는 스크린샷이 없거나 0바이트.
   - 사전 실행: 수동이라 하지 않았습니다.
 - **V-9 패키지 빌드의 업데이트 확인 (S-11 · S-12, W-5)** — 루트에서 `pnpm build:unpack` → `v9-build-unpack.txt`. 그다음 두 번 실행합니다.
