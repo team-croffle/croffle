@@ -322,11 +322,6 @@
     }
   });
 
-  const reapplyPersistedAppearance = (value: AppSettings) => {
-    appSettingsStore.setThemeDraft(value.general.theme);
-    appSettingsStore.setAccentHueDraft(value.appearance?.accentHue ?? DEFAULT_ACCENT_HUE);
-  };
-
   const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
   /**
@@ -350,12 +345,18 @@
     }
     patches.receive(latest);
     showPatches();
-    // SETTINGS_UPDATE also re-applies the stored look app-wide; keep the screen's unsent colour
-    // and theme on it.
-    if (settings.value) {
-      reapplyPersistedAppearance(settings.value);
-    }
+    const waiting = storedWaiters;
+    storedWaiters = [];
+    waiting.forEach((resolve) => resolve());
   };
+
+  /** Resolves on the next stored settings received (or after `ms`, whichever is first). */
+  let storedWaiters: (() => void)[] = [];
+  const nextStored = (ms: number) =>
+    new Promise<void>((resolve) => {
+      storedWaiters.push(resolve);
+      setTimeout(resolve, ms);
+    });
 
   const refreshFromStore = async () => {
     try {
@@ -387,16 +388,27 @@
     if (!patches) {
       return;
     }
+    // Main broadcasts SETTINGS_UPDATE before it replies, but the two may reach this window in
+    // either order: wait (briefly) for the stored value so the field never flickers back.
+    const stored = nextStored(STORED_WAIT_MS);
     try {
       await croffleInternal.settings.update(patch);
-      patches.settle(id);
-      showPatches();
+      await stored;
     } catch (error) {
-      patches.settle(id);
-      showPatches();
       toast.error(t('settings.errors.save', { error: errorMessage(error) }));
-      if (settings.value) {
-        reapplyPersistedAppearance(settings.value);
+    }
+    patches.settle(id);
+    showPatches();
+    // A previewed theme or colour now shows what is stored (the new value, or the old on failure),
+    // unless a newer unsent one of the same field is still on screen.
+    for (const [section, field, key] of [
+      ['general', 'theme', 'theme'],
+      ['appearance', 'accentHue', 'accentHue'],
+    ] as const) {
+      if ((patch as Record<string, Record<string, unknown>>)[section]?.[field] !== undefined) {
+        if (!patches.pendingFor(section, field)) {
+          appSettingsStore.endPreview(key);
+        }
       }
     }
   };
@@ -436,6 +448,8 @@
 
   // A short pause groups quick changes (dragging the colour picker) into one save.
   const PERSIST_DELAY_MS = 250;
+  /** How long a saved patch waits for its SETTINGS_UPDATE before it ends anyway. */
+  const STORED_WAIT_MS = 1000;
   let accentTimer: ReturnType<typeof setTimeout> | null = null;
   /** The colour patch shown on screen but not sent yet (the picker is still moving). */
   let accentPatchId: number | null = null;

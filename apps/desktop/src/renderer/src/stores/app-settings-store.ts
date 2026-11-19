@@ -1,4 +1,4 @@
-import { type AppSettingTheme, AppEventType } from '@croffledev/common';
+import { type AppSettingTheme, AppEventType, lookOf, type LookPreview } from '@croffledev/common';
 import type { AppSettings } from '@croffledev/croffle-types';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
@@ -8,19 +8,32 @@ import { applyAppearance, DEFAULT_ACCENT_HUE } from '@/utils/appearance';
 
 import { useThemeStore } from './theme-store';
 
-const applyToUi = (value: AppSettings) => {
-  const themeStore = useThemeStore();
-  themeStore.applyFromSettings(value.general.theme);
-  setI18nLocale(value.general.language);
-  applyAppearance({
-    accentHue: value.appearance?.accentHue ?? DEFAULT_ACCENT_HUE,
-  });
-};
-
 export const useAppSettingsStore = defineStore('appSettings', () => {
   const settings = ref<AppSettings | null>(null);
   const isReady = ref(false);
+  /** The settings screen's theme or colour not stored yet. Shown over every stored value. */
+  const preview: LookPreview = {};
   let unsubscribe: (() => void) | null = null;
+
+  /** Applies stored settings with the preview on top — the only place the look is applied. */
+  const applyToUi = (value: AppSettings) => {
+    const look = lookOf(
+      {
+        theme: value.general.theme,
+        accentHue: value.appearance?.accentHue ?? DEFAULT_ACCENT_HUE,
+      },
+      preview,
+    );
+    useThemeStore().applyFromSettings(look.theme);
+    setI18nLocale(value.general.language);
+    applyAppearance({ accentHue: look.accentHue });
+  };
+
+  const reapply = () => {
+    if (settings.value) {
+      applyToUi(settings.value);
+    }
+  };
 
   const load = async () => {
     const loaded = await croffle.settings.getAll();
@@ -44,23 +57,22 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     unsubscribe = null;
   };
 
+  /** Shows a theme before it is stored (cleared by endPreview when its save ends). */
   const setThemeDraft = (theme: AppSettingTheme) => {
-    if (!settings.value) {
-      return;
-    }
-    settings.value.general.theme = theme;
-    useThemeStore().applyFromSettings(theme);
+    preview.theme = theme;
+    reapply();
   };
 
+  /** Shows an accent hue before it is stored (cleared by endPreview when its save ends). */
   const setAccentHueDraft = (accentHue: number) => {
-    if (!settings.value) {
-      return;
-    }
-    if (!settings.value.appearance) {
-      settings.value.appearance = { accentHue: DEFAULT_ACCENT_HUE };
-    }
-    settings.value.appearance.accentHue = accentHue;
-    applyAppearance({ accentHue });
+    preview.accentHue = accentHue;
+    reapply();
+  };
+
+  /** The save of a previewed value ended (stored or failed): show what is stored. */
+  const endPreview = (key: keyof LookPreview) => {
+    delete preview[key];
+    reapply();
   };
 
   return {
@@ -71,5 +83,6 @@ export const useAppSettingsStore = defineStore('appSettings', () => {
     load,
     setThemeDraft,
     setAccentHueDraft,
+    endPreview,
   };
 });
