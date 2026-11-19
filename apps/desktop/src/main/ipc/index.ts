@@ -4,6 +4,7 @@ import { registerExtensionInfoIpcHandlers } from './extension-info.handler';
 import { registerExtensionSessionIpcHandlers } from './extension-session.handler';
 import { registerExtensionStorageIpcHandlers } from './extension-storage.handler';
 import { registerHttpIpcHandlers } from './http.handler';
+import { registerNotificationsIpcHandlers } from './notifications.handler';
 import { registerOsIpcHandlers } from './os.handler';
 import { registerScheduleIpcHandlers } from './schedule.handler';
 import { registerSearchIpcHandlers } from './search.handler';
@@ -13,6 +14,9 @@ import { registerTagIpcHandlers } from './tag.handler';
 import { registerWindowIpcHandlers } from './window.handler';
 
 export function registerAllIpcHandlers() {
+  logger.debug('IPC', 'Registering Notifications IPC Handlers');
+  registerNotificationsIpcHandlers();
+
   logger.debug('IPC', 'Registering Window IPC Handlers');
   // Window IPC Handlers
   registerWindowIpcHandlers();
