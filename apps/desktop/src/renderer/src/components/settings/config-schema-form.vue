@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import type { ConfigItemSchema } from '@croffledev/common';
+  import { parseNumberInput, type ConfigItemSchema } from '@croffledev/common';
+  import { ref } from 'vue';
+  import { useI18n } from 'vue-i18n';
 
   import { Input } from '@/components/ui/input';
   import { Label } from '@/components/ui/label';
@@ -38,6 +40,35 @@
 
   const updateValue = (key: string, v: unknown) => {
     values.value = { ...values.value, [key]: v };
+  };
+
+  const { t } = useI18n();
+
+  /** Text and number fields apply when the field is left or Enter is pressed, not per keystroke. */
+  const typed = ref<Record<string, string>>({});
+  const fieldErrors = ref<Record<string, string>>({});
+
+  const shown = (key: string) => typed.value[key] ?? String(values.value[key] ?? '');
+
+  const commit = (key: string, schema: ConfigItemSchema) => {
+    const raw = typed.value[key];
+    if (raw === undefined) {
+      return;
+    }
+    if (schema.type === 'number') {
+      const value = parseNumberInput(raw);
+      if (value === null) {
+        fieldErrors.value = { ...fieldErrors.value, [key]: t('settings.errors.notANumber') };
+        return;
+      }
+      updateValue(key, value);
+    } else {
+      updateValue(key, raw);
+    }
+    const { [key]: _done, ...rest } = typed.value;
+    typed.value = rest;
+    const { [key]: _cleared, ...others } = fieldErrors.value;
+    fieldErrors.value = others;
   };
 </script>
 
@@ -96,14 +127,27 @@
             </SelectItem>
           </SelectContent>
         </Select>
-        <Input
-          v-else
-          :id="`ext-setting-${key}`"
-          :model-value="String(values[key] ?? '')"
-          :type="schema.type === 'number' ? 'number' : 'text'"
-          :class="schema.type === 'number' ? 'w-24 shrink-0' : 'w-60 shrink-0'"
-          @update:model-value="(v) => updateValue(key, schema.type === 'number' ? Number(v) : v)"
-        />
+        <div v-else class="flex shrink-0 flex-col items-end gap-1">
+          <Input
+            :id="`ext-setting-${key}`"
+            :model-value="shown(key)"
+            :type="schema.type === 'number' ? 'number' : 'text'"
+            :class="schema.type === 'number' ? 'w-24' : 'w-60'"
+            :aria-invalid="fieldErrors[key] ? true : undefined"
+            :aria-describedby="fieldErrors[key] ? `ext-setting-${key}-error` : undefined"
+            @update:model-value="(v) => (typed[key] = String(v))"
+            @blur="commit(key, schema)"
+            @keydown.enter="commit(key, schema)"
+          />
+          <p
+            v-if="fieldErrors[key]"
+            :id="`ext-setting-${key}-error`"
+            class="text-destructive text-xs"
+            role="alert"
+          >
+            {{ fieldErrors[key] }}
+          </p>
+        </div>
       </div>
     </div>
   </section>

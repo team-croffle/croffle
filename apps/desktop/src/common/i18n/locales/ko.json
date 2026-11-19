@@ -82,7 +82,6 @@
       "showWeekNumbersHint": "캘린더에 주차 번호를 표시합니다.",
       "data": "데이터",
       "dataIntro": "일정을 JSON 파일로 백업하거나 파일에서 불러옵니다.",
-      "dataHint": "이 작업은 바로 실행되며 저장/취소 버튼과 무관합니다.",
       "export": "내보내기",
       "exportHint": "모든 일정을 JSON 파일로 저장합니다.",
       "exportDone": "일정 {count}개를 내보냈습니다: {path}",
@@ -119,7 +118,9 @@
       "configHeading": "{name} 확장 구성",
       "githubPlaceholder": "owner/repo 또는 GitHub URL",
       "githubHint": "{'@'}태그 또는 /tree/브랜치를 붙여 버전을 고를 수 있습니다. 없으면 기본 브랜치를 받습니다.",
-      "selectZipTitle": "Zip 파일로 확장 설치"
+      "selectZipTitle": "Zip 파일로 확장 설치",
+      "uninstallTitle": "확장 삭제",
+      "uninstall": "삭제"
     },
     "sync": {
       "intro": "직접 운영하는 Croffle Server를 통해 기기 사이에 일정을 동기화합니다. 서버가 없어도 Croffle은 모든 기능을 그대로 쓸 수 있습니다.",
@@ -185,7 +186,8 @@
         "manifestMissing": "확장 최상위에서 croffle-manifest.json을 찾을 수 없습니다.",
         "manifestInvalid": "croffle-manifest.json이 올바르지 않거나 필수 항목(id, name, version, author)이 없습니다.",
         "incompatibleEngine": "이 확장은 더 새로운 버전의 Croffle이 필요합니다."
-      }
+      },
+      "notANumber": "숫자만 입력할 수 있습니다."
     }
   },
   "sidebar": {

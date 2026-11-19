@@ -5,6 +5,7 @@
     AppSettingTheme,
     CalendarTimeFormat,
     CalendarView,
+    applySetting,
     CalendarWeekStartDay,
     extensionInstallErrorCode,
   } from '@croffledev/common';
@@ -44,6 +45,7 @@
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useSettingsStore } from '@/stores/settings-store';
+  import { useUiStore } from '@/stores/ui-store';
   import {
     DEFAULT_ACCENT_HUE,
     DEFAULT_ACCENT_PRESET_HEX,
@@ -67,6 +69,7 @@
   const settingsStore = useSettingsStore();
   const appSettingsStore = useAppSettingsStore();
   const scheduleStore = useScheduleStore();
+  const uiStore = useUiStore();
   const { t } = useI18n();
   const appVersion = pkg.version;
 
@@ -269,7 +272,13 @@
   };
 
   const onUninstallExtension = async (plugin: ExtensionInfo) => {
-    if (!confirm(t('settings.extensions.uninstallConfirm', { name: plugin.name }))) {
+    const confirmed = await uiStore.openConfirm({
+      title: t('settings.extensions.uninstallTitle'),
+      description: t('settings.extensions.uninstallConfirm', { name: plugin.name }),
+      confirmLabel: t('settings.extensions.uninstall'),
+      confirmVariant: 'destructive',
+    });
+    if (!confirmed) {
       return;
     }
     try {
@@ -311,35 +320,10 @@
     }
   });
 
-  const handleSave = async () => {
-    if (!settings.value) {
-      return;
-    }
-    try {
-      await croffleInternal.settings.update(cloneSettings(settings.value));
-
-      for (const tab of settingsStore.sortedExtensionTabs) {
-        if (!tab.sections?.length) {
-          continue;
-        }
-        const compositeId = settingsStore.getTabCompositeId(tab);
-        const draft = extensionDrafts.value[compositeId];
-        if (draft) {
-          await croffleInternal.extensions.configuration.set(tab.extensionId, draft);
-        }
-      }
-
-      // 저장 후 재조회(실제 반영값 동기화)
-      const reloaded = await croffle.settings.getAll();
-      originalSettings.value = reloaded;
-      settings.value = cloneSettings(reloaded);
-
-      originalExtensionDrafts.value = cloneExtensionDrafts(extensionDrafts.value);
-
-      emit('update:open', false);
-    } catch (error) {
-      toast.error(t('settings.errors.save', { error: JSON.stringify(error) }));
-    }
+  /** Saves and reads back what main stored (settings apply as soon as they change). */
+  const saveSettings = async (next: AppSettings) => {
+    await croffleInternal.settings.update(next);
+    return croffle.settings.getAll();
   };
 
   const reapplyPersistedAppearance = (value: AppSettings) => {
@@ -347,15 +331,82 @@
     appSettingsStore.setAccentHueDraft(value.appearance?.accentHue ?? DEFAULT_ACCENT_HUE);
   };
 
-  const handleCancel = () => {
-    if (originalSettings.value) {
-      settings.value = cloneSettings(originalSettings.value);
-      reapplyPersistedAppearance(originalSettings.value);
-    }
-    extensionDrafts.value = cloneExtensionDrafts(originalExtensionDrafts.value);
+  const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-    emit('update:open', false);
+  /** Applies the app settings on screen. A failed save puts the stored values back. */
+  const persistSettings = async () => {
+    const stored = originalSettings.value;
+    if (!settings.value || !stored) {
+      return;
+    }
+    const next = cloneSettings(settings.value);
+    if (sameJson(next, stored)) {
+      return;
+    }
+    const result = await applySetting(stored, next, saveSettings);
+    if (result.ok) {
+      originalSettings.value = result.value;
+      if (sameJson(settings.value, next)) {
+        settings.value = cloneSettings(result.value);
+      }
+      return;
+    }
+    const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
+    toast.error(t('settings.errors.save', { error: reason }));
+    settings.value = cloneSettings(result.value);
+    reapplyPersistedAppearance(result.value);
   };
+
+  /** Applies extension configuration that changed on screen. */
+  const persistExtensionDrafts = async () => {
+    for (const tab of settingsStore.sortedExtensionTabs) {
+      const compositeId = settingsStore.getTabCompositeId(tab);
+      const draft = extensionDrafts.value[compositeId];
+      const stored = originalExtensionDrafts.value[compositeId];
+      if (!draft || sameJson(draft, stored)) {
+        continue;
+      }
+      const snapshot = JSON.parse(JSON.stringify(draft)) as Record<string, unknown>;
+      const result = await applySetting(stored ?? {}, snapshot, async (value) => {
+        await croffleInternal.extensions.configuration.set(tab.extensionId, value);
+        return value;
+      });
+      if (result.ok) {
+        originalExtensionDrafts.value[compositeId] = result.value;
+      } else {
+        const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
+        toast.error(t('settings.errors.save', { error: reason }));
+        extensionDrafts.value[compositeId] = JSON.parse(JSON.stringify(result.value));
+      }
+    }
+  };
+
+  // A short pause groups quick changes (dragging the colour picker) into one save.
+  const PERSIST_DELAY_MS = 250;
+  let persistTimer: ReturnType<typeof setTimeout> | null = null;
+  let extensionTimer: ReturnType<typeof setTimeout> | null = null;
+
+  watch(
+    settings,
+    () => {
+      if (persistTimer) {
+        clearTimeout(persistTimer);
+      }
+      persistTimer = setTimeout(() => void persistSettings(), PERSIST_DELAY_MS);
+    },
+    { deep: true },
+  );
+
+  watch(
+    extensionDrafts,
+    () => {
+      if (extensionTimer) {
+        clearTimeout(extensionTimer);
+      }
+      extensionTimer = setTimeout(() => void persistExtensionDrafts(), PERSIST_DELAY_MS);
+    },
+    { deep: true },
+  );
 
   // Switch 이벤트값 정규화(checked/modelValue 둘 다 대응)
   const asBool = (v: unknown): boolean => {
@@ -1012,10 +1063,6 @@
                       </div>
                     </div>
                   </div>
-
-                  <p class="text-muted-foreground text-xs">
-                    {{ $t('settings.calendar.dataHint') }}
-                  </p>
                 </section>
               </div>
 
@@ -1246,15 +1293,6 @@
                 />
               </div>
             </div>
-          </div>
-
-          <div class="bg-muted/20 mt-auto flex shrink-0 justify-end gap-2 border-t px-6 py-4">
-            <Button type="button" variant="outline" class="min-w-20" @click="handleCancel">
-              {{ $t('common.cancel') }}
-            </Button>
-            <Button type="button" class="min-w-20" @click="handleSave">
-              {{ $t('common.save') }}
-            </Button>
           </div>
         </div>
       </div>

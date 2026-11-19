@@ -9,6 +9,7 @@ export * from './recurrence-exceptions';
 export * from './reminder';
 export * from './upcoming';
 export * from './update-status';
+export * from './settings-apply';
 export {
   allOutboxTriggerSql,
   OUTBOX_TRIGGER_COUNT,
