@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
-import { applySetting, parseNumberInput, PendingPatches } from '../src/common/settings-apply.ts';
+import {
+  applySetting,
+  lookOf,
+  parseNumberInput,
+  PendingPatches,
+} from '../src/common/settings-apply.ts';
 
 type Prefs = { weekNumbers: boolean; days: number };
 const STORED: Prefs = { weekNumbers: false, days: 7 };
@@ -124,5 +129,16 @@ describe('settings apply immediately', () => {
     patches.settle(week.id);
     assert.equal(patches.view().appearance.accentHue, 200);
     assert.deepEqual(patches.revise(colour.id, 200), { appearance: { accentHue: 200 } });
+  });
+
+  test('a previewed colour or theme survives a settings event', () => {
+    const stored = { theme: 'light', accentHue: 70 };
+    assert.deepEqual(lookOf(stored, {}), stored);
+    // The screen previews hue 200; another field's SETTINGS_UPDATE re-applies the look.
+    assert.deepEqual(lookOf(stored, { accentHue: 200 }), { theme: 'light', accentHue: 200 });
+    assert.deepEqual(lookOf({ theme: 'dark', accentHue: 70 }, { accentHue: 200 }), {
+      theme: 'dark',
+      accentHue: 200,
+    });
   });
 });

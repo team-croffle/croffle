@@ -79,6 +79,11 @@ export class PendingPatches<T extends object> {
     return this.pending.some((p) => p.id === id);
   }
 
+  /** Whether a patch of this field is still unfinished. */
+  public pendingFor(section: keyof T, field: string): boolean {
+    return this.pending.some((p) => p.section === section && p.field === field);
+  }
+
   /** The patch finished (saved or failed); its field now shows what is stored. */
   public settle(id: number): void {
     this.pending = this.pending.filter((p) => p.id !== id);
@@ -105,4 +110,22 @@ export class PendingPatches<T extends object> {
     }
     return { [entry.section]: { [entry.field]: entry.value } } as unknown as Partial<T>;
   }
+}
+
+/** A theme or colour shown before it is stored (the settings screen's unsent edits). */
+export type LookPreview = { theme?: string; accentHue?: number };
+
+/**
+ * The look the app shows: the stored theme and accent, unless the settings screen previews
+ * another one. Applied in one place (the app settings store) for every stored-settings event,
+ * so the order in which listeners run cannot drop a preview.
+ */
+export function lookOf<Theme extends string>(
+  stored: { theme: Theme; accentHue: number },
+  preview: LookPreview,
+): { theme: Theme; accentHue: number } {
+  return {
+    theme: (preview.theme as Theme | undefined) ?? stored.theme,
+    accentHue: preview.accentHue ?? stored.accentHue,
+  };
 }
