@@ -79,14 +79,14 @@ summary_for_user: |
 - **브랜치** — `feat/desktop-1.3.2-design-system`. W 마다 커밋하고, 커밋 제목에 W 번호를 씁니다.
 
 ## 작업 단위
-- [ ] W-1 토큰 — `index.css` 를 시스템 토큰으로(S-1 · S-2 · S-3 · S-4), `@theme` 연결, `appearance.ts` · `setting-service.ts` 기본 색조 70 · 미리보기 L/C, Pretendard 500 · 600 `@font-face`. 토큰 대비 검사 테스트(`test/tokens-contrast.test.ts`: `index.css` 를 읽어 글자 쌍 4.5:1, `input` 3:1, 강조 색조 0–359°)를 이 단위에 넣습니다.
-- [ ] W-2 대비 · 색 규칙 — 화면 코드와 위 `components/ui` 6개 파일의 오류 글자(S-6), 스위치(S-5), 우선순위 점 + 글자, `amber-*` → `warning`, 팔레트 색 · hex · `rgba(` · 강조색 위 흰 글자 정리(S-5), 달력 강조 글자(`calendar.vue` 의 `var(--croffle-primary)` 글자색) · 설정 · 도움말의 강조 글자 → `croffle-primary-strong`.
-- [ ] W-3 셸: 테마 · 부제 · 다가오는 일정 — S-9, S-10, S-8(+ `src/common/upcoming.ts` 와 테스트).
-- [ ] W-4 알림 팝오버 — S-7 (메인 메모리 목록 `src/main/notification/notification-list.ts` · IPC · preload · store · popover · 종의 수, `test/notification-list.test.ts`).
-- [ ] W-5 업데이트 확인 · 버전 타일 — S-11 · S-12 (IPC · 상태 `src/common/update-status.ts` · store · 버전 타일 Popover · 설정 › 일반 › 업데이트 행, `test/update-status.test.ts`).
-- [ ] W-6 설정 바로 적용 · 확장 삭제 확인 — S-13 · S-14 (저장 · 되돌리기 순수 함수 `src/common/settings-apply.ts`, `test/settings-apply.test.ts`, 확장 구성 폼의 blur · Enter 적용, `dataHint` 정리).
-- [ ] W-7 문구 — S-15 (ko 영어 값, `test/i18n-catalogs.test.ts`), S-16 (도움말 4단계).
-- [ ] W-8 문서 — S-17 (`DESIGN.md`).
+- [x] W-1 토큰 — `index.css` 를 시스템 토큰으로(S-1 · S-2 · S-3 · S-4), `@theme` 연결, `appearance.ts` · `setting-service.ts` 기본 색조 70 · 미리보기 L/C, Pretendard 500 · 600 `@font-face`. 토큰 대비 검사 테스트(`test/tokens-contrast.test.ts`: `index.css` 를 읽어 글자 쌍 4.5:1, `input` 3:1, 강조 색조 0–359°)를 이 단위에 넣습니다. — a91eafd
+- [x] W-2 대비 · 색 규칙 — 화면 코드와 위 `components/ui` 6개 파일의 오류 글자(S-6), 스위치(S-5), 우선순위 점 + 글자, `amber-*` → `warning`, 팔레트 색 · hex · `rgba(` · 강조색 위 흰 글자 정리(S-5), 달력 강조 글자(`calendar.vue` 의 `var(--croffle-primary)` 글자색) · 설정 · 도움말의 강조 글자 → `croffle-primary-strong`. — 4458a7e
+- [x] W-3 셸: 테마 · 부제 · 다가오는 일정 — S-9, S-10, S-8(+ `src/common/upcoming.ts` 와 테스트). — 0f1ce63
+- [x] W-4 알림 팝오버 — S-7 (메인 메모리 목록 `src/main/notification/notification-list.ts` · IPC · preload · store · popover · 종의 수, `test/notification-list.test.ts`). — cd17d8a
+- [x] W-5 업데이트 확인 · 버전 타일 — S-11 · S-12 (IPC · 상태 `src/common/update-status.ts` · store · 버전 타일 Popover · 설정 › 일반 › 업데이트 행, `test/update-status.test.ts`). — 0fe0860
+- [x] W-6 설정 바로 적용 · 확장 삭제 확인 — S-13 · S-14 (저장 · 되돌리기 순수 함수 `src/common/settings-apply.ts`, `test/settings-apply.test.ts`, 확장 구성 폼의 blur · Enter 적용, `dataHint` 정리). — c80a644
+- [x] W-7 문구 — S-15 (ko 영어 값, `test/i18n-catalogs.test.ts`), S-16 (도움말 4단계). — 1c1ba1b
+- [x] W-8 문서 — S-17 (`DESIGN.md`). — 5eb9a5d
 
 W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 독립이라 각각 되돌릴 수 있습니다(S-10 의 "Calendar" 부제는 W-3, 그 밖의 ko 영어 값은 W-7). W-8 은 마지막입니다. 새 테스트 파일은 모두 `apps/desktop/test/` 바로 아래에 둡니다(`test/**/*.test.ts` 는 셸 glob 이라 하위 폴더를 찾지 않음).
 
@@ -264,6 +264,12 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
 - A-1 (2026-11-19, W-1) 라이트 `--primary` 의 oklch 명도를 시스템 #98641b 의 0.547 에서 0.534 로 낮췄습니다 · 0.547 이면 색조 192° 부근에서 `primary-foreground` 대비가 4.39:1 로 떨어져 S-3 · V-3 의 "모든 색조 4.5:1" 을 지키지 못합니다. 0.534 면 최저 4.61:1 입니다. 기본 색조 70° 에서는 거의 같은 색(#93601a 부근)입니다. `--croffle-today-bg` · 설정 미리보기도 같은 명도를 씁니다.
 - A-2 (2026-11-19, W-1) 다크의 강조색은 설정 색조에 차이를 더합니다(`primary` +5°, `accent-foreground` · `ring` +8.6°) · 시스템 다크 값(#d9a353 75°, #ecc079 78.6°)이 라이트(70°)와 색조가 달라, 색조 하나로 두 테마를 맞추려면 차이가 필요합니다. 기본 70° 에서 시스템 hex 와 같습니다.
 - A-3 (2026-11-19, W-1) 라이트 `--input` 을 #988c74 에서 #968a72 로 한 단계 진하게 했습니다 · 시스템 값은 `--sidebar`(#f6f2e9) 위에서 2.97:1 로 S-5 · V-3 의 3:1 에 못 미칩니다. #968a72 는 sidebar 3.04 · background · card 그 이상입니다. 시스템 문서 수정 여부는 사용자에게 보고합니다.
+- A-4 (2026-11-19, W-3) `listOccurrenceStarts` 를 `src/common/reminder.ts` 에서 새 `src/common/occurrences.ts` 로 옮기고 `reminder.ts` 는 다시 내보냅니다. 테스트용 해석 훅 `test/support/{register.ts,ts-resolve.mjs}` 를 더했습니다 · `node --test` 의 타입 제거 모드는 `reminder.ts → i18n → enums.ts`(TS enum)를 읽지 못하고, 공용 코드는 확장자 없는 import · JSON · `rrule` CJS 를 씁니다. V 명령은 그대로입니다. 다가오는 일정은 달력이 보는 달과 상관없이 같은 범위 조회(`schedules.getAll`)로 오늘부터 8일을 읽습니다(`upcoming-store.ts`) · 0f1ce63
+- A-5 (2026-11-19, W-2) 상태색을 글자로 쓰는 쌍(`success` · `warning` · `info` × `background` · `card` · `sidebar`)을 V-3 의 `text pairs hold 4.5:1 in both themes` 에 더했습니다 · 동기화 패널의 경고 글자를 `text-warning` 으로 바꾸면서 대비 근거가 필요했습니다. `warning` 은 `muted` 위에서 4.36:1 이라 그 조합은 쓰지 않습니다(DESIGN.md) · 4458a7e
+- A-6 (2026-11-19, W-4) `components/ui/popover/PopoverContent.vue` 의 기본 모양을 `rounded-md shadow-md` 에서 `rounded-xl shadow-lg` 로 바꿨습니다 · 시스템 규칙(팝오버 `radius-xl` · `shadow-lg`). 설계에 적은 6개 밖의 `ui` 파일이며, 날짜 선택 팝오버도 같이 바뀝니다 · cd17d8a
+- A-7 (2026-11-19, W-5) 수동 확인은 사용자가 건너뛰기로 한 버전도 "새 버전"으로 보입니다. `checkForUpdates()` 가 `null` 을 돌려주면 "실패"로 알립니다 · 건너뛴 버전이면 electron-updater 이벤트가 렌더러에 오지 않아 "확인 중"에 멈춥니다(S-12 "멈추지 않습니다") · 0fe0860
+- A-8 (2026-11-19, W-6) 문구 키를 더했습니다: `settings.errors.notANumber`, `settings.extensions.uninstallTitle` · `uninstall`. 저장은 바뀐 뒤 250ms 를 모아 한 번 합니다(색 선택을 끄는 동안 저장이 몰리지 않게) · c80a644
+- A-9 (2026-11-19, W-8) DESIGN.md 의 검사 grep 을 `apps/desktop/scripts/check-ui-tokens.sh` 로 옮겼습니다 · V-10 6 은 DESIGN.md 에 `amber` 가 없기를 기대하는데, 팔레트 이름을 나열한 검사 명령이 그 줄에 걸립니다. V-4 a ~ c 와 같은 명령입니다 · 5eb9a5d
 
 ## 우려
 - **확장 화면 색이 바뀝니다.** `--croffle-*` 값이 바뀌므로, 이 변수를 읽는 확장의 화면 색이 1.3.2 에서 달라집니다. 이름은 그대로라 깨지지는 않습니다. 릴리스 노트에 적습니다.
