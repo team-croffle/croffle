@@ -42,6 +42,10 @@
       occurrence.occurrenceStart === null
         ? undefined
         : { start: occurrence.start, end: occurrence.end, isOverride: occurrence.isOverride };
+    // The viewer reads the calendar's store, which holds only the month on screen.
+    if (!scheduleStore.getScheduleById(occurrence.schedule.id)) {
+      scheduleStore.upsertSchedule(occurrence.schedule);
+    }
     uiStore.openScheduleModal('view', occurrence.schedule.id, detail);
   };
 

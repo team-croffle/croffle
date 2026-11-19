@@ -7,11 +7,13 @@ import { croffleInternal } from '@/services/host-bridge';
 import type { SelectedOccurrence } from './ui-store';
 
 const EMPTY: NotificationList = { fired: [], upcoming: [], unread: 0 };
+const REFRESH_MS = 60_000;
 
 /** The bell's popover: reminders fired during this run and those due in the next 24 hours. */
 export const useNotificationStore = defineStore('notifications', () => {
   const list = ref<NotificationList>(EMPTY);
   let unsubscribe: (() => void) | null = null;
+  let timer: ReturnType<typeof setInterval> | null = null;
 
   const refresh = async () => {
     try {
@@ -22,12 +24,14 @@ export const useNotificationStore = defineStore('notifications', () => {
   };
 
   const init = () => {
-    if (unsubscribe) {
+    if (unsubscribe || timer) {
       return;
     }
     unsubscribe = croffleInternal.notifications.onChanged(() => {
       void refresh();
     });
+    // Time alone moves reminders into the next 24 hours (and past ones out, after sleep).
+    timer = setInterval(() => void refresh(), REFRESH_MS);
     void refresh();
   };
 

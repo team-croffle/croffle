@@ -81,6 +81,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     schedules,
     events,
     getScheduleById,
+    upsertSchedule,
     createSchedule,
     updateScheduleById,
     moveOccurrence,
