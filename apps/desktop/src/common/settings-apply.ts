@@ -55,3 +55,51 @@ export function mergeEdits<T>(latest: T, base: T, edited: T): T {
   }
   return same(edited, base) ? latest : edited;
 }
+
+const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/**
+ * The settings screen's state while settings apply immediately.
+ * - `stored`: the latest stored settings (from saves and from changes saved elsewhere);
+ * - `base`: what the screen's values were last set from; the screen's edits are where `screen`
+ *   differs from it;
+ * - while a save runs, the values being saved count as the base, so an edit made meanwhile
+ *   (even one back to the old value) is kept and saved next.
+ */
+export class SettingsDraft<T> {
+  public stored: T;
+  public base: T;
+  public screen: T;
+  private saving: T | null = null;
+
+  public constructor(initial: T) {
+    this.stored = copy(initial);
+    this.base = copy(initial);
+    this.screen = copy(initial);
+  }
+
+  /** Settings stored elsewhere (or this screen's own save, reported back) arrived. */
+  public rebase(latest: T): void {
+    this.screen = copy(mergeEdits(latest, this.saving ?? this.base, this.screen));
+    this.stored = copy(latest);
+    this.base = copy(latest);
+  }
+
+  /** What to save now, or null when the screen has no edits. Marks it as being saved. */
+  public beginSave(): T | null {
+    const next = mergeEdits(this.stored, this.base, this.screen);
+    if (same(next, this.stored)) {
+      return null;
+    }
+    this.saving = copy(next);
+    return copy(next);
+  }
+
+  /** The save ended; `result` is what is stored now (the old values if it failed). */
+  public endSave(saved: T, result: T): void {
+    this.screen = copy(mergeEdits(result, saved, this.screen));
+    this.stored = copy(result);
+    this.base = copy(result);
+    this.saving = null;
+  }
+}
