@@ -194,7 +194,8 @@
     "help": "Help",
     "calendar": {
       "title": "Calendar",
-      "subtitle": "Calendar"
+      "subtitle": "{count} today",
+      "subtitleEmpty": "Nothing today"
     }
   },
   "rightSidebar": {
@@ -206,12 +207,13 @@
     "emptyToday": "No schedules today",
     "emptySelected": "No schedules on this day",
     "upcoming": "Upcoming",
-    "emptyUpcoming": "No upcoming schedules"
+    "emptyUpcoming": "No upcoming schedules",
+    "upcomingOpenHint": "Double-click to open"
   },
   "titleBar": {
     "toggleTheme": "Toggle theme",
     "toggleLeftSidebar": "Toggle left sidebar",
-    "themeMenuHint": "Click to toggle · right-click to pick Light / Dark / System"
+    "themeMenuHint": "Click: light ↔ dark · Right-click: light / dark / system (both are saved)"
   },
   "closeModal": {
     "title": "Close Croffle?",

@@ -54,8 +54,8 @@
   const { t } = useI18n();
   useGlobalShortcuts();
 
-  // 타이틀 바 테마 버튼 우클릭 메뉴. 좌클릭은 세션 임시 토글(theme-store.changeTheme)이고,
-  // 여기서 고른 값은 설정(general.theme)에 저장되어 설정 모달과 같은 값을 보여준다.
+  // 타이틀 바 테마 버튼. 좌클릭은 라이트 ↔ 다크를 바꾸고, 우클릭 메뉴는 라이트 / 다크 / 시스템을 고른다.
+  // 둘 다 설정(general.theme)에 저장되어 설정 모달 · 다음 실행과 같은 값을 보여준다.
   const themeMenuOptions = computed(() => [
     { value: AppSettingTheme.LIGHT, label: t('settings.general.themeLight'), icon: 'lucide:sun' },
     { value: AppSettingTheme.DARK, label: t('settings.general.themeDark'), icon: 'lucide:moon' },
@@ -82,6 +82,10 @@
       toast.error(t('settings.errors.save', { error: JSON.stringify(error) }));
     }
   };
+
+  /** 좌클릭: 보이는 상태를 기준으로 뒤집어 저장한다(시스템 설정에서 OS 가 다크여도 첫 클릭에 바뀜). */
+  const toggleTheme = () =>
+    selectTheme(themeStore.isDark ? AppSettingTheme.LIGHT : AppSettingTheme.DARK);
 
   // 설정 모달 상태
   const isSettingsOpen = ref(false);
@@ -357,7 +361,7 @@
               class="text-muted-foreground"
               :aria-label="$t('titleBar.toggleTheme')"
               :title="$t('titleBar.themeMenuHint')"
-              @click="themeStore.changeTheme"
+              @click="toggleTheme"
             >
               <Icon v-if="themeStore.isDark" icon="lucide:sun" />
               <Icon v-else icon="lucide:moon" />
