@@ -1,11 +1,15 @@
-/** Default Croffle accent hue (warm brown), matches index.css --croffle-accent-hue. */
-export const DEFAULT_ACCENT_HUE = 69.8;
+/** Default Croffle accent hue (amber), matches index.css --croffle-accent-hue. */
+export const DEFAULT_ACCENT_HUE = 70;
 
 export type AppearanceOverrides = {
   accentHue?: number;
 };
 
 const ACCENT_HUE_VAR = '--croffle-accent-hue';
+
+/** oklch lightness and chroma of --primary in Croffle Light (index.css). */
+export const PREVIEW_LIGHTNESS = 0.534;
+export const PREVIEW_CHROMA = 0.1074;
 
 /** Clamp hue to the CSS hue range. */
 export const normalizeAccentHue = (hue: number): number => {
@@ -57,9 +61,9 @@ export const hexToHue = (hex: string): number => {
  */
 export const hueToPreviewHex = (hue: number): string => {
   const h = normalizeAccentHue(hue);
-  // Match approximate lightness/chroma of --croffle-primary in light mode
-  const l = 0.785;
-  const c = 0.104;
+  // Same lightness/chroma as --primary in Croffle Light (index.css)
+  const l = PREVIEW_LIGHTNESS;
+  const c = PREVIEW_CHROMA;
   const [r, g, b] = oklchToSrgb(l, c, h);
   return rgbToHex(r, g, b);
 };
