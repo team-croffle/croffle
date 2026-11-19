@@ -5,13 +5,15 @@
     AppSettingTheme,
     CalendarTimeFormat,
     CalendarView,
+    AppEventType,
     applySetting,
     CalendarWeekStartDay,
     extensionInstallErrorCode,
+    mergeEdits,
   } from '@croffledev/common';
   import type { ConfigurationTabContribution, ExtensionInfo } from '@croffledev/common';
   import type { AppSettings } from '@croffledev/croffle-types';
-  import { ref, onMounted, watch, computed } from 'vue';
+  import { ref, onBeforeUnmount, onMounted, watch, computed } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { toast } from 'vue-sonner';
 
@@ -193,6 +195,7 @@
     try {
       const loaded = await croffle.settings.getAll();
       originalSettings.value = loaded;
+      base.value = cloneSettings(loaded);
       settings.value = cloneSettings(loaded);
       await loadAllExtensionSettings();
     } catch (error) {
@@ -299,12 +302,12 @@
     () => props.open,
     (isOpen) => {
       if (!isOpen) {
+        // Closing does not drop a change still waiting for its save.
+        flushPending();
         return;
       }
       if (originalSettings.value) {
-        settings.value = cloneSettings(originalSettings.value);
-        reapplyPersistedAppearance(originalSettings.value);
-        extensionDrafts.value = cloneExtensionDrafts(originalExtensionDrafts.value);
+        void refreshFromStore();
       } else {
         void reloadSettings();
       }
@@ -333,28 +336,53 @@
 
   const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
+  /**
+   * `originalSettings` is the latest stored settings; `base` is what the screen was last set from.
+   * The screen's edits are the fields where `settings` differs from `base`; only those are saved,
+   * laid over the latest stored values (mergeEdits), so a change saved elsewhere (the title bar's
+   * theme button) is never overwritten by a stale screen.
+   */
+  const base = ref<AppSettings | null>(null);
+
+  /** Takes the latest stored settings and keeps the screen's unsaved edits on top. */
+  const rebase = (latest: AppSettings) => {
+    const edited = settings.value ?? latest;
+    const from = base.value ?? latest;
+    originalSettings.value = cloneSettings(latest);
+    base.value = cloneSettings(latest);
+    settings.value = cloneSettings(mergeEdits(latest, from, edited));
+  };
+
+  const refreshFromStore = async () => {
+    try {
+      rebase(await croffle.settings.getAll());
+    } catch (error) {
+      toast.error(t('settings.errors.load', { error: errorMessage(error) }));
+    }
+  };
+
   /** Applies the app settings on screen. A failed save puts the stored values back. */
   const persistSettings = async () => {
     const stored = originalSettings.value;
-    if (!settings.value || !stored) {
+    if (!settings.value || !stored || !base.value) {
       return;
     }
-    const next = cloneSettings(settings.value);
+    const edited = cloneSettings(settings.value);
+    const next = mergeEdits(stored, base.value, edited);
     if (sameJson(next, stored)) {
       return;
     }
     const result = await applySetting(stored, next, saveSettings);
-    if (result.ok) {
-      originalSettings.value = result.value;
-      if (sameJson(settings.value, next)) {
-        settings.value = cloneSettings(result.value);
-      }
-      return;
+    // Edits made while saving stay on screen and are saved by the next run.
+    const current = settings.value ?? edited;
+    originalSettings.value = cloneSettings(result.value);
+    base.value = cloneSettings(result.value);
+    settings.value = cloneSettings(mergeEdits(result.value, edited, current));
+    if (!result.ok) {
+      const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
+      toast.error(t('settings.errors.save', { error: reason }));
+      reapplyPersistedAppearance(settings.value);
     }
-    const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
-    toast.error(t('settings.errors.save', { error: reason }));
-    settings.value = cloneSettings(result.value);
-    reapplyPersistedAppearance(result.value);
   };
 
   /** Applies extension configuration that changed on screen. */
@@ -362,23 +390,30 @@
     for (const tab of settingsStore.sortedExtensionTabs) {
       const compositeId = settingsStore.getTabCompositeId(tab);
       const draft = extensionDrafts.value[compositeId];
-      const stored = originalExtensionDrafts.value[compositeId];
+      const stored = originalExtensionDrafts.value[compositeId] ?? {};
       if (!draft || sameJson(draft, stored)) {
         continue;
       }
       const snapshot = JSON.parse(JSON.stringify(draft)) as Record<string, unknown>;
-      const result = await applySetting(stored ?? {}, snapshot, async (value) => {
+      const result = await applySetting(stored, snapshot, async (value) => {
         await croffleInternal.extensions.configuration.set(tab.extensionId, value);
         return value;
       });
-      if (result.ok) {
-        originalExtensionDrafts.value[compositeId] = result.value;
-      } else {
+      originalExtensionDrafts.value[compositeId] = result.value;
+      if (!result.ok) {
         const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
         toast.error(t('settings.errors.save', { error: reason }));
-        extensionDrafts.value[compositeId] = JSON.parse(JSON.stringify(result.value));
+        const current = extensionDrafts.value[compositeId] ?? snapshot;
+        extensionDrafts.value[compositeId] = mergeEdits(result.value, snapshot, current);
       }
     }
+  };
+
+  // Saves run one at a time, in order; a failed one does not stop the next.
+  let saving: Promise<void> = Promise.resolve();
+  const enqueue = (run: () => Promise<void>) => {
+    saving = saving.then(run, run);
+    return saving;
   };
 
   // A short pause groups quick changes (dragging the colour picker) into one save.
@@ -386,13 +421,29 @@
   let persistTimer: ReturnType<typeof setTimeout> | null = null;
   let extensionTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const flushPending = () => {
+    if (persistTimer) {
+      clearTimeout(persistTimer);
+      persistTimer = null;
+      void enqueue(persistSettings);
+    }
+    if (extensionTimer) {
+      clearTimeout(extensionTimer);
+      extensionTimer = null;
+      void enqueue(persistExtensionDrafts);
+    }
+  };
+
   watch(
     settings,
     () => {
       if (persistTimer) {
         clearTimeout(persistTimer);
       }
-      persistTimer = setTimeout(() => void persistSettings(), PERSIST_DELAY_MS);
+      persistTimer = setTimeout(() => {
+        persistTimer = null;
+        void enqueue(persistSettings);
+      }, PERSIST_DELAY_MS);
     },
     { deep: true },
   );
@@ -403,10 +454,27 @@
       if (extensionTimer) {
         clearTimeout(extensionTimer);
       }
-      extensionTimer = setTimeout(() => void persistExtensionDrafts(), PERSIST_DELAY_MS);
+      extensionTimer = setTimeout(() => {
+        extensionTimer = null;
+        void enqueue(persistExtensionDrafts);
+      }, PERSIST_DELAY_MS);
     },
     { deep: true },
   );
+
+  // Settings saved elsewhere (title bar theme, another window) reach the screen at once.
+  let offSettingsUpdate: (() => void) | null = null;
+  onMounted(() => {
+    offSettingsUpdate = croffle.event.on(AppEventType.SETTINGS_UPDATE, (payload) => {
+      if (originalSettings.value) {
+        rebase(payload as AppSettings);
+      }
+    });
+  });
+  onBeforeUnmount(() => {
+    offSettingsUpdate?.();
+    flushPending();
+  });
 
   // Switch 이벤트값 정규화(checked/modelValue 둘 다 대응)
   const asBool = (v: unknown): boolean => {

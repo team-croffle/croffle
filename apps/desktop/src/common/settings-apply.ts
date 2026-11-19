@@ -34,3 +34,24 @@ export function parseNumberInput(raw: string): number | null {
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 }
+
+type Plain = Record<string, unknown>;
+const isPlain = (v: unknown): v is Plain =>
+  typeof v === 'object' && v !== null && !Array.isArray(v) && !(v instanceof Date);
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * The screen's edits laid over the latest stored settings: a field the screen changed (edited
+ * differs from base) takes the screen's value; every other field keeps `latest`, so a change
+ * saved elsewhere meanwhile (the title bar's theme button) is not overwritten.
+ */
+export function mergeEdits<T>(latest: T, base: T, edited: T): T {
+  if (isPlain(latest) && isPlain(base) && isPlain(edited)) {
+    const out: Plain = { ...latest };
+    for (const key of new Set([...Object.keys(latest), ...Object.keys(edited)])) {
+      out[key] = mergeEdits(latest[key], base[key], edited[key]);
+    }
+    return out as T;
+  }
+  return same(edited, base) ? latest : edited;
+}
