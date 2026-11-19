@@ -39,14 +39,16 @@ export function parseNumberInput(raw: string): number | null {
  * App settings while they apply immediately. Each control sends only the field it changed
  * (main merges a patch into what it has stored); the screen shows the latest stored settings
  * with the patches that have not finished laid on top.
+ * - Stored settings come in one way only, `receive` (main's SETTINGS_UPDATE, sent before the
+ *   save's reply, or a read): a reply never brings back an older stored value.
  * - A change saved elsewhere only replaces `stored`; it is never taken for an edit.
  * - A failed patch is dropped, so its field shows the latest stored value again.
  * - An edit made while an earlier patch is saving is its own patch and stays on screen.
+ * - A patch may be held back (the colour picker) and revised until it is sent; it shows meanwhile.
  */
 export class PendingPatches<T extends object> {
   private pending: { id: number; section: keyof T; field: string; value: unknown }[] = [];
   private nextId = 1;
-
   public stored: T;
 
   public constructor(stored: T) {
@@ -61,18 +63,28 @@ export class PendingPatches<T extends object> {
   ): { id: number; patch: Partial<T> } {
     const id = this.nextId++;
     this.pending.push({ id, section, field, value });
-    return { id, patch: { [section]: { [field]: value } } as unknown as Partial<T> };
+    return { id, patch: this.patchOf(id) };
   }
 
-  /** The patch finished. On success `latest` is what main stored after it. */
-  public settle(id: number, latest?: T): void {
-    this.pending = this.pending.filter((p) => p.id !== id);
-    if (latest) {
-      this.stored = latest;
+  /** Changes the value of a patch not sent yet; returns the patch as it is now. */
+  public revise(id: number, value: unknown): Partial<T> {
+    const entry = this.pending.find((p) => p.id === id);
+    if (entry) {
+      entry.value = value;
     }
+    return this.patchOf(id);
   }
 
-  /** Settings stored elsewhere (or a save reported back) arrived. */
+  public has(id: number): boolean {
+    return this.pending.some((p) => p.id === id);
+  }
+
+  /** The patch finished (saved or failed); its field now shows what is stored. */
+  public settle(id: number): void {
+    this.pending = this.pending.filter((p) => p.id !== id);
+  }
+
+  /** The latest stored settings arrived. */
   public receive(latest: T): void {
     this.stored = latest;
   }
@@ -84,5 +96,13 @@ export class PendingPatches<T extends object> {
       (out[p.section] as Record<string, unknown>)[p.field] = p.value;
     }
     return out;
+  }
+
+  private patchOf(id: number): Partial<T> {
+    const entry = this.pending.find((p) => p.id === id);
+    if (!entry) {
+      return {};
+    }
+    return { [entry.section]: { [entry.field]: entry.value } } as unknown as Partial<T>;
   }
 }

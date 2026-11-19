@@ -69,10 +69,12 @@ describe('settings apply immediately', () => {
     const patches = new PendingPatches(APP);
     const first = patches.edit('calendar', 'weekNumbers', true);
     const second = patches.edit('calendar', 'weekNumbers', false);
-    // The first save reports back before the second finishes.
-    patches.settle(first.id, { ...APP, calendar: { weekNumbers: true } });
+    // The first save is stored and reported back before the second finishes.
+    patches.receive({ ...APP, calendar: { weekNumbers: true } });
+    patches.settle(first.id);
     assert.equal(patches.view().calendar.weekNumbers, false);
-    patches.settle(second.id, APP);
+    patches.receive(APP);
+    patches.settle(second.id);
     assert.equal(patches.view().calendar.weekNumbers, false);
   });
 
@@ -81,7 +83,8 @@ describe('settings apply immediately', () => {
     const { id } = patches.edit('calendar', 'weekNumbers', true);
     patches.receive(withTheme('dark'));
     patches.receive(withTheme('light'));
-    patches.settle(id, { ...withTheme('light'), calendar: { weekNumbers: true } });
+    patches.receive({ ...withTheme('light'), calendar: { weekNumbers: true } });
+    patches.settle(id);
     assert.deepEqual(patches.view(), { ...APP, calendar: { weekNumbers: true } });
     const next = patches.edit('general', 'language', 'en');
     assert.deepEqual(next.patch, { general: { language: 'en' } });
@@ -95,5 +98,31 @@ describe('settings apply immediately', () => {
     patches.settle(id);
     assert.equal(patches.view().calendar.weekNumbers, true);
     assert.deepEqual(patches.stored, { ...APP, calendar: { weekNumbers: true } });
+  });
+
+  test('a late reply never brings back an older stored value', () => {
+    const patches = new PendingPatches(APP);
+    const { id } = patches.edit('calendar', 'weekNumbers', true);
+    // Main stored this patch, then the title bar stored dark; the reply to the patch comes last.
+    patches.receive({ ...APP, calendar: { weekNumbers: true } });
+    patches.receive({ ...withTheme('dark'), calendar: { weekNumbers: true } });
+    patches.settle(id);
+    assert.deepEqual(patches.view(), { ...withTheme('dark'), calendar: { weekNumbers: true } });
+  });
+
+  test('a held-back colour shows on screen until it is sent', () => {
+    type Look = { appearance: { accentHue: number }; calendar: { weekNumbers: boolean } };
+    const patches = new PendingPatches<Look>({
+      appearance: { accentHue: 70 },
+      calendar: { weekNumbers: false },
+    });
+    const colour = patches.edit('appearance', 'accentHue', 120);
+    patches.revise(colour.id, 200);
+    // Another field changes and is stored before the colour is sent.
+    const week = patches.edit('calendar', 'weekNumbers', true);
+    patches.receive({ appearance: { accentHue: 70 }, calendar: { weekNumbers: true } });
+    patches.settle(week.id);
+    assert.equal(patches.view().appearance.accentHue, 200);
+    assert.deepEqual(patches.revise(colour.id, 200), { appearance: { accentHue: 200 } });
   });
 });

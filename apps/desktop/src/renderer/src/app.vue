@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { ConfigurationSectionContribution, ExtensionInfo } from '@croffledev/common';
   import { AppSettingTheme } from '@croffledev/common';
+  import type { AppSettings } from '@croffledev/croffle-types';
   import { computed, ref, onMounted, onUnmounted } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { toast } from 'vue-sonner';
@@ -76,8 +77,8 @@
       return;
     }
     try {
-      // SETTINGS_UPDATE 이벤트가 app-settings-store를 거쳐 테마를 적용한다.
-      await croffleInternal.settings.update({ general: { ...general, theme } });
+      // 테마 한 칸만 보낸다(메인이 저장값과 합침). SETTINGS_UPDATE 가 app-settings-store를 거쳐 적용한다.
+      await croffleInternal.settings.update({ general: { theme } } as Partial<AppSettings>);
     } catch (error) {
       toast.error(t('settings.errors.save', { error: JSON.stringify(error) }));
     }
