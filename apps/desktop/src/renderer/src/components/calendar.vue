@@ -381,7 +381,7 @@
     padding: calc(var(--spacing) * 4);
     border: 1px solid var(--croffle-border);
     border-radius: var(--radius-3xl);
-    box-shadow: 0 var(--spacing) calc(var(--spacing) * 5) rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-surface);
   }
 
   /* FullCalendar 본체 */
@@ -420,7 +420,7 @@
   .calendar-title {
     font-size: var(--text-2xl);
     font-weight: 700;
-    color: var(--croffle-primary);
+    color: var(--croffle-primary-strong);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -473,7 +473,7 @@
   /* 오늘 날짜 숫자 스타일 */
   :deep(.fc-day-today .fc-daygrid-day-number) {
     background-color: transparent !important;
-    color: var(--croffle-primary);
+    color: var(--croffle-primary-strong);
     font-weight: bold;
     border-radius: 0;
   }
@@ -542,7 +542,7 @@
   }
 
   :deep(.fc-more-link:hover) {
-    color: var(--croffle-primary);
+    color: var(--croffle-primary-strong);
   }
 
   :deep(.fc-daygrid-day.is-context-menu-target) {

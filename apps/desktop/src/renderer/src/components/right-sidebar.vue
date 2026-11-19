@@ -67,14 +67,17 @@
     uiStore.openScheduleModal('view', occurrence.schedule.id, detail);
   };
 
-  function getPriorityClass(priority: string) {
+  /** Priority: a dot and the word on the status tokens (low success, medium warning, high destructive). */
+  function getPriorityClass(priority: string): { badge: string; dot: string } {
     switch (priority) {
       case 'low':
-        return 'bg-emerald-500/30 border-emerald-500';
+        return { badge: 'border-success bg-success/14', dot: 'bg-success' };
       case 'medium':
-        return 'bg-amber-500/30 border-amber-500';
+        return { badge: 'border-warning bg-warning/14', dot: 'bg-warning' };
       case 'high':
-        return 'bg-rose-500/30 border-rose-500';
+        return { badge: 'border-destructive bg-destructive/14', dot: 'bg-destructive' };
+      default:
+        return { badge: 'border-warning bg-warning/14', dot: 'bg-warning' };
     }
   }
 
@@ -175,11 +178,16 @@
                   variant="outline"
                   :class="
                     cn(
-                      'text-foreground border-sidebar-ring text-2xs h-4 shrink-0 px-1.5 py-0',
-                      getPriorityClass(occurrence.schedule.priority),
+                      'text-foreground text-2xs h-4 shrink-0 gap-1 px-1.5 py-0',
+                      getPriorityClass(occurrence.schedule.priority).badge,
                     )
                   "
                 >
+                  <span
+                    class="size-1.5 rounded-full"
+                    :class="getPriorityClass(occurrence.schedule.priority).dot"
+                    aria-hidden="true"
+                  />
                   {{ getPriorityText(occurrence.schedule.priority) }}
                 </Badge>
               </div>
@@ -207,7 +215,7 @@
       >
         <Icon
           icon="lucide:home"
-          class="text-primary mb-1 size-6 group-data-[collapsible=icon]:size-5"
+          class="text-croffle-primary-strong mb-1 size-6 group-data-[collapsible=icon]:size-5"
         />
         <div class="text-center group-data-[collapsible=icon]:hidden">
           <h4 class="text-xs font-bold tracking-wider">CROFFLE</h4>

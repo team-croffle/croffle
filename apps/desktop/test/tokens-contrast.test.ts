@@ -140,6 +140,10 @@ const TEXT_PAIRS: [string, string][] = [
   ['--destructive', '--background'],
   ['--destructive', '--card'],
   ['--destructive-foreground', '--destructive'],
+  // Status colours used as lettering (warning notices, status words).
+  ...['--success', '--warning', '--info'].flatMap((fg) =>
+    ['--background', '--card', '--sidebar'].map((bg) => [fg, bg] as [string, string]),
+  ),
   ['--success-foreground', '--success'],
   ['--warning-foreground', '--warning'],
   ['--info-foreground', '--info'],

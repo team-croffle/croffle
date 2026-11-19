@@ -578,7 +578,7 @@
               :class="[
                 'w-full justify-start',
                 activeTab === tab.id
-                  ? 'bg-croffle-sidebar-selected text-primary hover:bg-croffle-sidebar-selected hover:text-primary'
+                  ? 'bg-croffle-sidebar-selected text-croffle-primary-strong hover:bg-croffle-sidebar-selected hover:text-croffle-primary-strong'
                   : 'text-muted-foreground',
               ]"
               @click="
@@ -1176,7 +1176,11 @@
                           />
                           <span
                             class="text-xs font-medium"
-                            :class="plugin.enabled ? 'text-primary' : 'text-muted-foreground'"
+                            :class="
+                              plugin.enabled
+                                ? 'text-croffle-primary-strong'
+                                : 'text-muted-foreground'
+                            "
                           >
                             {{
                               plugin.enabled

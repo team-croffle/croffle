@@ -88,12 +88,12 @@
       <div class="p-6">
         <DialogHeader class="flex flex-col items-center text-center">
           <div
-            class="bg-primary/10 text-primary mb-4 flex size-16 items-center justify-center rounded-full"
+            class="bg-primary/10 text-croffle-primary-strong mb-4 flex size-16 items-center justify-center rounded-full"
           >
             <Icon :icon="currentStepData.icon" class="size-8" />
           </div>
 
-          <DialogTitle class="text-primary">
+          <DialogTitle class="text-croffle-primary-strong">
             {{ currentStepData.title }}
           </DialogTitle>
 

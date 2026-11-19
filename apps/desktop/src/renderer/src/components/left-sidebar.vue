@@ -81,7 +81,9 @@
         </div>
 
         <div v-if="leftSidebarOpen" class="flex flex-col gap-0.5">
-          <span class="font-logo text-primary text-2xl leading-none font-bold">CROFFLE</span>
+          <span class="font-logo text-croffle-primary-strong text-2xl leading-none font-bold"
+            >CROFFLE</span
+          >
 
           <span class="text-croffle-text text-xs leading-none">{{ $t('sidebar.tagline') }}</span>
         </div>

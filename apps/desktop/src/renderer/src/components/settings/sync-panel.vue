@@ -140,7 +140,7 @@
     <p class="text-muted-foreground text-sm">{{ $t('settings.sync.intro') }}</p>
 
     <div
-      class="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+      class="border-warning bg-warning/10 text-foreground flex items-start gap-2 rounded-md border px-3 py-2 text-xs"
     >
       <Icon icon="lucide:flask-conical" class="mt-0.5 size-4 shrink-0" />
       <span>{{ $t('settings.sync.beta') }}</span>
@@ -243,7 +243,7 @@
         </form>
       </template>
 
-      <p v-if="status.tokenVolatile" class="text-xs text-amber-700 dark:text-amber-300">
+      <p v-if="status.tokenVolatile" class="text-warning text-xs">
         {{ $t('settings.sync.volatileToken') }}
       </p>
     </div>
@@ -273,15 +273,15 @@
         <dt class="text-muted-foreground">{{ $t('settings.sync.pending') }}</dt>
         <dd>
           {{ $t('settings.sync.pendingCount', { count: status.pending }) }}
-          <span v-if="status.failed" class="text-destructive-foreground">
+          <span v-if="status.failed" class="text-destructive">
             · {{ $t('settings.sync.failedCount', { count: status.failed }) }}
           </span>
         </dd>
       </dl>
-      <p v-if="errorText" class="text-xs text-destructive-foreground" role="alert">
+      <p v-if="errorText" class="text-destructive text-xs" role="alert">
         {{ errorText }}
       </p>
-      <p v-if="clockSkewMinutes" class="text-xs text-amber-700 dark:text-amber-300">
+      <p v-if="clockSkewMinutes" class="text-warning text-xs">
         {{ $t('settings.sync.clockSkew', { minutes: clockSkewMinutes }) }}
       </p>
       <Button
@@ -303,7 +303,7 @@
           <Label class="text-foreground text-sm font-medium">{{
             $t('settings.sync.allowInsecureTls')
           }}</Label>
-          <p class="text-xs text-amber-700 dark:text-amber-300">
+          <p class="text-warning text-xs">
             {{ $t('settings.sync.allowInsecureTlsWarning') }}
           </p>
         </div>
