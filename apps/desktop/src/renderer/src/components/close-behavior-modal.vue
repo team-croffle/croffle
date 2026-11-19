@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { AppCloseBehavior, AppEventType } from '@croffledev/common';
+  import type { AppSettings } from '@croffledev/croffle-types';
   import { onMounted, onUnmounted, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
   import { toast } from 'vue-sonner';
@@ -14,7 +15,6 @@
     DialogTitle,
   } from '@/components/ui/dialog';
   import { croffleInternal } from '@/services/host-bridge';
-  import { useAppSettingsStore } from '@/stores/app-settings-store';
 
   /**
    * First-close prompt. Main emits WINDOW_CLOSE_REQUESTED while `general.closeBehavior`
@@ -23,7 +23,6 @@
    * and leaves the setting untouched, so the next close asks again.
    */
   const { t } = useI18n();
-  const appSettingsStore = useAppSettingsStore();
 
   const isOpen = ref(false);
   const isSaving = ref(false);
@@ -35,9 +34,8 @@
     }
     isSaving.value = true;
     try {
-      const general =
-        appSettingsStore.settings?.general ?? (await croffle.settings.getAll()).general;
-      await croffleInternal.settings.update({ general: { ...general, closeBehavior } });
+      // One field only; main merges it into what it has stored.
+      await croffleInternal.settings.update({ general: { closeBehavior } } as Partial<AppSettings>);
       isOpen.value = false;
       if (closeBehavior === AppCloseBehavior.QUIT) {
         await croffleInternal.window.exitApp();

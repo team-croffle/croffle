@@ -350,6 +350,11 @@
     }
     patches.receive(latest);
     showPatches();
+    // SETTINGS_UPDATE also re-applies the stored look app-wide; keep the screen's unsent colour
+    // and theme on it.
+    if (settings.value) {
+      reapplyPersistedAppearance(settings.value);
+    }
   };
 
   const refreshFromStore = async () => {
@@ -371,9 +376,20 @@
     }
     const { id, patch } = patches.edit(section, field, value);
     showPatches();
+    await send(id, patch);
+  };
+
+  /**
+   * Sends one patch. Main stores it and broadcasts SETTINGS_UPDATE before replying, so the stored
+   * value arrives through `receiveStored`; the reply only ends the patch.
+   */
+  const send = async (id: number, patch: Partial<AppSettings>) => {
+    if (!patches) {
+      return;
+    }
     try {
-      const latest = await croffleInternal.settings.update(patch);
-      patches.settle(id, latest);
+      await croffleInternal.settings.update(patch);
+      patches.settle(id);
       showPatches();
     } catch (error) {
       patches.settle(id);
@@ -403,7 +419,10 @@
       if (!result.ok) {
         const reason = result.reason === 'failed' ? errorMessage(result.error) : result.message;
         toast.error(t('settings.errors.save', { error: reason }));
-        extensionDrafts.value[compositeId] = JSON.parse(JSON.stringify(result.value));
+        // Put back only what this run tried to save; a newer edit stays and is saved next.
+        if (sameJson(extensionDrafts.value[compositeId], snapshot)) {
+          extensionDrafts.value[compositeId] = JSON.parse(JSON.stringify(result.value));
+        }
       }
     }
   };
@@ -418,16 +437,18 @@
   // A short pause groups quick changes (dragging the colour picker) into one save.
   const PERSIST_DELAY_MS = 250;
   let accentTimer: ReturnType<typeof setTimeout> | null = null;
-  let pendingAccentHue: number | null = null;
+  /** The colour patch shown on screen but not sent yet (the picker is still moving). */
+  let accentPatchId: number | null = null;
 
-  /** The colour picker previews at once and saves the hue after a short pause. */
+  /** The colour picker previews at once and sends the hue after a short pause. */
   const sendAccent = async () => {
-    if (pendingAccentHue === null) {
+    if (!patches || accentPatchId === null) {
       return;
     }
-    const hue = pendingAccentHue;
-    pendingAccentHue = null;
-    await edit('appearance', 'accentHue', hue);
+    const id = accentPatchId;
+    accentPatchId = null;
+    const hue = patches.view().appearance?.accentHue ?? DEFAULT_ACCENT_HUE;
+    await send(id, patches.revise(id, hue));
   };
   let extensionTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -504,19 +525,8 @@
     void edit('general', 'theme', theme as AppSettingTheme);
   };
 
-  const ensureAppearance = () => {
-    if (!settings.value) {
-      return null;
-    }
-    if (!settings.value.appearance) {
-      settings.value.appearance = { accentHue: DEFAULT_ACCENT_HUE };
-    }
-    return settings.value;
-  };
-
   const onAccentHexChange = (hex: string) => {
-    const draft = ensureAppearance();
-    if (!draft) {
+    if (!patches) {
       return;
     }
     // First preset is the exact Croffle primary hue (avoid round-trip drift).
@@ -524,9 +534,13 @@
       hex.toUpperCase() === DEFAULT_ACCENT_PRESET_HEX.toUpperCase()
         ? DEFAULT_ACCENT_HUE
         : hexToHue(hex);
-    draft.appearance.accentHue = hue;
+    if (accentPatchId !== null && patches.has(accentPatchId)) {
+      patches.revise(accentPatchId, hue);
+    } else {
+      accentPatchId = patches.edit('appearance', 'accentHue', hue).id;
+    }
+    showPatches();
     appSettingsStore.setAccentHueDraft(hue);
-    pendingAccentHue = hue;
     if (accentTimer) {
       clearTimeout(accentTimer);
     }
