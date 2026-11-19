@@ -26,7 +26,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     closeBehavior: AppCloseBehavior.ASK,
   },
   appearance: {
-    accentHue: 69.8,
+    accentHue: 70,
   },
   calendar: {
     defaultView: CalendarView.MONTH,

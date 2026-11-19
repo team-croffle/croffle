@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Tokens follow the shared design system "croffle" (themes Croffle Light / Croffle Dark).
+ * Rules for using them: apps/desktop/DESIGN.md.
+ */
 @theme inline {
   --font-sans: 'Pretendard', sans-serif;
   --font-logo: 'Fredoka', sans-serif;
@@ -23,6 +27,12 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -35,6 +45,12 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --shadow-xs: var(--elevation-xs);
+  --shadow-sm: var(--elevation-sm);
+  --shadow-surface: var(--elevation-surface);
+  --shadow-lg: var(--elevation-lg);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -43,13 +59,14 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  /* Croffle Custom Colors */
+  /* Croffle names (read by extensions; aliases of the tokens above) */
   --color-croffle-bg: var(--croffle-bg);
   --color-croffle-sidebar: var(--croffle-sidebar);
   --color-croffle-sidebar-content: var(--croffle-sidebar-content);
   --color-croffle-sidebar-content-disabled: var(--croffle-sidebar-content-disabled);
   --color-croffle-sidebar-selected: var(--croffle-sidebar-selected);
   --color-croffle-primary: var(--croffle-primary);
+  --color-croffle-primary-strong: var(--croffle-primary-strong);
   --color-croffle-hover: var(--croffle-hover);
   --color-croffle-text: var(--croffle-text);
   --color-croffle-border: var(--croffle-border);
@@ -63,132 +80,143 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: var(--croffle-primary);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: var(--croffle-border);
-  --input: var(--croffle-border);
-  --ring: var(--croffle-primary);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
   /*
-   * --primary, --ring, --sidebar-ring, --border and --input follow the Croffle tokens below, so every part in
-   * components/ui picks up the accent color the user chose. See apps/desktop/DESIGN.md.
+   * Accent hue. The accent setting changes only this; it tints primary, ring,
+   * accent-foreground (croffle-primary-strong) and croffle-today-bg. Every other token is fixed.
    */
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: var(--croffle-primary);
-  /* ---Croffle Design--- */
-  --croffle-accent-hue: 69.8;
-  /* 배경 및 사이드바 (accent hue와 동일 톤) */
-  --croffle-bg: oklch(0.987 0.007 var(--croffle-accent-hue));
-  --croffle-sidebar: oklch(0.965 0.012 var(--croffle-accent-hue));
-  --croffle-sidebar-content: oklch(1 0 0 / 0.8);
-  --croffle-sidebar-content-disabled: oklch(1 0 0 / 0.5);
-  --croffle-sidebar-selected: oklch(0.9433 0.0131 var(--croffle-accent-hue));
-  /* 포인트 */
-  --croffle-primary: oklch(0.785 0.104 var(--croffle-accent-hue));
-  /* 호버 */
-  --croffle-hover: oklch(0.87 0.04577 var(--croffle-accent-hue));
-  /* 텍스트 */
-  --croffle-text: oklch(0.603 0.057 var(--croffle-accent-hue));
-  /* 테두리 */
-  --croffle-border: oklch(0.941 0.024 var(--croffle-accent-hue));
-  /* 기능성 색상 - 주말 및 상태 표시용 */
-  --croffle-red: oklch(0.64 0.22 26.6);
-  --croffle-blue: oklch(0.68 0.16 255);
-  --croffle-green: oklch(0.69 0.18 145);
-  --croffle-today-bg: oklch(0.785 0.104 var(--croffle-accent-hue) / 0.3);
-  --croffle-day-select-bg: oklch(0.9029 0.0471 211.48/0.5);
+  --croffle-accent-hue: 70;
 
-  /* 중립 색상 - 비활성화 및 보조 텍스트 */
-  --croffle-muted: oklch(0.7 0.02 var(--croffle-accent-hue)); /* 보조 텍스트 */
-  --croffle-disabled: oklch(0.92 0.01 var(--croffle-accent-hue)); /* 비활성 버튼 */
+  /* Croffle Light */
+  --background: #faf7f1;
+  --foreground: #221d13;
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  /* Lightness 0.534 (system #98641b is 0.547) keeps primary-foreground at 4.5:1 for every hue. */
+  --primary: oklch(0.534 0.1074 var(--croffle-accent-hue));
+  --primary-foreground: #fffaf0;
+  --secondary: #f3eee2;
+  --secondary-foreground: #3a3327;
+  --muted: #f3eee2;
+  --muted-foreground: #5c5546;
+  --accent: #ece5d5;
+  --accent-foreground: oklch(0.5109 0.0998 var(--croffle-accent-hue));
+  --destructive: #bf3d40;
+  --destructive-foreground: #fffaf0;
+  --success: #2a7c52;
+  --success-foreground: #fffaf0;
+  --warning: #b05519;
+  --warning-foreground: #fffaf0;
+  --info: #3c6ea5;
+  --info-foreground: #fffaf0;
+  --border: #e4dcc9;
+  --input: #968a72; /* system #988c74 is 2.97:1 on --sidebar */
+  --ring: var(--primary);
+  --chart-1: var(--primary);
+  --chart-2: var(--info);
+  --chart-3: var(--success);
+  --chart-4: var(--warning);
+  --chart-5: var(--muted-foreground);
+  --radius: 0.75rem;
+  --sidebar: #f6f2e9;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --elevation-xs: 0 1px 2px 0 rgba(34, 29, 19, 0.05);
+  --elevation-sm: 0 1px 3px 0 rgba(34, 29, 19, 0.08), 0 1px 2px -1px rgba(34, 29, 19, 0.08);
+  --elevation-surface: 0 4px 20px 0 rgba(34, 29, 19, 0.06);
+  --elevation-lg: 0 10px 15px -3px rgba(34, 29, 19, 0.1), 0 4px 6px -4px rgba(34, 29, 19, 0.1);
+
+  /* Croffle names (aliases) */
+  --croffle-bg: var(--background);
+  --croffle-sidebar: var(--sidebar);
+  --croffle-sidebar-content: var(--card);
+  --croffle-sidebar-content-disabled: var(--muted);
+  --croffle-sidebar-selected: var(--accent);
+  --croffle-primary: var(--primary);
+  --croffle-primary-strong: var(--accent-foreground);
+  --croffle-hover: var(--accent);
+  --croffle-text: var(--muted-foreground);
+  --croffle-border: var(--border);
+  --croffle-red: var(--destructive);
+  --croffle-blue: var(--info);
+  --croffle-green: var(--success);
+  --croffle-today-bg: oklch(0.534 0.1074 var(--croffle-accent-hue) / 0.16);
+  --croffle-day-select-bg: rgba(60, 110, 165, 0.14);
+  --croffle-muted: var(--muted-foreground);
+  --croffle-disabled: var(--muted);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: var(--croffle-primary);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: var(--croffle-border);
-  --input: var(--croffle-border);
-  --ring: var(--croffle-primary);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: var(--croffle-primary);
-  /* ---Croffle Design--- */
-  /* 배경 및 사이드바 (accent hue와 동일 톤) */
-  --croffle-bg: oklch(0.25 0.007 var(--croffle-accent-hue));
-  --croffle-sidebar: oklch(0.3 0.012 var(--croffle-accent-hue));
-  --croffle-sidebar-content: oklch(0.4 0 0);
-  --croffle-sidebar-content-disabled: oklch(0.5 0 0);
-  --croffle-sidebar-selected: oklch(0.35 0.0131 var(--croffle-accent-hue));
-  /* 포인트 */
-  --croffle-primary: oklch(0.685 0.104 var(--croffle-accent-hue));
-  /* 호버 */
-  --croffle-hover: oklch(0.57 0.04577 var(--croffle-accent-hue));
-  /* 텍스트 */
-  --croffle-text: oklch(0.86 0.057 var(--croffle-accent-hue));
-  /* 테두리 */
-  --croffle-border: oklch(0.36 0.024 var(--croffle-accent-hue));
-  /* 기능성 색상 - 주말 및 상태 표시용 */
-  --croffle-red: oklch(0.64 0.22 26.6);
-  --croffle-blue: oklch(0.68 0.16 255);
-  --croffle-green: oklch(0.69 0.18 145);
-  --croffle-today-bg: oklch(0.785 0.104 var(--croffle-accent-hue) / 0.3);
-  --croffle-day-select-bg: oklch(0.7029 0.0471 211.48/0.5);
+  /* Croffle Dark. The accent hues are offset so the default hue gives the system values. */
+  --background: #15171b;
+  --foreground: #ece7dd;
+  --card: #1c1f25;
+  --card-foreground: var(--foreground);
+  --popover: #1c1f25;
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.7506 0.1163 calc(var(--croffle-accent-hue) + 5));
+  --primary-foreground: #241703;
+  --secondary: #23262d;
+  --secondary-foreground: #ece7dd;
+  --muted: #23262d;
+  --muted-foreground: #a9a294;
+  --accent: #292d35;
+  --accent-foreground: oklch(0.8314 0.1023 calc(var(--croffle-accent-hue) + 8.6));
+  --destructive: #e3676a;
+  --destructive-foreground: #1a0d0d;
+  --success: #57b17e;
+  --success-foreground: #0f1f16;
+  --warning: #e2874a;
+  --warning-foreground: #1f1105;
+  --info: #6fa8dc;
+  --info-foreground: #0d1620;
+  --border: #2b2f37;
+  --input: #6a707c;
+  --ring: var(--accent-foreground);
+  --chart-1: var(--primary);
+  --chart-2: var(--info);
+  --chart-3: var(--success);
+  --chart-4: var(--warning);
+  --chart-5: var(--muted-foreground);
+  --sidebar: #181b20;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: #23262d;
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: #23262d;
+  --sidebar-ring: var(--ring);
+  --elevation-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --elevation-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --elevation-surface: 0 4px 20px 0 rgba(0, 0, 0, 0.35);
+  --elevation-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
 
-  /* 중립 색상 - 비활성화 및 보조 텍스트 */
-  --croffle-muted: oklch(0.7 0.02 var(--croffle-accent-hue)); /* 보조 텍스트 */
-  --croffle-disabled: oklch(0.42 0.01 var(--croffle-accent-hue)); /* 비활성 버튼 */
+  --croffle-bg: var(--background);
+  --croffle-sidebar: var(--sidebar);
+  --croffle-sidebar-content: var(--card);
+  --croffle-sidebar-content-disabled: var(--muted);
+  --croffle-sidebar-selected: var(--accent);
+  --croffle-primary: var(--primary);
+  --croffle-primary-strong: var(--accent-foreground);
+  --croffle-hover: var(--accent);
+  --croffle-text: var(--muted-foreground);
+  --croffle-border: var(--border);
+  --croffle-red: var(--destructive);
+  --croffle-blue: var(--info);
+  --croffle-green: var(--success);
+  --croffle-today-bg: oklch(0.7506 0.1163 calc(var(--croffle-accent-hue) + 5) / 0.18);
+  --croffle-day-select-bg: rgba(111, 168, 220, 0.18);
+  --croffle-muted: var(--muted-foreground);
+  --croffle-disabled: var(--muted);
 }
 
-/* 기본(Regular) 폰트 정의 */
+/* Pretendard 400 · 500 · 600 · 700 */
 @font-face {
   font-family: 'Pretendard';
   font-weight: 400;
@@ -199,7 +227,26 @@
   font-display: swap;
 }
 
-/* 굵은(Bold) 폰트 정의 */
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 500;
+  font-style: normal;
+  src:
+    url('./assets/fonts/woff2/Pretendard-Medium.woff2') format('woff2'),
+    url('./assets/fonts/woff/Pretendard-Medium.woff') format('woff');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 600;
+  font-style: normal;
+  src:
+    url('./assets/fonts/woff2/Pretendard-SemiBold.woff2') format('woff2'),
+    url('./assets/fonts/woff/Pretendard-SemiBold.woff') format('woff');
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'Pretendard';
   font-weight: 700;
