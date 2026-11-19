@@ -39,3 +39,16 @@ export const contrast = (a: Rgb, b: Rgb) => {
   const [hi, lo] = [luminance(a), luminance(b)].toSorted((x, y) => y - x) as [number, number];
   return (hi + 0.05) / (lo + 0.05);
 };
+
+/** The accent dip: `calc(L - k * max(0, cos((var(--croffle-accent-hue) - c) * 1deg)))`. */
+export const DIP =
+  /^calc\(([\d.]+) - ([\d.]+) \* max\(0, cos\(\(var\(--croffle-accent-hue\) - ([\d.]+)\) \* 1deg\)\)\)$/;
+
+export function lightnessOf(expr: string, hue: number): number {
+  const m = DIP.exec(expr);
+  if (!m) {
+    return Number(expr);
+  }
+  const [base, dip, center] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  return base - dip * Math.max(0, Math.cos(((hue - center) * Math.PI) / 180));
+}

@@ -60,10 +60,12 @@ or remove one; add a new one only with an alias. New screen code uses the semant
 
 Settings › General › Accent color changes only `--croffle-accent-hue`, which tints the accent
 family: `primary`, `ring`, `accent-foreground` (= `croffle-primary-strong`) and
-`croffle-today-bg`, at fixed lightness and chroma. Every other token (backgrounds, sidebars,
-borders, hover) stays fixed. The default hue is 70; the dark theme adds a small offset so
-the default gives the design system's dark values. The lightness is chosen so that every hue keeps
-4.5:1.
+`croffle-today-bg`, at fixed chroma. Every other token (backgrounds, sidebars, borders, hover)
+stays fixed. The default hue is 70, where every value equals the design system's. The dark theme
+adds a small hue offset so the default gives the system's dark values. Light `primary` and
+`croffle-today-bg` keep the system's lightness 0.5469 except near hue 185, where it dips by up to
+0.0095 (`0.5469 - 0.0095 * max(0, cos(hue - 185°))`, the same formula as the settings preview's
+`accentLightness`) so `primary-foreground` keeps 4.5:1 for every hue.
 
 ## Controls
 

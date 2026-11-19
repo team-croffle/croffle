@@ -8,9 +8,18 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, test } from 'node:test';
 
-import { contrast, oklchToSrgb, srgbToOklchL, type Rgb } from './support/color.ts';
+import {
+  contrast,
+  DIP,
+  lightnessOf,
+  oklchToSrgb,
+  srgbToOklchL,
+  type Rgb,
+} from './support/color.ts';
 
 const ROOT = join(import.meta.dirname, '..');
+/** Loaded at run time (a renderer module; the node type-check project has no DOM types). */
+const APPEARANCE_MODULE = join(ROOT, 'src/renderer/src/utils/appearance.ts');
 const CSS = readFileSync(join(ROOT, 'src/renderer/src/index.css'), 'utf8');
 
 type Vars = Map<string, string>;
@@ -69,19 +78,6 @@ function resolve(vars: Vars, name: string, hue: number, depth = 0): Rgb {
     return oklchToSrgb(lightnessOf(ok[1]!, hue), Number(ok[2]), hueOf(ok[3]!, hue));
   }
   throw new Error(`cannot resolve ${name}: ${v}`);
-}
-
-/** The accent dip: `calc(L - k * max(0, cos((var(--croffle-accent-hue) - c) * 1deg)))`. */
-const DIP =
-  /^calc\(([\d.]+) - ([\d.]+) \* max\(0, cos\(\(var\(--croffle-accent-hue\) - ([\d.]+)\) \* 1deg\)\)\)$/;
-
-function lightnessOf(expr: string, hue: number): number {
-  const m = DIP.exec(expr);
-  if (!m) {
-    return Number(expr);
-  }
-  const [base, dip, center] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  return base - dip * Math.max(0, Math.cos(((hue - center) * Math.PI) / 180));
 }
 
 function hueOf(expr: string, hue: number): number {
@@ -245,7 +241,7 @@ describe('design system tokens', () => {
     }
   });
 
-  test('croffle variables alias semantic tokens and default accent hue is 70', () => {
+  test('croffle variables alias semantic tokens and default accent hue is 70', async () => {
     for (const [theme, vars] of THEMES) {
       for (const [alias, token] of Object.entries(CROFFLE_ALIASES)) {
         assert.equal(vars.get(alias), `var(${token})`, `${theme}: ${alias}`);
@@ -273,6 +269,24 @@ describe('design system tokens', () => {
     assert.match(appearance, new RegExp(`ACCENT_DIP = ${dip[2]};`));
     assert.match(appearance, new RegExp(`ACCENT_DIP_CENTER = ${dip[3]};`));
     assert.match(appearance, new RegExp(`PREVIEW_CHROMA = ${primary[2]};`));
+    // today's fill uses the same lightness formula, chroma and hue as primary.
+    const today =
+      /^oklch\((calc\(.+?\)\)\)) ([\d.]+) var\(--croffle-accent-hue\) \/ [\d.]+\)$/.exec(
+        LIGHT.get('--croffle-today-bg') ?? '',
+      );
+    assert.ok(today, '--croffle-today-bg is not oklch(calc(…) C var(--croffle-accent-hue) / a)');
+    assert.equal(today[1], primary[1]);
+    assert.equal(today[2], primary[2]);
+    // The settings preview computes the same lightness for every hue.
+    const { accentLightness } = (await import(APPEARANCE_MODULE)) as {
+      accentLightness: (hue: number) => number;
+    };
+    for (let hue = 0; hue < 360; hue += 5) {
+      assert.ok(
+        Math.abs(accentLightness(hue) - lightnessOf(primary[1]!, hue)) < 1e-12,
+        `preview lightness differs at hue ${hue}`,
+      );
+    }
   });
 
   test('dark surfaces rise: background < card = popover', () => {
