@@ -116,17 +116,17 @@ summary_for_user: |
 - 문서: README(en · ko) 대시보드 절에 한 줄, 릴리스 노트 0.2.0 에 한 줄.
 
 ## 작업 단위
-각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트(`make -C apps/server check`, 대시보드를 고치면 `pnpm --dir apps/server/web build`, 공통 게이트)를 통과합니다.
+완료 표시의 SHA 는 master 의 커밋입니다(2026-11-19 회고에서 브랜치 SHA 를 바꿈, 대응표는 감사 기록 `### SHA 대응`). 각 단위는 따로 되돌릴 수 있고, 그 커밋은 게이트(`make -C apps/server check`, 대시보드를 고치면 `pnpm --dir apps/server/web build`, 공통 게이트)를 통과합니다.
 
-- [x] W-1 (678a6b8) TOTP secret 암호화 · 시작 시 이전 · 키 없음 경고 — S-1, S-2, S-10
-- [x] W-2 (1b690f0) `secret generate` · `secret rotate` — S-3
-- [x] W-3 (97b82b1) 운영자 역할(0006) · CLI · `requireOperator` — S-4
-- [x] W-4 (4abd54b) 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
-- [x] W-5 (420f68a) 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
-- [x] W-6 (1b86743) 운영 API `/dash/admin/*` — S-8, S-4
-- [x] W-7 (c0f851b) 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
-- [x] W-8 (333ba62) README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
-- [x] W-9 (f456308) 본인 비밀번호 변경(store · auth · `POST /dash/me/password` · Security 탭 · 문서 한 줄) — S-12
+- [x] W-1 (5f5a88b) TOTP secret 암호화 · 시작 시 이전 · 키 없음 경고 — S-1, S-2, S-10
+- [x] W-2 (74b4969) `secret generate` · `secret rotate` — S-3
+- [x] W-3 (4a7be4b) 운영자 역할(0006) · CLI · `requireOperator` — S-4
+- [x] W-4 (bb74721) 다중 팀: store · CLI(create · rename · members · remove-member) — S-5
+- [x] W-5 (5d7ab29) 팀 범위 따라잡기(0007 `device_scope`) · 410 · bootstrap 기록 · 픽스처 14 · 15 · `team-scopes` — S-6, S-7, S-9
+- [x] W-6 (502fff7) 운영 API `/dash/admin/*` — S-8, S-4
+- [x] W-7 (0bc24b9) 대시보드 운영 화면 · 키 경고 띠 — S-8, S-2
+- [x] W-8 (a630da0) README(en · ko) · 호환 표 · 릴리스 노트 · 주석 정정 — S-11
+- [x] W-9 (39c51d1) 본인 비밀번호 변경(store · auth · `POST /dash/me/password` · Security 탭 · 문서 한 줄) — S-12
 
 ## 검증 기준
 qa-designer(google gemini-4-argon-high)가 작성하고 PM 이 검토 · 수정했습니다(원본 `.loctx/reports/server-0.2.0/qa-checks.md`). qa-designer 가 짚은 spec 의 문제 10개는 설계에 반영했습니다(각 자리에 "qa-designer 지적 n"). PM 수정: V-13 의 "0.3" 판정을 지정한 4곳 기준으로 좁힘(0.3 계획을 가리키는 정당한 표기를 허용).

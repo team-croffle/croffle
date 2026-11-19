@@ -1,7 +1,7 @@
 ---
 version: server-0.2.0
 first: { range: "d80e72d47759339e622b2a8a5650ac528dd96514..8830b544f96581e1e2ea3922f80a20b3a801336c", at: 2026-11-18, auditor: { vendor: openai, model: "GPT-6 계열 Codex; 정확한 실행 모델 식별자는 확인 불가", independence: "작업 대화 없이 저장소 기록만 읽은 별도 감사; 읽기 전용·네트워크 미사용" } }
-second: { range: "<end SHA of first.range, or its default-branch SHA if the merge rewrote the commits>..<last>", at: 0000-00-00, auditor: { vendor: —, model: —, independence: — } }
+second: { range: "2c715c2..b666727", at: 2026-11-19, auditor: { vendor: openai, model: "GPT-6 계열 Codex; 정확한 실행 모델 식별자는 확인 불가", independence: "작업 대화 없이 저장소 기록만 읽은 별도 감사; 읽기 전용·네트워크 미사용" } }
 ---
 ## 1차 감사
 <!-- CI 뒤, 머지 전. 위험을 본다. 감사자의 답을 고치지 않고 쓴다. -->
@@ -230,22 +230,154 @@ PM 보완 (2026-11-19, 사용자 결정 전):
 - 머지 지시: 보완 기록 뒤 CI 통과를 확인하고 머지합니다.
 
 ## 2차 감사
-<!-- stable 뒤, 회고 직전. 절차만 본다. 감사자의 답을 고치지 않고 쓴다. -->
+
 ### 읽은 것
-—
+
+- `AGENTS.md`, `.agents/harness/`의 감사자 역할·설정·정책·게이트·감사 템플릿, `.agents/skills/{audit,merge,release,retro}/SKILL.md`, 로컬 위임 설정과 `.agents/knowledge/*.md`입니다.
+- `.agents/audit/server-0.2.0.md`의 두 1차 감사와 사용자 처리, `.agents/intent/005_server-console-teams/{intent.md,spec.md}`의 승인·waiver·A-1~A-24, 두 로드맵과 `.loctx/history/server-0.2.0.md`입니다.
+- `.loctx/reports/server-0.2.0/audit2/`의 PR #138~#141 조회·검사 원본, `user-words.md`, 릴리스 실행 JSON 세 개, `tags.txt`, `github-releases.txt`입니다.
+- 같은 버전의 `sha-table.md`, `sha-table-pr140.md`, `sha-table-pr141.md`, `pr140-checks*.txt`, 리뷰 4·8과 rc.1·stable 문서 리뷰, `premerge-pr139.log`, `judgement.md`, `test-rc2-run3.md`입니다.
+- `rc1-verify.log`, `rc1-smoke.log`, `rc2-verify.log`, `rc2-smoke.log`, `stable-verify.log`, 세 차례의 `fill-gates-*.log`, 범위 안 21개 커밋의 tree별 게이트 로그입니다.
+- `docs/server/release/0.2.0*.md`, 서버 README 영·한의 운영·키·팀 안내, `apps/server/docker/`의 문서·Compose 설정과 git 이력입니다.
+
+이하 `reports/`는 `.loctx/reports/server-0.2.0/`입니다. 시작점은 첫 감사 끝 `8830b54`에 대응하는 master SHA `2c715c2`이며, 요청된 범위 `2c715c2..b666727`을 그대로 적용했습니다. PR #140의 별도 1차 감사도 함께 확인했습니다.
+
+**배포 완료와 주요 절차의 실행은 확인되지만, 리뷰 연결과 기록 완결성에는 위반·확인 불가 항목이 남아 있습니다.** 이번 감사는 절차만 대상으로 하며, 제품 방향이나 코드 품질을 보증하지 않습니다.
+
 ### 절차 판정
+
 | 절차 | 판정 | 근거 |
 |---|---|---|
-| 머지 지시와 방식 | — | — |
-| CI·배포 기록 | — | — |
-| 릴리스 문서 | — | — |
-| 기록의 완결성 | — | — |
+| 머지 지시와 방식 | 지시·방식 확인 / 리뷰 절차 일부 위반 | `audit2/user-words.md`와 history에는 #138·#139의 “V-12 빠르게 하고 배포해보자 그럼”, #140의 “두 정정 모두 승인. Q-1 수용은 함. 완료 후 머지해.”, #141의 “stable 배포”가 기록되어 있습니다. #138·#139와 #141은 배포 지시를 해당 작업·릴리스 문서 PR의 병합까지 포함한다고 해석한 기록입니다. 네 PR 모두 `bluenyang`이 병합했고, history의 Rebase and Merge 기록은 단일 부모 git 이력·SHA 대응과 일치합니다. 다만 최종 변경까지 이어지는 리뷰 근거는 일부 빠져 있습니다(R-1). |
+| master 직접 커밋 | 사용자 지시로 건너뜀 / 리뷰 확인 불가 | `9c16d09`의 Docker 예시 작업은 intent의 일회성 waiver와 A-18에 명시되어 있습니다. 사용자 원문은 “apps/server/docker에 예시 파일 넣고 푸시해줘. master에 direct로”입니다. 브랜치·PR 생략은 허용 범위입니다. 이 waiver에 리뷰 생략은 없으며, 직접 반영 전 리뷰 근거는 확인 불가입니다. |
+| CI·배포 기록 | 주요 실행 준수 / 증적 형식 일부 미흡 | `audit2/pr138..pr141-checks.txt`에서 네 PR의 `CI result`·Secret Scan 통과와 비대상 검사 skip을 확인했습니다. #140은 보완 후 최종 head `e801612`의 검사도 `pr140-checks-3.txt`에 있습니다. 릴리스 실행 `44328499482`·`44349893705`·`44354312949`는 모두 성공이며, 각각 `6919922`·`60be866`·`b666727`을 대상으로 합니다. 태그·이미지 버전·스모크 기록이 대응합니다. 다만 일부 배포 검증 로그는 명령·종료 상태가 생략되거나 출력이 발췌되어 있습니다(R-4). |
+| 커밋별 게이트 | 준수 — 감사 전 보충 실행 | 범위 안 21개 tree 로그 모두 `stage: audit`, `worktree: clean`, 마지막 `exit: 0`입니다. 이번 `fill-gates-audit2.log`가 11개를 보충했고 나머지 10개는 앞선 감사 단계 실행입니다. 커밋 당시 실행으로 간주하지 않습니다. 최종 tree 로그는 `.loctx/reports/gates/7f52163a153a29bd483ec0237e1d9e4fcdef3930.log`입니다. |
+| 릴리스 문서 | 준수 | rc.1·rc.2·stable 노트가 각각 있으며 이미지·태그·프로토콜·영한 안내가 갖춰져 있습니다. 최종 노트에는 rc에서 stable로 올리는 안내도 추가되었습니다. Docker 예시와 공개 로드맵은 0.2.0에 맞춰져 있습니다. 기록상 rc의 `:latest`는 0.1.1을 유지했고 stable에서 0.2.0으로 바뀌었습니다. 제출된 GitHub Release 목록에는 서버 릴리스가 없고 latest는 `desktop-v1.3.1`입니다. |
+| 기록의 완결성 | 일부 위반 / 일부 확인 불가 | 두 감사 원문과 사용자 처리, spec 변경 승인, A-1~A-24, 직접 커밋 waiver가 있습니다. #139·#141 본문에는 릴리스 문서만 담아 1차 감사를 생략한다는 이유가 있습니다. 그러나 첫 감사의 잔여 미확인 항목 처리, 최종 리뷰 연결, spec 완료 SHA 및 PR 본문의 최신 판정 반영이 불완전합니다(R-1~R-3). |
+
+병합 기록의 head → master 대응은 다음과 같습니다. 병합 시각은 UTC입니다.
+
+| PR | head → master | 병합 시각 |
+|---|---|---|
+| #138 | `84a79af` → `04bbc04` | 2026-11-18T14:46:01Z |
+| #139 | `b819e76` → `6919922` | 2026-11-18T14:49:03Z |
+| #140 | `e801612` → `60be866` | 2026-11-18T16:39:01Z |
+| #141 | `02a5f23` → `b666727` | 2026-11-18T17:02:32Z |
+
+history에는 병합 후 브랜치 삭제가 기록되어 있고, 현재 로컬 브랜치는 master만 있습니다. 원격 브랜치 삭제의 독립된 host 출력은 제출 자료에서 확인 불가입니다.
+
 ### 알려진 수용
-—
+
+`.agents/knowledge/`에 `kind: accepted-finding` 항목은 없습니다. 다음은 이번 버전에 한정된 명시적 사용자 수용이며, 서로 별개입니다.
+
+1. **PR #138 F-5 — 검증 정정 승인 전 테스트 추가:** 2026-11-18 “F-5. 수용”입니다. 사후 수용이며 당시 순서가 준수로 바뀌는 것은 아닙니다.
+2. **PR #138 F-6 — 독립 수정의 혼합 커밋:** 2026-11-18 “F-6. 가”입니다. 감사 기록에 인용된 선택지는 기존 이력을 다시 쓰지 않고 수용하되 이후 수정은 기능별로 나누는 것입니다.
+3. **PR #140 Q-1 — V-14의 qa-designer 미위임·승인 전 사전 실행 누락:** 2026-11-19 “Q-1 수용은 함.”입니다. PM도 두 절차를 수행하지 않았다고 명시했습니다.
+
+V-14 두 기준의 정정 승인은 확인됩니다. 이는 PR #140 F-1의 이전 진행 순서 위반까지 명시적으로 수용했다는 뜻으로 확대하지 않습니다. A-18의 직접 커밋 허용도 위 수용과 별개의 일회성 waiver입니다.
+
 ### 회고로 넘길 것
-—
+
+1. **R-1 — 후속 리뷰가 마지막 변경까지 연결되지 않았습니다.**  
+   `reports/review4.md`의 끝은 `6a8a6cb`이며, 그 뒤 테스트 세 파일을 바꾼 A-17 `15d5029` → master `0055236`의 후속 리뷰 근거가 없습니다. #140의 `review8.md`는 `fd626ae`까지이며 최종 head `e801612`의 기준 정정·기록 변경까지 본 리뷰는 확인 불가입니다. #141의 `review-stable.md`는 `8db892a`까지이고, 지적을 반영한 최종 `02a5f23`의 재확인 기록이 없습니다. #139는 `premerge-pr139.log`로 최종 head와 리뷰 대상 일치를 확인했습니다.  
+   따라서 “리뷰 뒤 변경도 병합 전에 리뷰한다”는 knowledge의 요구를 충족하지 못한 기록입니다. 리뷰에서 제안한 수정이라는 사실이나 CI 통과는 후속 리뷰를 대신하지 않습니다. A-18 직접 반영 전 리뷰도 확인 불가이며, 해당 waiver에는 리뷰 면제가 없습니다.
+
+2. **R-2 — 첫 감사의 잔여 미확인 사항에 대한 처리 기록이 완결되지 않았습니다.**  
+   PR #138 Q-1은 사전 실행 요약만 있고 명령별 원본·미실행 항목의 당시 기록이 없다는 설명으로 남아 있습니다. 이를 수용한 사용자 원문은 확인 불가입니다. V-12는 같은 동기화 회차의 격리 동작을 다시 확인했지만 OS·빌드 번호는 여전히 미확인입니다. 그런데 `reports/judgement.md`는 “확인 불가가 하나라도 있으면 통과로 쓰지 않는다”고 선언하면서 V-12를 “통과”로 표시합니다. 해당 환경 공백의 별도 수용도 확인 불가입니다.  
+   예시 TOTP 값의 과거 이력 유지와 UI 다듬기 이월은 PM이 “가”로 처리하겠다고 알리고 사용자가 이의 없이 검증을 진행했다는 기록입니다. 이를 명시적 사용자 수용으로 올려 적지는 않습니다. PR #140의 Q-1 수용을 PR #138의 Q-1에 적용할 수도 없습니다.
+
+3. **R-3 — 병합 후 추적 정보와 외부 PR 요약이 최신 상태에 맞춰지지 않았습니다.**  
+   spec의 W-1~W-8 완료 표시는 이력 재작성 전 SHA이고 W-9는 브랜치 SHA `f456308`입니다. merge 스킬이 요구하는 다음 기록 커밋에서의 master SHA 정정은 최종 `b666727`까지 반영되지 않았습니다. SHA 표로 추적은 가능하지만 완료 표 자체의 준수와는 별개입니다.  
+   #138 본문은 V-1~V-13 전부 통과라는 이전 요약을 유지하고, #140 본문은 승인·재판정이 끝난 V-14를 여전히 사용자 결정 대기로 적습니다. 반면 `test-rc2-run3.md`에는 승인 후 재판정이 따로 남아 있습니다. 감사 원문의 보존은 적절하지만, PR의 현재 요약과 최종 판정 사이에는 불일치가 있습니다.
+
+4. **R-4 — 배포 검증 기록의 원본 형식이 일정하지 않습니다.**  
+   workflow JSON과 태그 출력으로 성공한 배포 대상은 확인됩니다. 그러나 `rc2-verify.log`·`rc2-smoke.log`·`stable-verify.log`에는 명령별 종료 상태가 없고, `$ GET /health`, `$ docker run :latest --version`처럼 완전한 실행 명령이 아닌 표기가 있습니다. 일부 manifest·서버 로그도 발췌되어 있습니다. 이는 knowledge의 명령별 원본·context·종료 상태 요구에 미달합니다. 배포 실패나 출력 조작으로 판단하지 않으며, 재현 가능한 증적의 완전성이 부족한 것으로 넘깁니다.
+
+5. **반복된 절차와 보충 실행의 비용입니다.**  
+   두 1차 감사 모두 마지막 리뷰 뒤 변경과 검증 증적 문제를 지적했고, V-14에서도 승인된 검사와 실제 출력의 불일치를 해결하기 전에 PR·감사까지 진행했습니다. 이후 기준 정정·재판정·보완 실행은 기록되어 있지만, 앞선 순서 위반이 없어지는 것은 아닙니다. 범위의 게이트 21건도 모두 감사 단계 보충이며, 이는 허용된 방식이므로 위반과 구분하여 회고에 넘깁니다.
+
+위 항목은 회고에 전달하는 절차 판정입니다. 이번 감사에서 수정 작업이나 이력 재작성, 추가 배포를 지시하지 않습니다.
+
 ### SHA 대응
-<!-- PM이 붙인다: 머지가 커밋을 다시 만들었을 때 브랜치 SHA ↔ 기본 브랜치 SHA -->
-—
+
+| 브랜치 SHA | master SHA | 제목 |
+|---|---|---|
+| 84a79af | 04bbc04 | docs: first audit — V-12 rerun and the user's go-ahead recorded |
+| 7080331 | c607dae | docs: first audit — PM remedies for F-1, F-3, F-4 recorded |
+| 15d5029 | 0055236 | test(server): no example TOTP secret literal in tests (A-17) |
+| 6a8a6cb | 3a35bfc | docs: first audit — user decisions F-5, F-6; A-16 and Q-1 recorded |
+| 4c04ddc | 8d105d4 | docs: first audit record for server 0.2.0 |
+| 8830b54 | 2c715c2 | docs(server): 0.2.0 note names the push authorisation fix (A-13) |
+| 1930666 | 2d96069 | docs: spec 005 V-3 drops ./internal/auth from its command (user approved) |
+| 274983c | 9d3500d | fix(server): key-mismatch message as specified; HTTP test with a sealed secret (A-15) |
+| 05b6ceb | 523714f | docs: spec 005 matches the adjustments (A-12..A-14, review 2 G-4) |
+| 09def63 | ae25cc9 | fix(server): review 2 — membership generation, stored-row authorization (A-12, A-13) |
+| 1072250 | 33b74d8 | fix(server): leaving a team cuts the link to its rows (S-7, A-11) |
+| 8064306 | 1bf5e2a | docs: spec 005 S-7 change proposal — leaving a team cuts the link (review 1 F-2) |
+| caaf1f3 | 2972c6b | docs(server): sign out to resnapshot; rotate recovery; set-password signs out (A-10) |
+| 6555322 | 1f79586 | fix(server): team members appear only after they load (A-8) |
+| ededee9 | 11fc0fd | fix(server): review 1 — team scope, password reset, key recovery (A-5, A-6, A-7, A-9) |
+| fdf83ab | a630da0 | docs(server): operators, secret key, teams; 0.2.0 note and compatibility (W-8, S-11) |
+| 72f79ab | b3c2dbb | fix(server): login teamId stays team-default with several teams (S-9, A-4) |
+| b0d14c7 | 0bc24b9 | feat(server): dashboard operator screens (W-7, S-8, S-2) |
+| 01efa88 | 502fff7 | feat(server): operator API under /dash/admin (W-6, S-8, S-4, A-3) |
+| 5258a88 | 5d7ab29 | feat(server): team scopes — a device catches up on a team it joins (W-5, S-6, S-7, S-9, A-2) |
+| 0f8136b | bb74721 | feat(server): several teams — create, rename, members (W-4, S-5, A-1) |
+| 4412397 | 4a7be4b | feat(server): operator role (W-3, S-4) |
+| d730433 | 74b4969 | feat(server): secret generate and secret rotate (W-2, S-3) |
+| 041c1e0 | 5f5a88b | feat(server): seal TOTP secrets with an operator key (W-1, S-1, S-2, S-10) |
+| 8929afa | a50993f | docs: spec 005 accepted by the user |
+| 859785a | d1dff3f | docs: spec 005 draft — server 0.2.0 work units W-1..W-8 and checks V-1..V-13 |
+| 0783341 | 6f38a69 | docs: intent 005 approved by the user |
+| 5c5cd43 | 7e7eee2 | docs: intent 005 — the user's answers to questions 1–4 |
+| 735eb2c | 9c1d211 | docs: intent 005 draft — server 0.2.0 console, teams, TOTP secret encryption |
+
+# PR #140 SHA 대응 (브랜치 → master), Rebase and Merge 2026-11-18T16:39:01Z
+
+| 브랜치 | master | 제목 |
+|---|---|---|
+| c401f35 | 8722dd6 | docs(server): spec 005 — W-9 self password change for rc.2 (S-12, V-14) |
+| f456308 | 39c51d1 | feat(server): change your own password from the dashboard (W-9, S-12, A-21) |
+| 8a738c3 | c33fd54 | docs(server): secret key through an env file, never overwrite a key (A-19, A-20) |
+| 9dc6e5a | 533ec33 | docs(server): tick W-9 (f456308) |
+| ec605c2 | 60f89e3 | docs(server): key commands stop at the first failure (A-22, review 5) |
+| 5c1a749 | 4325dfb | docs(server): the old-key copy is the first step of the rotation chain (A-22, review 6) |
+| 99d6a19 | 0816b10 | fix(server): space between the Security tab's two sections (A-23) |
+| c402710 | 1d03431 | docs(server): rc.2 test scope (A-24) |
+| 5ba519f | db932a2 | docs(server): 0.2.0-rc.2 release note, Docker example and roadmap status |
+| fd626ae | 8b498b3 | docs: first audit of PR #140 (W-9, rc.2) recorded as answered |
+| f77d08e | 1757958 | docs: first audit of PR #140 — PM remedies for F-2, F-3, and Q-1 stated |
+| e801612 | 60be866 | docs(server): V-14 corrections approved, first-audit decisions for PR #140 |
+
+# PR #141 SHA 대응 (브랜치 → master), Rebase and Merge 2026-11-18T17:02:32Z
+
+| 브랜치 | master | 제목 |
+|---|---|---|
+| 8db892a | 0cecd14 | docs(server): release documents for server 0.2.0 |
+| 02a5f23 | b666727 | docs(server): 0.2.0 note — upgrading from the rcs (review) |
+
 ### 회고에서의 처리
-—
+
+2026-11-19 사용자 결정:
+
+- **R-1** — "계속 수용해줘서 그런가. 안되겠는데. Fable, Astra 호출해서 원인 조사해." → 수용하지 않음. advisor/committee 두 모델(claude-fable-5-2, gpt-6-astra)에게 서로 보지 않는 원인 조사를 맡김(`.loctx/reports/server-0.2.0/r1-cause-task.md`). 결과와 처리는 아래에 이어 적음.
+- **R-2** — "Q-1은 수용. V-12의 경우 Windows11이었고 빌드 번호르 모르겠지만 desktop은 1.3.1 이었음" → PR #138 Q-1 수용. V-12 환경은 Windows 11(빌드 번호 모름), 데스크톱 1.3.1 로 기록함. 빌드 번호는 미확인으로 남김.
+- **R-1 원인 조사** — 두 모델의 결론이 같습니다. 반복된 수용은 기여했지만 주된 원인은 아닙니다.
+  - 리뷰 통과가 머지되는 내용(SHA)에 묶여 있지 않았습니다.
+  - 병합 때 읽는 skill과 장치에 확인 단계가 없었습니다(merge skill 은 "merge at once").
+  - 0.1.1 A-2 때 "reins 0.3.2 에서 적용"으로 미룬 처방이 0.3.3 에 들어오지 않았고, 들어왔는지 대조하지도 않았습니다(Fable; PM 이 감사 기록 · merge skill 로 확인).
+  - PM 이 리뷰 지적의 수정과 승인된 정정을 리뷰 끝으로 다뤘습니다.
+  - 의견 차이: 감사 기록 커밋을 예외 경로로 둘지(Fable), 리뷰 사실을 커밋하지 않을지(Astra). 원문은 `.loctx/reports/server-0.2.0/r1-cause-{fable,astra}.md`(history 에 요약).
+- **D-1** — 사용자: "`.claude/settins.json`에 hook이 없네… reins에서는 그 hook을 권장하고 있는 상황이라서." 이어서 "제작자인 내가 .claude의 hook을 권장한대잖아"(PM 이 처음 husky 로 잘못 시도했다가 push 전에 되돌림).
+  - Claude Code hook 을 `.claude/settings.json` 에 넣음.
+  - PreToolUse(Bash): `gh pr merge` 와 master 직접 push 는 리뷰 원장 확인(`.claude/hooks/premerge-review-check.sh`), `git push` 는 게이트.
+  - PostToolUse(Bash): `git commit` 뒤 게이트.
+  - 지난 PR 로 시험함: #141 · #140 은 막고, #139 는 통과, 원장에 없는 PR 과 번호 없는 머지는 막음.
+- **D-2** — "응. 그거 규칙은 추가하자." → AGENTS.md Branch/PR 규칙에 "Review covers what is merged" · "Review ledger".
+- **D-3 · K-1 · K-2** — "굳", "K-1/2는 승인" → knowledge `2026-11-15_review-before-merge`(범위 · hook · 원장 · 이번 사례), `2026-11-17_check-wording-and-raw-evidence`(승인 뒤 추가한 V-n, 대상 패키지, 배포 확인 로그) 갱신.
+- **D-4** — "알겠음" → AGENTS.md "Accepting a repeated finding", 미뤄진 처방은 `.loctx/ROADMAP.local.md` 의 열린 항목으로.
+- **D-5 · H-1** — "개선해 볼게." → reins 쪽 개선 목록을 `.loctx/ROADMAP.local.md` 열린 항목에 둠(하네스는 PM 이 고치지 않음).
+- **P-1** — "일단 hook으로 되는지 확인해봐" → 게이트를 위 Claude Code hook 으로 돌림. 커밋마다 tree 로그가 남는 것을 확인(`stage: post-commit`, 약 20초).
+- **R-3** — "일단 수정해서 올리자" → spec 완료 표시를 master SHA 로 바꿈. PR #138 · #140 본문 끝에 최종 판정은 이 기록과 spec 을 보라는 한 줄을 더함.
+- **R-4** — 배포 확인 로그가 무엇인지 설명함. 형식은 K-2 에 넣음.
+- knowledge 후보: 위 두 갱신. accepted-finding 후보 없음.
