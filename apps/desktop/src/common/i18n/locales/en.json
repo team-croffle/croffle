@@ -58,7 +58,9 @@
       "closeBehaviorAsk": "Ask on next close",
       "closeBehaviorTray": "Hide to the tray",
       "closeBehaviorQuit": "Quit Croffle",
-      "closeBehaviorHint": "Reminders fire only while Croffle is running. Hiding to the tray keeps it running."
+      "closeBehaviorHint": "Reminders fire only while Croffle is running. Hiding to the tray keeps it running.",
+      "updateCheck": "Check for updates",
+      "updateCheckHint": "You have v{version}. You can check even with automatic updates off."
     },
     "calendar": {
       "intro": "How the calendar is displayed.",
@@ -208,7 +210,11 @@
     "emptySelected": "No schedules on this day",
     "upcoming": "Upcoming",
     "emptyUpcoming": "No upcoming schedules",
-    "upcomingOpenHint": "Double-click to open"
+    "upcomingOpenHint": "Double-click to open",
+    "versionTile": {
+      "title": "About",
+      "version": "Version {version}"
+    }
   },
   "titleBar": {
     "toggleTheme": "Toggle theme",
@@ -382,7 +388,17 @@
     "alreadyLatest": "You're already on the latest version.",
     "failed": "Update failed",
     "errorFallback": "An error occurred during the update.",
-    "viewReleaseNotes": "View the release notes"
+    "viewReleaseNotes": "View the release notes",
+    "check": {
+      "button": "Check for updates",
+      "openUpdate": "Open the update",
+      "checking": "Checking…",
+      "latest": "You have the latest version.",
+      "available": "Version v{version} is available.",
+      "failed": "Could not check: {message}",
+      "unsupportedDevelopment": "A development build cannot check for updates.",
+      "unsupportedPackage": "This kind of install cannot check for updates."
+    }
   },
   "extensions": {
     "loadFailed": "Failed to load extensions",

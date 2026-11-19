@@ -1,9 +1,17 @@
-import { AppEventType } from '@croffledev/common';
+import {
+  AppEventType,
+  nextUpdateStatus,
+  toastsLatest,
+  UPDATE_IDLE,
+  type UpdateCheckEvent,
+  type UpdateCheckStatus,
+} from '@croffledev/common';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
 
 import { i18n } from '@/i18n';
+import { croffleInternal } from '@/services/host-bridge';
 import type { UpdateInfo } from '@/types/update';
 
 function t(key: string) {
@@ -16,7 +24,34 @@ export const useUpdateStore = defineStore('update', () => {
   const isDownloading = ref<boolean>(false);
   const downloadProgress = ref<number>(0);
   const updateError = ref<string | null>(null);
+  /** "Check for updates" state, shared by the version tile and Settings › General. */
+  const checkStatus = ref<UpdateCheckStatus>(UPDATE_IDLE);
+  /** The running check was started by hand (its result shows in place, without a toast). */
+  let manualCheck = false;
   let unsubscribers: (() => void)[] = [];
+
+  const isChecking = () => checkStatus.value.kind === 'checking';
+
+  const apply = (event: UpdateCheckEvent) => {
+    checkStatus.value = nextUpdateStatus(checkStatus.value, event);
+  };
+
+  /** Starts a check by hand. The answer is immediate; the result arrives as events. */
+  async function checkNow() {
+    if (isChecking()) {
+      return;
+    }
+    manualCheck = true;
+    try {
+      apply({ type: 'check', result: await croffleInternal.window.checkForUpdates() });
+    } catch (error) {
+      apply({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
+    // An install that cannot check answers at once; no events follow.
+    if (!isChecking()) {
+      manualCheck = false;
+    }
+  }
 
   function init() {
     unsubscribers = [
@@ -24,9 +59,15 @@ export const useUpdateStore = defineStore('update', () => {
         updateInfo.value = payload as UpdateInfo;
         updateError.value = null;
         isModalOpen.value = true;
+        manualCheck = false;
+        apply({ type: 'available', version: updateInfo.value.version });
       }),
       croffle.event.on(AppEventType.UPDATE_NOT_AVAILABLE, () => {
-        toast(t('update.alreadyLatest'));
+        apply({ type: 'not-available' });
+        if (toastsLatest(manualCheck)) {
+          toast(t('update.alreadyLatest'));
+        }
+        manualCheck = false;
       }),
       croffle.event.on(AppEventType.UPDATE_DOWNLOAD_PROGRESS, (payload) => {
         isDownloading.value = true;
@@ -44,6 +85,8 @@ export const useUpdateStore = defineStore('update', () => {
         downloadProgress.value = 0;
         isModalOpen.value = false;
         updateError.value = message;
+        apply({ type: 'error', message });
+        manualCheck = false;
         toast.error(t('update.failed'), { description: message });
       }),
     ];
@@ -77,6 +120,8 @@ export const useUpdateStore = defineStore('update', () => {
   }
 
   return {
+    checkStatus,
+    checkNow,
     isModalOpen,
     updateInfo,
     isDownloading,
