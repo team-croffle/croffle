@@ -7,6 +7,8 @@ approvals:
   - { role: user, by: bluenyang, at: "2026-11-20", words: "정정 3건은 승인", rev: "383c2bf", kind: change, note: "V-4 c regex, V-8 run conditions (isolated dev run), V-9 log location and evidence file names; judged on the same raw output (test/judgement.md)" }
   - { role: user, by: bluenyang, at: "2026-11-20", words: "spec 경로를 정정. 경로만 일치하면 추가 리뷰 없음", rev: "a854b7d", kind: change, note: "V-8 evidence paths to the ones used (first audit A-4); path-only change, no further review by the user's word" }
 summary_for_user: |
+  [rc.2 변경, 2026-11-20] rc.1 확인 뒤 작업 단위 3개를 더합니다. W-9 중립색 색조: 바탕 · 사이드바 · 테두리 · 호버 · 글자 등 중립색이 강조 색조를 색조만 따릅니다(L · C 는 시스템 값, 토큰마다 색조 차이 d). 기본 70° 에서 라이트는 지금과 같고, 다크는 같은 방향으로 따르게 해 기본 다크가 슬레이트에서 따뜻한 짙은 회색으로 바뀝니다. W-10 라이트의 입력칸 · 셀렉트 · 여러 줄 입력 · outline 버튼 바탕을 card(#ffffff)로. W-11 이 규칙과 컨트롤 바탕을 디자인 시스템 · 캔버스에 씁니다. primary 는 그대로(brand 토큰은 로드맵).
+  검사: V-3 에 "중립색이 색조를 따르고 L · C 는 시스템 값" · "모든 글자 쌍이 0~359° 모든 색조에서 기준 이상"을 더하고, V-12 컨트롤 바탕 grep, V-13 시스템 · 캔버스 파일 대조, V-14 라이트 · 다크 × 70° · 250° 화면과 계산값을 더합니다. 이미 고친 결함 A-21 ~ A-23(버전 타일 · 보기 셀렉트 · 직접 색 칸)도 V-14 에서 봅니다. intent 의 "강조색 계열만" 문장도 함께 고쳤습니다.
   1.3.2 를 8개 작업 단위로 나눕니다: W-1 토큰(시스템 값, `--croffle-*` 별칭 유지, 강조 색조는 4개 토큰만, 기본 70, Pretendard 500·600 선언) → W-2 대비·색 규칙(화면 코드 + `components/ui` 6개 파일) → W-3 테마 좌클릭 저장·부제·다가오는 일정 → W-4 알림 팝오버 → W-5 업데이트 확인(기존 호스트 전용 `window.checkForUpdates` 를 고침, 확인할 수 없는 설치는 바로 "확인할 수 없음")·버전 타일 → W-6 설정 바로 적용·확장 삭제 확인 창 → W-7 ko 영어 값·도움말 4단계 → W-8 DESIGN.md.
   검증은 V-1~V-11 입니다(V-11 릴리스 노트는 release 단계). qa-designer(gemini) 검토로 빠진 검사(S-1~S-4·S-16), grep 정규식, `components/ui` 의 오류 글자·스위치, Linux unpack 의 업데이트 확인 동작을 보강했습니다.
   디자인 시스템은 고치신 버전(`1795075960-81fe`)을 기준으로 합니다. 바뀐 명령은 모두 다시 사전 실행했습니다(`.loctx/reports/1.3.2/dryrun/`).
@@ -17,6 +19,7 @@ summary_for_user: |
 - S-1 (바라는 결과 "모든 화면이 … 토큰(색 · 반경 · 그림자)을 씁니다", 계획 1) — `index.css` 의 `:root`(Croffle Light) · `.dark`(Croffle Dark) 값을 시스템 `tokens.json` 의 값으로 바꿉니다. 시스템에만 있는 `success` · `warning` · `info`(+ `-foreground`)를 더하고 `@theme inline` 에 연결해 `bg-success` · `text-warning` 같은 클래스가 생기게 합니다. 반경은 `--radius: 12px` 에 시스템 단계(sm 8 · md 10 · lg 12 · xl 16 · 2xl 20 · 3xl 24), 그림자는 `shadow-xs` · `shadow-sm` · `shadow-surface` · `shadow-lg` 4종(라이트는 잉크색, 다크는 검정)입니다.
 - S-2 (제약 "`--croffle-*` 이름은 지우거나 바꾸지 않습니다", 바라는 결과 "값은 새 토큰을 따릅니다") — 지금 있는 `--croffle-*` 16개는 모두 남기고, 시스템 표대로 의미 토큰의 별칭으로 둡니다(`croffle-bg` → `background`, `croffle-text` → `muted-foreground` …). `--croffle-accent-hue` 도 남깁니다. 시스템에서 새로 생긴 `--croffle-primary-strong` 을 더합니다.
 - S-3 (바라는 결과 "강조 색상 설정은 강조색 계열만 바꾸고, 기본 색조는 70°") — 강조색 계열 `primary` · `ring` · `croffle-primary-strong`(= `accent-foreground`) · `croffle-today-bg` 만 `--croffle-accent-hue` 를 따르고, 시스템 기본값과 같은 명도 · 채도를 씁니다(oklch). 그 밖의 토큰(배경 · 사이드바 · 테두리 · 호버)은 색조를 따르지 않습니다(지금은 따름). `DEFAULT_ACCENT_HUE`(`appearance.ts`)와 메인 기본 설정 `DEFAULT_SETTINGS.appearance.accentHue`(`setting-service.ts:29`)는 시스템 `primary`(#98641b)의 oklch 색조를 반올림한 70 입니다. 이미 저장된 69.8 은 그대로 두며, `huesMatch` 가 기본값으로 봅니다. 설정 미리보기 색(`hueToPreviewHex`)도 새 `primary` 의 명도 · 채도를 씁니다.
+  - **S-3 변경 (2026-11-20, rc.1 확인 뒤 사용자 결정):** 중립색도 강조 색조를 **색조만** 따릅니다. 따르는 토큰은 라이트 `background` · `foreground` · `secondary` · `secondary-foreground` · `muted` · `muted-foreground` · `accent` · `border` · `input` · `sidebar`, 다크는 여기에 `card` · `popover` · `sidebar-accent` · `sidebar-border` 를 더한 것입니다. 각 토큰은 `oklch(L C calc(var(--croffle-accent-hue) + d))` 이고 L · C 는 시스템 값, `d` 는 라이트에서 그 토큰의 시스템 색조 − 70 입니다. 다크는 같은 방향으로 따르도록 라이트 짝의 `d` 를 씁니다(`card` · `popover` → `background`, `sidebar-accent` · `sidebar-border` → `muted`). 그래서 기본 70° 에서 라이트는 시스템 hex 와 같고, 다크 중립색은 슬레이트(색조 264°)에서 따뜻한 짙은 회색(예: `background` #15171b → #191713)으로 바뀌며 시스템 다크 값도 그렇게 고칩니다. 고정: `destructive` · `success` · `warning` · `info` 와 각 `-foreground`, `primary-foreground`, 그림자, `croffle-day-select-bg`, 채도 0 인 색(라이트 `card` · `popover`). 위 "그 밖의 토큰은 색조를 따르지 않습니다"는 이것으로 바뀝니다.
 - S-4 (바라는 결과 "본문 글꼴은 Pretendard 그대로") — 글꼴은 Pretendard · Fredoka 그대로입니다. 시스템의 글자 단계가 500 · 600 굵기를 쓰므로(라벨 14/500, 대화상자 제목 18/600) 이미 저장소에 있는 `assets/fonts/woff2/Pretendard-Medium.woff2` · `Pretendard-SemiBold.woff2` 의 `@font-face`(500 · 600)를 선언합니다(PM 해석; 지금은 선언이 없어 브라우저가 굵기를 흉내 냅니다).
 - S-5 (바라는 결과 "색과 대비 문제가 모두 고쳐집니다", 계획 2) — 다음을 고칩니다.
   - 강조색 위 글자는 `primary-foreground`(흰색 아님). 화면 코드에 강조색 위 `text-white` 가 있으면 바꿉니다.
@@ -57,6 +60,8 @@ summary_for_user: |
 - S-15 (사용자 "i18n을 사용하여 번역") — ko 카탈로그의 `settings.errors.install` · `installLocal` 을 한국어로 바꿉니다. 같은 검사로 ko 카탈로그에 남은 다른 영어 문장도 찾아 고칩니다. en 카탈로그에는 같은 키가 그대로 있습니다.
 - S-16 (사용자 "실제 동작에 맞춰서 수정") — 도움말의 각 항목 문구를 이 버전의 실제 동작에 맞춥니다. 단계는 지금처럼 4개(`welcome` · `addTodo` · `theme` · `ready`)이고 키도 유지합니다. `addTodo` 는 일정 추가(우클릭 메뉴 · 추가 버튼; 날짜 더블클릭은 그날 보기; 지금 문구의 "클릭"은 틀림)와 다가오는 일정, `theme` 은 테마 좌클릭 저장 · 우클릭 메뉴와 설정 바로 적용, `ready` 는 알림 종과 업데이트 확인을 담습니다. 문구는 해요체입니다(시스템 "Voice").
 - S-17 (계획 5) — `apps/desktop/DESIGN.md` 를 시스템에 맞춰 다시 씁니다.
+- S-18 (사용자 결정 3 "변경해줘.", 2026-11-20) — 라이트에서 `Input` · `SelectTrigger` · `Textarea` 와 `Button variant="outline"` 의 바탕을 `card`(#ffffff)로 합니다. 다크는 지금 그대로(`dark:bg-input/30`)입니다. 바탕과 컨트롤이 구분되게 하는 것이 목적입니다.
+- S-19 (사용자 "이거 디자인 시스템을 통해서 추가로 작성해줄래?", 2026-11-20) — S-3 변경의 규칙(따르는 토큰 · 고정 토큰 · L · C · `d` · 기준 색조)과 S-18 을 디자인 시스템(`tokens.json` 의 규칙 항목과 값, README 의 "강조 색조" 절, Input · Button 문서, `components/bundle.css`)과 캔버스(`croffle-theme.css`, `ds/croffle/tokens.json`)에 씁니다. 다른 디자인 시스템이 기준 색조 · 토큰별 L · C · `d` · 고정 목록만 바꿔 쓸 수 있게 적습니다.
   - 토큰 표: 상태 토큰, `croffle-primary-strong`.
   - `--croffle-*` 규칙: "이름은 유지, 값은 의미 토큰의 별칭".
   - 오류 글자 규칙(S-6).
@@ -90,6 +95,9 @@ summary_for_user: |
 - [x] W-6 설정 바로 적용 · 확장 삭제 확인 — S-13 · S-14 (저장 · 되돌리기 순수 함수 `src/common/settings-apply.ts`, `test/settings-apply.test.ts`, 확장 구성 폼의 blur · Enter 적용, `dataHint` 정리). — c80a644
 - [x] W-7 문구 — S-15 (ko 영어 값, `test/i18n-catalogs.test.ts`), S-16 (도움말 4단계). — 1c1ba1b
 - [x] W-8 문서 — S-17 (`DESIGN.md`). — 5eb9a5d
+- [ ] W-9 중립색 색조 — S-3 변경 (`index.css` `:root` · `.dark`, `test/tokens-contrast.test.ts`, DESIGN.md 의 강조 색조 절).
+- [ ] W-10 라이트 컨트롤 바탕 — S-18 (`components/ui` 의 `input/Input.vue` · `select/SelectTrigger.vue` · `textarea/Textarea.vue` · `button/index.ts`, DESIGN.md).
+- [ ] W-11 디자인 시스템 · 캔버스 — S-19 (아티팩트 두 개; 저장소 파일 없음).
 
 W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 독립이라 각각 되돌릴 수 있습니다(S-10 의 "Calendar" 부제는 W-3, 그 밖의 ko 영어 값은 W-7). W-8 은 마지막입니다. 새 테스트 파일은 모두 `apps/desktop/test/` 바로 아래에 둡니다(`test/**/*.test.ts` 는 셸 glob 이라 하위 폴더를 찾지 않음).
 
@@ -107,7 +115,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     1. 다섯 개 모두 `exit=0`.
     2. `v1-test.txt` 에 `$ node --test --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/**/*.test.ts` 줄과 `ℹ fail 0` 줄이 있고, `ℹ pass` 가 61 이상입니다(사전 실행 34 + V-3 9 + V-5 3 + V-6 6 + V-7 9).
     3. `v1-build.txt` 에 `Pretendard-Medium-` 와 `Pretendard-SemiBold-` 로 시작하는 `.woff2` 산출물 줄이 있습니다(S-4).
-  - 실패: `exit≠0`, `ℹ fail` 이 0 이 아님, `ℹ pass` 가 61 미만, 또는 두 글꼴 줄이 없음.
+  - 실패: `exit≠0`, `ℹ fail` 이 0 이 아님, `ℹ pass` 가 61 미만(rc.2 부터는 75 미만: 73 + V-3 변경 2), 또는 두 글꼴 줄이 없음.
   - 서버 게이트(`make -C apps/server check`, `server-web`)와 `build-cli` 는 돌리지 않습니다. V-2 가 그 범위를 건드리지 않았음을 보입니다.
   - 사전 실행: 다섯 개 모두 `exit=0`, `ℹ pass 34` · `ℹ fail 0`(`dryrun/v1-test.txt:50–51`). 빌드 원본의 글꼴 줄은 `out/renderer/assets/Pretendard-Regular-<hash>.woff2` 형식이고, 지금은 Regular · Bold 만 있습니다(`dryrun/v1-build.txt:23–29`).
 - **V-2 범위 (제약 · 범위 밖)** — 루트에서 `git diff --name-only origin/master...HEAD -- apps/server packages apps/desktop/drizzle .agents/harness .claude` 를 실행해 `v2-scope.txt` 에 남깁니다.
@@ -120,6 +128,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     - `input holds 3:1 against background card sidebar in both themes`
     - `accent hue sweep keeps accent pairs for every hue 0..359` — 정수 색조 전부, 두 테마에서 `primary-foreground`/`primary` ≥ 4.5:1, `croffle-primary-strong`/`background` · `card` ≥ 4.5:1(sRGB 밖은 잘라 낸 뒤 계산).
     - `non-accent tokens do not use the accent hue` — `--croffle-accent-hue` 를 직접 또는 별칭으로 쓰는 토큰이 `primary`(`croffle-primary` · `sidebar-primary`), `ring`(`sidebar-ring`), `accent-foreground`(`croffle-primary-strong` · `sidebar-accent-foreground`), `croffle-today-bg` 뿐입니다.
+    - **rc.2 변경 (S-3 변경):** 위 항목 대신 `neutral tokens follow the accent hue with system L and C` — 따르는 토큰 목록이 S-3 변경과 같고, 각 토큰이 기본 70° 에서 라이트는 시스템 hex 와 sRGB 8비트로 같으며(다크는 S-3 변경의 L · C · `d` 그대로), 고정 목록은 `--croffle-accent-hue` 를 쓰지 않습니다. 그리고 `every text pair holds for every hue 0..359` — 위 `text pairs hold 4.5:1 in both themes` 의 쌍과 `input` 3:1 쌍을 정수 색조 전부에서 계산해 모두 기준 이상입니다.
     - `every croffle variable of 1.3.1 is still defined` — 1.3.1 의 16개 이름(테스트에 고정), `--croffle-accent-hue`, 새 `--croffle-primary-strong` 이 `:root` 와 `.dark` 에 모두 있습니다.
     - `croffle variables alias semantic tokens and default accent hue is 70` — 강조 계열이 아닌 `--croffle-*` 가 시스템 표대로 `var(--의미 토큰)` 이고, `index.css` 의 `--croffle-accent-hue`, `appearance.ts` 의 `DEFAULT_ACCENT_HUE`, `setting-service.ts` 의 기본 `accentHue` 가 모두 70 이며, `hueToPreviewHex` 가 라이트 `primary` 의 L · C 를 씁니다.
     - `dark surfaces rise: background < card = popover` — `.dark` 의 oklch 명도.
@@ -249,6 +258,15 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     - `check-ignore` 가 `exit=0` 으로 무시 규칙을 보입니다.
   - 실패: 파일 없음, 한쪽 언어에 안내가 없음, 또는 추적 대상임.
   - 사전 실행: `.loctx/release/` 가 아직 없어 release 단계에서.
+- **V-12 라이트 컨트롤 바탕 (S-18, W-10)** — `apps/desktop/src/renderer/src/components/ui` 에서 `grep -nE "bg-transparent|bg-background|bg-card" input/Input.vue select/SelectTrigger.vue textarea/Textarea.vue button/index.ts` → `v12-controls.txt`.
+  - 기대: 네 파일의 컨트롤 바탕 줄이 `bg-card` 이고 같은 줄에 `dark:bg-input/30` 이 있습니다. 컨트롤 자신의 바탕에 `bg-transparent` · `bg-background` 가 없습니다(`file:bg-transparent` 같은 하위 요소는 판정에 줄마다 적고 허용).
+  - 실패: 하나라도 `bg-card` 가 아니거나 다크 바탕이 빠짐.
+- **V-13 디자인 시스템 · 캔버스 (S-19, W-11)** — 두 아티팩트에서 `project/tokens.json` · `project/README.md` · `project/components/Input/README.md` · `project/components/Button/README.md` · `project/components/Select/README.md` · `project/components/bundle.css`(시스템), `project/croffle-theme.css` · `project/ds/croffle/tokens.json` · `project/ds/croffle/components/bundle.css`(캔버스)을 읽어 `.loctx/reports/1.3.2/rc2/v13/` 에 받고, 버전과 함께 `grep -n` 결과를 `v13-ds.txt` 에 남깁니다.
+  - 기대: 시스템 README 에 강조 색조 절이 있고 따르는 토큰 · 고정 토큰 · L · C · `d` · 기준 색조 70 을 말합니다. 두 tokens.json 의 다크 중립색 값이 `index.css` 의 기본 70° 값과 같습니다. 캔버스 테마의 중립색이 `calc(var(--croffle-accent-hue) + d)` 입니다. Input · Select · Button 문서와 두 bundle.css 의 라이트 컨트롤 바탕이 `card` 입니다.
+  - 실패: 하나라도 없음, 또는 값이 앱과 다름.
+- **V-14 rc.2 화면 (S-3 변경 · S-18, A-21 ~ A-23)** — 격리한 개발 실행(V-8 의 실행 조건)에서 라이트 · 다크 × 강조 색조 70 · 250 의 전체 화면, 설정 창, 일정 추가 창을 찍어 `.loctx/reports/1.3.2/rc2/v14/` 에 둡니다. 함께 각 경우의 `getComputedStyle` 값(`--background` · `--sidebar` · `--card` · `--input` 바탕 · `--primary`)을 `v14-values.txt` 에 남깁니다.
+  - 기대: 70° 에서 라이트 값이 시스템 hex, 250° 에서 중립색이 푸른 쪽으로 바뀌고 명도는 같습니다. 라이트 입력칸 · 셀렉트 · outline 버튼의 바탕이 #ffffff 입니다. 버전 타일 · 보기 셀렉트 · 직접 색 칸이 A-21 ~ A-23 대로입니다.
+  - 실패: 값이 다르거나 화면에서 하나라도 다름.
 
 ## 검토
 - 2026-11-19 PM 자체 검토입니다(위임표에 plan-reviewer · qa-plan-reviewer 가 없음). 사용자 원문, intent, 제품 경계와 대조했습니다.
@@ -300,5 +318,5 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
 - 일정 공유(1.3.3), 할 일(1.3.4), 서버 WebUI(서버 0.3.1), pipit-hub.
 - 울린 알림의 DB 저장, 알림 설정의 새 항목.
 - `components/ui/**` 의 전면 재생성.
-- 시스템 · 캔버스 아티팩트 수정.
+- 시스템 · 캔버스 아티팩트 수정 (2026-11-20 부터 S-19 의 두 항목은 범위 안).
 - 일정 편집 창(`schedule-modal.vue`)의 배치 변경. 이번에는 토큰 · 색 규칙만 적용합니다.
