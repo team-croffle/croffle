@@ -10,7 +10,7 @@
   import FullCalendar from '@fullcalendar/vue3';
   import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
-  import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+  import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
   import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
@@ -66,6 +66,10 @@
   // The toolbar is drawn here instead of by FullCalendar so the view picker can be a dropdown.
   const viewTitle = ref('');
   const currentView = ref<string>('dayGridMonth');
+
+  const viewLabel = computed(
+    () => VIEW_OPTIONS.find((opt) => opt.value === currentView.value)?.label ?? 'calendar.month',
+  );
 
   function changeView(view: unknown) {
     if (typeof view === 'string') {
@@ -339,7 +343,8 @@
       <div class="flex items-center gap-2">
         <Select :model-value="currentView" @update:model-value="changeView">
           <SelectTrigger :aria-label="t('calendar.view')">
-            <SelectValue />
+            <!-- The item's text is known only once the list has rendered; name the view here. -->
+            <SelectValue>{{ t(viewLabel) }}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="opt in VIEW_OPTIONS" :key="opt.value" :value="opt.value">
