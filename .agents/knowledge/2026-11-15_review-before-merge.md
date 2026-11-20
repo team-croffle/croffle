@@ -11,7 +11,7 @@ source: project
 symptom: "a change of content (code, tests, spec text, release documents) reaches an audit or the default branch without a review of it"
 cause: "a fix made late (after the first review round, or after an audit) went straight to test and merge; the user's merge approval was read as covering the review step"
 fix: "every change of content comes before the last review; each review adds a line to .loctx/reports/review-ledger.tsv; the Claude Code PreToolUse hook (.claude/hooks/premerge-review-check.sh) refuses gh pr merge and a direct push to master when anything but .agents/audit/*.md changed since the last reviewed SHA"
-check: "sh .claude/hooks/premerge-review-check.sh pr <n> exits 0 before the first audit and before the merge (the hook runs it on every gh pr merge)"
+check: "sh .claude/hooks/premerge-review-check.sh pr <n> <full head SHA> exits 0 before the first audit and before the merge (the hook runs it on every gh pr merge)"
 verified: 2
 approved: { by: user, at: 2026-11-15 }
 updated: { by: user, at: 2026-11-19, words: "K-1/2는 승인" }
