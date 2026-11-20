@@ -6,6 +6,7 @@
 //   node scripts/check-design-commit-msg.mjs --range <a..b>    every commit in the range (run by the
 //                                                              Claude Code hook before a push, so an
 //                                                              amended or rebased commit is caught too)
+// It guards against the PM forgetting the line, not against a deliberate way around the check.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -32,7 +33,18 @@ const ok = (text) =>
 if (process.argv[2] === '--range') {
   // A merge commit counts by its change against the first parent; a rename counts as delete + add.
   const changed = (c) =>
-    git('diff', '--name-only', '--no-renames', `${c}^1`, c, '--', DESIGN).trim() !== '';
+    git(
+      'diff-tree',
+      '--root',
+      '--diff-merges=first-parent',
+      '--no-commit-id',
+      '--name-only',
+      '--no-renames',
+      '-r',
+      c,
+      '--',
+      DESIGN,
+    ).trim() !== '';
   const bad = git('rev-list', process.argv[3])
     .split('\n')
     .filter(Boolean)
