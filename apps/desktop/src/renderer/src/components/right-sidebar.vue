@@ -18,6 +18,7 @@
   import { useScheduleStore } from '@/stores/schedule-store';
   import { useUiStore } from '@/stores/ui-store';
   import { useUpcomingStore } from '@/stores/upcoming-store';
+  import { useUpdateStore } from '@/stores/update-store';
   import { occurrencesOnDate, type ScheduleOccurrence } from '@/utils/schedule-occurrences';
 
   import pkg from '../../../../package.json';
@@ -50,6 +51,7 @@
   };
 
   const { rightSidebarOpen, selectedDate } = storeToRefs(uiStore);
+  const { checkStatus } = storeToRefs(useUpdateStore());
 
   const isSelectedToday = computed(
     () => !selectedDate.value || dayjs(selectedDate.value).isSame(dayjs(), 'day'),
@@ -128,7 +130,7 @@
     side="right"
     collapsible="icon"
     :open="rightSidebarOpen"
-    class="bg-croffle-sidebar relative flex h-screen flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
+    class="bg-croffle-sidebar relative flex h-full flex-col border-l py-2 [--sidebar-width:20rem] group-data-[collapsible=icon]:w-15"
   >
     <SidebarHeader class="bg-croffle-sidebar shrink-0 px-4 pb-0">
       <div
@@ -271,22 +273,35 @@
       </div>
     </SidebarContent>
 
-    <SidebarFooter class="bg-croffle-sidebar shrink-0 flex-col items-center justify-center pb-4">
+    <SidebarFooter
+      class="bg-croffle-sidebar shrink-0 px-4 pt-2 pb-1 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0"
+    >
       <Popover>
         <PopoverTrigger as-child>
-          <button
-            type="button"
-            class="bg-croffle-sidebar-content-disabled hover:bg-croffle-hover focus-visible:ring-ring/50 mb-4 flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border p-4 shadow-sm outline-none focus-visible:ring-[3px] group-data-[collapsible=icon]:border-none group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:shadow-none"
+          <Button
+            v-if="!rightSidebarOpen"
+            variant="ghost"
+            size="icon"
+            class="text-croffle-primary-strong"
             :aria-label="$t('rightSidebar.versionTile.title')"
           >
-            <Icon
-              icon="lucide:info"
-              class="text-croffle-primary-strong mb-1 size-6 group-data-[collapsible=icon]:size-5"
+            <Icon icon="lucide:info" class="size-5" />
+          </Button>
+          <button
+            v-else
+            type="button"
+            class="bg-croffle-sidebar-content-disabled hover:bg-croffle-hover focus-visible:ring-ring/50 flex w-full cursor-pointer items-center gap-2.5 rounded-xl border px-3.5 py-3 text-left shadow-sm outline-none focus-visible:ring-[3px]"
+            :aria-label="$t('rightSidebar.versionTile.title')"
+          >
+            <Icon icon="lucide:info" class="text-croffle-primary-strong size-5 shrink-0" />
+            <span class="min-w-0 flex-1 truncate text-xs font-bold tracking-wider">
+              CROFFLE {{ packageVersion }}
+            </span>
+            <span
+              v-if="checkStatus.kind === 'available'"
+              class="bg-info size-2 shrink-0 rounded-full"
+              aria-hidden="true"
             />
-            <div class="text-center group-data-[collapsible=icon]:hidden">
-              <h4 class="text-xs font-bold tracking-wider">CROFFLE</h4>
-              <span class="text-croffle-text text-xs">{{ packageVersion }}</span>
-            </div>
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="end" :side-offset="8" class="w-[340px]">
