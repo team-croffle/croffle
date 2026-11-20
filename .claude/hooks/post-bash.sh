@@ -7,7 +7,8 @@
 command -v jq >/dev/null 2>&1 || { echo "hook: jq is missing; the post-commit gates did not run" >&2; exit 2; }
 cmd=$(jq -er '.tool_input.command | strings' 2>/dev/null) ||
   { echo "hook: cannot read the Bash command; the post-commit gates did not run" >&2; exit 2; }
-printf '%s\n' "$cmd" | grep -qE '(^|[;&|(])[[:space:]]*git([[:space:]]+(-C|-c)[[:space:]]+[^[:space:]]+)*[[:space:]]+commit' || exit 0
+# Quotes and backslashes are removed first, so a quoted path or word does not hide the commit.
+printf '%s\n' "$cmd" | tr -d "'\"\\\\" | grep -qE '(^|[^[:alnum:]_-])git([[:space:]]+-[^;&|]*)?[[:space:]]+commit([[:space:]]|$)' || exit 0
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$root" || exit 0
 sh .agents/harness/run-gates.sh post-commit >/dev/null 2>&1 || {
@@ -19,7 +20,11 @@ checked() {
   awk '/^== /{clean=($0 ~ /worktree: clean/)} /^exit: /{if (clean && $2==0) ok=1} END{exit ok?0:1}' "$1" 2>/dev/null
 }
 missing=""
-for c in $(git rev-list origin/master..HEAD 2>/dev/null); do
+list=$(git rev-list origin/master..HEAD 2>&1) || {
+  echo "hook: cannot list the commits since origin/master ($list); the gate-log check did not run" >&2
+  exit 2
+}
+for c in $list; do
   checked ".loctx/reports/gates/$(git rev-parse "$c^{tree}").log" || missing="$missing $(git rev-parse --short "$c")"
 done
 if [ -n "$missing" ]; then
