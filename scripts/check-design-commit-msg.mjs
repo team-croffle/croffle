@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const DESIGN = 'apps/desktop/DESIGN.md';
-const LINE = /^Spec-check:\s*.*\b[SA]-\d+\b.*\s[—–-]+\s*\S/;
+const LINE = /^Spec-check:\s*.*\b[SA]-\d+\b.*\s[—–-]+\s*.*[\p{L}\p{N}]/u;
 const FORM = 'Spec-check: <S-n / A-n compared> — <result>';
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
 
@@ -30,12 +30,13 @@ const ok = (text) =>
     .some((l) => LINE.test(l));
 
 if (process.argv[2] === '--range') {
-  const bad = git('rev-list', '--no-merges', process.argv[3])
+  // A merge commit counts by its change against the first parent; a rename counts as delete + add.
+  const changed = (c) =>
+    git('diff', '--name-only', '--no-renames', `${c}^1`, c, '--', DESIGN).trim() !== '';
+  const bad = git('rev-list', process.argv[3])
     .split('\n')
     .filter(Boolean)
-    .filter((c) =>
-      git('diff-tree', '--no-commit-id', '--name-only', '-r', c).split('\n').includes(DESIGN),
-    )
+    .filter(changed)
     .filter((c) => !ok(git('log', '-1', '--format=%B', c)))
     .map((c) => git('log', '-1', '--format=%h %s', c).trim());
   if (bad.length > 0) {
@@ -52,7 +53,7 @@ if (process.argv[2] === '--range') {
   process.exit(0);
 }
 
-const staged = git('diff', '--cached', '--name-only').split('\n').filter(Boolean);
+const staged = git('diff', '--cached', '--name-only', '--no-renames').split('\n').filter(Boolean);
 if (!staged.includes(DESIGN)) {
   process.exit(0);
 }
