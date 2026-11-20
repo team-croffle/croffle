@@ -169,6 +169,11 @@
     tags: [] as Tag[],
   });
 
+  /** A colour picked by hand (not a preset) is shown in the custom swatch. */
+  const isCustomColor = computed(
+    () => !COLOR_PRESETS.some((color) => color.toLowerCase() === form.colorLabel.toLowerCase()),
+  );
+
   const recurrence = reactive<RecurrenceFormState>(createDefaultRecurrenceFormState());
   const isUntilCalendarOpen = ref(false);
   const untilDate = shallowRef<CalendarDate | undefined>(undefined);
@@ -1107,10 +1112,20 @@
                     @click="form.colorLabel = color"
                   />
                   <label
-                    class="hover:bg-muted/50 relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed"
+                    class="relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full transition-transform hover:scale-105"
+                    :class="
+                      isCustomColor
+                        ? 'border-foreground scale-105 border-2'
+                        : 'hover:bg-muted/50 border border-dashed'
+                    "
+                    :style="isCustomColor ? { backgroundColor: form.colorLabel } : undefined"
                     :title="$t('schedule.customColor')"
                   >
-                    <Icon icon="lucide:palette" class="text-muted-foreground size-3.5" />
+                    <Icon
+                      v-if="!isCustomColor"
+                      icon="lucide:palette"
+                      class="text-muted-foreground size-3.5"
+                    />
                     <input
                       v-model="form.colorLabel"
                       type="color"
