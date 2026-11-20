@@ -21,6 +21,8 @@ import {
 import { base, block, followsHue, neutralParts, resolve, type Vars } from './support/css-tokens.ts';
 import {
   DARK_PARTNER,
+  FIXED_DARK,
+  FIXED_LIGHT,
   SYSTEM_DARK_NEUTRALS,
   SYSTEM_LIGHT_NEUTRALS,
 } from './support/system-tokens.ts';
@@ -120,6 +122,7 @@ const NEUTRALS: Record<string, Record<string, string>> = {
   light: SYSTEM_LIGHT_NEUTRALS,
   dark: SYSTEM_DARK_NEUTRALS,
 };
+const FIXED: Record<string, Record<string, string>> = { light: FIXED_LIGHT, dark: FIXED_DARK };
 
 describe('design system tokens', () => {
   test('text pairs hold 4.5:1 in both themes', () => {
@@ -171,15 +174,19 @@ describe('design system tokens', () => {
           DARK_OWN.has(n) && theme === 'dark' ? DARK_OWN.get(n) : LIGHT.get(n),
         );
         assert.ok(own, `${theme}: ${n} is not oklch(L C calc(var(--croffle-accent-hue) + d))`);
+        // L and C are the system colour's; light d is its hue - 70, dark d the light partner's.
+        const [l, c, h] = srgbToOklch(hexToRgb(hex));
+        assert.ok(Math.abs(own[0] - l) < 1e-4 && Math.abs(own[1] - c) < 1e-4, `${theme} ${n} L C`);
         if (theme === 'light') {
-          // At the default hue the light neutrals are the system's hex.
+          assert.ok(Math.abs(Number(own[2]) - (h - DEFAULT_HUE)) < 0.05, `light ${n} d`);
           assert.deepEqual(to8bit(resolve(vars, n, DEFAULT_HUE)), to8bit(hexToRgb(hex)), n);
         } else {
-          const [l, c] = srgbToOklch(hexToRgb(hex));
-          assert.ok(Math.abs(own[0] - l) < 1e-4 && Math.abs(own[1] - c) < 1e-4, `dark ${n} L C`);
           const partner = neutralParts(LIGHT.get(DARK_PARTNER[n] ?? n));
           assert.equal(own[2], partner?.[2], `dark ${n} leans like its light partner`);
         }
+      }
+      for (const [n, hex] of Object.entries(FIXED[theme]!)) {
+        assert.equal(vars.get(n), hex, `${theme}: fixed ${n}`);
       }
     }
   });
