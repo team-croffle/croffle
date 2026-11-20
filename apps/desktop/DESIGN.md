@@ -97,6 +97,9 @@ token's L, C and `d`, and the fixed list.
   a bare `<button>` or `<input>`. Exceptions: color swatches, the options of the priority picker,
   the small remove button inside a `Badge`, the three window buttons, `<input type="color">`, the
   rows of a list inside a popover (notifications) and the version tile.
+- Fields and outline buttons sit on `bg-card` in light, so they stand apart from the page and
+  sidebar grounds (`Input`, `SelectTrigger`, `Textarea`, `Button variant="outline"`, the time field,
+  the tags input); dark keeps `dark:bg-input/30`. Do not override it with `bg-transparent`.
 - Keep the focus ring of a part. A composite control (the time field, the tags input) shows the
   same ring on its wrapper with `focus-within:`.
 - These rules are about how a screen uses a part. What a generated part draws inside itself (the
