@@ -6,6 +6,7 @@ status: approved
 origin: user
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-19", words: "1. 가. 2. 가 승인", rev: "3b5fb6e" }
+  - { role: user, by: bluenyang, at: "2026-11-20", words: "응 진행해", rev: "7acf76c", kind: change, note: "desired result amended after the rc.1 check: neutral tokens follow the accent hue; light control backgrounds; the rule written into the design system" }
 waivers:
   - { step: "review of the spec's V-8 evidence-path correction after the first audit (path text only)", words: "spec 경로를 정정. 경로만 일치하면 추가 리뷰 없음", at: "2026-11-20", scope: once }
   - { step: "previous loop closed before the next intent — server 0.2.0 retro branch `chore/server-0.2.0-retro` (5 commits) is not merged yet and `.loctx/reports/server-0.2.0/` is not cleaned up", words: "1.3.2 intent 시작", at: "2026-11-19", scope: once }
