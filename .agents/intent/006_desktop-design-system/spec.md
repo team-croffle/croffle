@@ -97,8 +97,8 @@ summary_for_user: |
 - [x] W-7 문구 — S-15 (ko 영어 값, `test/i18n-catalogs.test.ts`), S-16 (도움말 4단계). — 1c1ba1b
 - [x] W-8 문서 — S-17 (`DESIGN.md`). — 5eb9a5d
 - [x] W-9 중립색 색조 — S-3 변경 (`index.css` `:root` · `.dark`, `test/tokens-contrast.test.ts`, DESIGN.md 의 강조 색조 절). — 845d998
-- [ ] W-10 라이트 컨트롤 바탕 — S-18 (`components/ui` 의 `input/Input.vue` · `select/SelectTrigger.vue` · `textarea/Textarea.vue` · `button/index.ts`, DESIGN.md).
-- [ ] W-11 디자인 시스템 · 캔버스 — S-19 (아티팩트 두 개; 저장소 파일 없음).
+- [x] W-10 라이트 컨트롤 바탕 — S-18 (`components/ui` 의 `input/Input.vue` · `select/SelectTrigger.vue` · `textarea/Textarea.vue` · `button/index.ts`, DESIGN.md). — 94305e6
+- [x] W-11 디자인 시스템 · 캔버스 — S-19 (아티팩트 두 개; 저장소 파일 없음). — 시스템 버전 `1795164178-9247`(tokens.json · README · Input/Select/Button README · bundle.css · design-system.json), 캔버스 버전 `1795164205-d996`(croffle-theme.css · ds/croffle/tokens.json · ds/croffle/components/bundle.css). A-24 · A-25 의 값도 시스템에 넣었습니다.
 
 W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 독립이라 각각 되돌릴 수 있습니다(S-10 의 "Calendar" 부제는 W-3, 그 밖의 ko 영어 값은 W-7). W-8 은 마지막입니다. 새 테스트 파일은 모두 `apps/desktop/test/` 바로 아래에 둡니다(`test/**/*.test.ts` 는 셸 glob 이라 하위 폴더를 찾지 않음).
 
@@ -308,6 +308,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
 - A-23 (2026-11-20, W-2 · W-6, rc.1 확인) 일정 색 · 강조 색상의 직접 선택 칸은 값이 미리 준비된 색이 아니면 그 색으로 채우고 선택 테두리를 그립니다. 강조 색상의 색 입력은 `change` 도 받습니다 · 직접 고른 색이 어디에도 보이지 않았고, 운영체제 색 선택 창은 확인을 누를 때 `change` 만 보낼 수 있습니다. DESIGN.md 에 적었습니다 · d07a872
 - A-24 (2026-11-20, W-9) 라이트 `--warning` 을 #b05519 에서 #af5519 로 한 단계 진하게 했습니다 · 중립색이 색조를 따르면 `warning` 글자가 `sidebar` 위에서 색조 337° 부근 4.497:1 로 4.5 에 못 미칩니다(#af5519 는 모든 색조에서 4.52 이상). 시스템 값도 W-11 에서 같이 고칩니다 · 845d998
 - A-25 (2026-11-20, W-9) 라이트 `--input` 을 #968a72(L 0.6375)에서 #958971(L 0.6341)로 한 단계 진하게 했습니다 · 색조 146° 부근에서 `sidebar` 위 대비가 2.998:1 로 3:1 에 못 미칩니다(#958971 은 모든 색조에서 3.04 이상). 시스템 값도 W-11 에서 같이 고칩니다 · 845d998
+- A-26 (2026-11-20, W-10) 시간 입력(`time-field.vue`)과 태그 입력(`ui/tags-input/TagsInput.vue`)의 바탕도 라이트 `bg-card` 로 했습니다(태그 입력은 다크 `dark:bg-input/30` 도 더함) · 같은 모양의 복합 컨트롤이라 W-10 의 4개만 바꾸면 한 창 안에서 바탕이 섞입니다. DESIGN.md 에 적었습니다 · 94305e6
 
 ## 우려
 - **확장 화면 색이 바뀝니다.** `--croffle-*` 값이 바뀌므로, 이 변수를 읽는 확장의 화면 색이 1.3.2 에서 달라집니다. 이름은 그대로라 깨지지는 않습니다. 릴리스 노트에 적습니다.
