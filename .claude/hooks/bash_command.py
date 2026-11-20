@@ -54,8 +54,11 @@ def classify(cmd):
         return f"push {remote} {branch}"
     merge = MERGE.fullmatch(line)
     if merge:
-        sha = re.search(r"--match-head-commit ([0-9a-f]{40})", merge.group(2) or "")
-        return f"merge {merge.group(1)} {sha.group(1) if sha else ''}".rstrip()
+        shas = re.findall(r"--match-head-commit ([0-9a-f]{40})", merge.group(2) or "")
+        if len(shas) > 1:
+            # gh takes the last value; the check must see the one the merge uses, so allow one.
+            return f"refuse give --match-head-commit once: {MERGE_FORM}"
+        return f"merge {merge.group(1)} {shas[0] if shas else ''}".rstrip()
     words = set(re.findall(r"[A-Za-z0-9_-]+", normalize(cmd).lower()))
     for word, kind, form in (("push", "push", PUSH_FORM), ("merge", "merge", MERGE_FORM)):
         if word in words:
