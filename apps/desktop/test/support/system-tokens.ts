@@ -43,3 +43,32 @@ export const DARK_PARTNER: Record<string, string> = {
   '--sidebar-accent': '--muted',
   '--sidebar-border': '--muted',
 };
+
+/** Tokens that never follow the accent hue, with their values. */
+export const FIXED_LIGHT: Record<string, string> = {
+  '--card': '#ffffff',
+  '--popover': '#ffffff',
+  '--primary-foreground': '#fffaf0',
+  '--destructive': '#bf3d40',
+  '--destructive-foreground': '#fffaf0',
+  '--success': '#2a7c52',
+  '--success-foreground': '#fffaf0',
+  '--warning': '#af5519', // the system's #b05519 one step deeper for every hue (A-24)
+  '--warning-foreground': '#fffaf0',
+  '--info': '#3c6ea5',
+  '--info-foreground': '#fffaf0',
+  '--croffle-day-select-bg': 'rgba(60, 110, 165, 0.14)',
+};
+
+export const FIXED_DARK: Record<string, string> = {
+  '--primary-foreground': '#241703',
+  '--destructive': '#e3676a',
+  '--destructive-foreground': '#1a0d0d',
+  '--success': '#57b17e',
+  '--success-foreground': '#0f1f16',
+  '--warning': '#e2874a',
+  '--warning-foreground': '#1f1105',
+  '--info': '#6fa8dc',
+  '--info-foreground': '#0d1620',
+  '--croffle-day-select-bg': 'rgba(111, 168, 220, 0.18)',
+};
