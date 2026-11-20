@@ -7,6 +7,7 @@ approvals:
   - { role: user, by: bluenyang, at: "2026-11-20", words: "정정 3건은 승인", rev: "383c2bf", kind: change, note: "V-4 c regex, V-8 run conditions (isolated dev run), V-9 log location and evidence file names; judged on the same raw output (test/judgement.md)" }
   - { role: user, by: bluenyang, at: "2026-11-20", words: "spec 경로를 정정. 경로만 일치하면 추가 리뷰 없음", rev: "a854b7d", kind: change, note: "V-8 evidence paths to the ones used (first audit A-4); path-only change, no further review by the user's word" }
   - { role: user, by: bluenyang, at: "2026-11-20", words: "응 진행해", rev: "7acf76c", kind: summary, note: "rc.2 changes: S-3 change, S-18, S-19, W-9..W-11, V-3 additions, V-12..V-14 (decisions: 1 \"추천으로\", 2 \"맞아! 되돌려줘.\" + \"가 방식으로 하고 싶어. 색조를 조금 따라가는 느낌.\", 3 \"변경해줘.\")" }
+  - { role: user, by: bluenyang, at: "2026-11-20", words: "3건 모두 승인", rev: "95ace28", kind: change, note: "check corrections: V-1 pass count 75 → 74 (PM arithmetic), V-3 9 → 10 tests (rc.2 change), V-8 8 expectation follows the S-3 change (review12 R-3, R-4)" }
 summary_for_user: |
   [rc.2 변경, 2026-11-20] rc.1 확인 뒤 작업 단위 3개를 더합니다. W-9 중립색 색조: 바탕 · 사이드바 · 테두리 · 호버 · 글자 등 중립색이 강조 색조를 색조만 따릅니다(L · C 는 시스템 값, 토큰마다 색조 차이 d). 기본 70° 에서 라이트는 지금과 같고, 다크는 같은 방향으로 따르게 해 기본 다크가 슬레이트에서 따뜻한 짙은 회색으로 바뀝니다. W-10 라이트의 입력칸 · 셀렉트 · 여러 줄 입력 · outline 버튼 바탕을 card(#ffffff)로. W-11 이 규칙과 컨트롤 바탕을 디자인 시스템 · 캔버스에 씁니다. primary 는 그대로(brand 토큰은 로드맵).
   검사: V-3 에 "중립색이 색조를 따르고 L · C 는 시스템 값" · "모든 글자 쌍이 0~359° 모든 색조에서 기준 이상"을 더하고, V-12 컨트롤 바탕 grep, V-13 시스템 · 캔버스 파일 대조, V-14 라이트 · 다크 × 70° · 250° 화면과 계산값을 더합니다. 이미 고친 결함 A-21 ~ A-23(버전 타일 · 보기 셀렉트 · 직접 색 칸)도 V-14 에서 봅니다. intent 의 "강조색 계열만" 문장도 함께 고쳤습니다.
@@ -116,7 +117,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     1. 다섯 개 모두 `exit=0`.
     2. `v1-test.txt` 에 `$ node --test --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/**/*.test.ts` 줄과 `ℹ fail 0` 줄이 있고, `ℹ pass` 가 61 이상입니다(사전 실행 34 + V-3 9 + V-5 3 + V-6 6 + V-7 9).
     3. `v1-build.txt` 에 `Pretendard-Medium-` 와 `Pretendard-SemiBold-` 로 시작하는 `.woff2` 산출물 줄이 있습니다(S-4).
-  - 실패: `exit≠0`, `ℹ fail` 이 0 이 아님, `ℹ pass` 가 61 미만(rc.2 부터는 75 미만: 73 + V-3 변경 2), 또는 두 글꼴 줄이 없음.
+  - 실패: `exit≠0`, `ℹ fail` 이 0 이 아님, `ℹ pass` 가 61 미만(rc.2 부터는 74 미만: 73 − 옛 V-3 테스트 1 + 새 2; 2026-11-20 정정, 처음 문구 "75" 는 PM 산수 오류), 또는 두 글꼴 줄이 없음.
   - 서버 게이트(`make -C apps/server check`, `server-web`)와 `build-cli` 는 돌리지 않습니다. V-2 가 그 범위를 건드리지 않았음을 보입니다.
   - 사전 실행: 다섯 개 모두 `exit=0`, `ℹ pass 34` · `ℹ fail 0`(`dryrun/v1-test.txt:50–51`). 빌드 원본의 글꼴 줄은 `out/renderer/assets/Pretendard-Regular-<hash>.woff2` 형식이고, 지금은 Regular · Bold 만 있습니다(`dryrun/v1-build.txt:23–29`).
 - **V-2 범위 (제약 · 범위 밖)** — 루트에서 `git diff --name-only origin/master...HEAD -- apps/server packages apps/desktop/drizzle .agents/harness .claude` 를 실행해 `v2-scope.txt` 에 남깁니다.
@@ -124,7 +125,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
   - 실패: 경로가 한 줄이라도 나옴. 이 경우 V-1 에 해당 게이트를 더하고 사용자에게 알립니다.
   - 사전 실행: 출력 0줄(`dryrun/v2-scope-2.txt`).
 - **V-3 토큰 · 대비 · 글꼴 선언 (S-1 · S-2 · S-3 · S-4, W-1)** — `node --test … test/tokens-contrast.test.ts` → `v3-tokens.txt`. 테스트는 `src/renderer/src/index.css` 와 관련 소스를 파일로 읽어 계산합니다.
-  - 기대: `exit=0`, `ℹ fail 0`, 다음 9개가 모두 `✔` 입니다.
+  - 기대: `exit=0`, `ℹ fail 0`, 다음 9개가 모두 `✔` 입니다. (rc.2 부터 10개: 아래 "rc.2 변경" 대로 `non-accent tokens do not use the accent hue` 대신 `neutral tokens follow the accent hue with system L and C` 와 `every text pair holds for every hue 0..359`; 2026-11-20 정정)
     - `text pairs hold 4.5:1 in both themes` — `foreground` · `muted-foreground` · `accent-foreground` 를 `background` · `card` · `popover` · `sidebar` · `muted` 위에서, 그리고 `primary-foreground`/`primary`, `destructive`(글자)/`background` · `card`, `destructive-foreground`/`destructive`, `success` · `warning` · `info` 의 `-foreground`/각 바탕.
     - `input holds 3:1 against background card sidebar in both themes`
     - `accent hue sweep keeps accent pairs for every hue 0..359` — 정수 색조 전부, 두 테마에서 `primary-foreground`/`primary` ≥ 4.5:1, `croffle-primary-strong`/`background` · `card` ≥ 4.5:1(sRGB 밖은 잘라 낸 뒤 계산).
@@ -135,7 +136,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
     - `dark surfaces rise: background < card = popover` — `.dark` 의 oklch 명도.
     - `theme inline exposes status colors radius steps and 4 shadows` — `--radius` 12px(0.75rem), `--radius-sm/md/lg/xl/2xl/3xl` = 8/10/12/16/20/24px, `--color-success` · `--color-warning` · `--color-info` 와 각 `-foreground`, `--color-croffle-primary-strong`, `--shadow-xs/sm/surface/lg`(`:root` 와 `.dark` 의 값 포함).
     - `pretendard 400 500 600 700 and fredoka 600 700 font faces are declared` — 각 `@font-face` 와 가리키는 `.woff2` 파일이 있습니다.
-  - 실패: `exit≠0`, `ℹ fail` 이 0 이 아님, 또는 9개 중 하나라도 `✔` 줄이 없음.
+  - 실패: `exit≠0`, `ℹ fail` 이 0 이 아님, 또는 9개(rc.2 부터 10개) 중 하나라도 `✔` 줄이 없음.
   - 사전 실행: 파일이 아직 없어 구현 뒤에 의미가 있습니다. `✔ 이름 (ms)` 형식은 기존 테스트로 확인했습니다(`dryrun/v3-format.txt`).
 - **V-4 화면 코드 규칙 (S-5 · S-6 · S-14, W-2 · W-6)** — `apps/desktop/src/renderer/src` 에서 a) ~ f) 를 각각 실행해 `v4{a..f}.txt` 에 남깁니다.
   - a) `grep -rnE '(bg|text|border|ring)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(-[0-9]+)?(/[0-9]+)?\b|\[#[0-9A-Fa-f]{3,8}\]|rgba\(' --include='*.vue' --include='*.ts' --exclude-dir=ui .`
@@ -212,7 +213,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
      - 동기화 탭의 연결 · 로그인 버튼은 그대로입니다.
      - (잘못된 값 · 저장 실패는 V-7 로 봅니다.)
   7. 확장 삭제(S-14): 확장이 하나 이상 설치된 상태에서 삭제를 누르면 앱 확인 창(destructive 버튼)이 뜹니다. 취소하면 남고, 확인하면 지워집니다.
-  8. 강조 색상(S-3 · S-5): 색조를 200 으로 바꾸면 주 버튼 · 오늘 칸 · 포커스 링 · 달력 제목 · 오늘 숫자만 바뀌고, 배경 · 사이드바 바탕 · 테두리 · 호버는 그대로입니다.
+  8. 강조 색상(S-3 · S-5): 색조를 200 으로 바꾸면 주 버튼 · 오늘 칸 · 포커스 링 · 달력 제목 · 오늘 숫자가 그 색조가 되고, 배경 · 사이드바 바탕 · 테두리 · 호버는 밝기는 그대로인 채 그 색조로 살짝 물듭니다. 상태색(오류 · 성공 · 경고 · 정보)은 그대로입니다. (2026-11-20 정정, S-3 변경에 맞춤; 처음 문구는 "배경 · 사이드바 바탕 · 테두리 · 호버는 그대로")
   9. 도움말(S-16): 4단계를 모두 넘기면 문구가 해요체이고, 일정 추가(우클릭 메뉴 · 추가 버튼; 날짜 더블클릭은 그날 보기), 다가오는 일정, 테마 좌클릭 저장, 설정 바로 적용, 알림 종, 업데이트 확인과 맞습니다.
   - 실패: 하위 조건 하나라도 다르거나 미확인, 또는 스크린샷이 없거나 0바이트.
   - 사전 실행: 수동이라 하지 않았습니다.
