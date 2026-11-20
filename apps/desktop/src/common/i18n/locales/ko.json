@@ -40,7 +40,7 @@
       "themeDark": "다크",
       "themeSystem": "시스템 설정 따름",
       "accentColor": "강조 색상",
-      "accentColorHint": "주 버튼·포커스 링·오늘 표시·강조 글자의 색이 바뀝니다. 배경과 사이드바는 그대로입니다.",
+      "accentColorHint": "주 버튼·포커스 링·오늘 표시·강조 글자의 색이 바뀌고, 배경과 사이드바도 그 색조로 살짝 물듭니다. 고른 색의 색조만 씁니다.",
       "accentColorAria": "강조 색상 {color}",
       "customAccentColor": "직접 선택",
       "customAccentColorAria": "사용자 지정 강조 색상",

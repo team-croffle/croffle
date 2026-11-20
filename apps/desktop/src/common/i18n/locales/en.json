@@ -40,7 +40,7 @@
       "themeDark": "Dark",
       "themeSystem": "Match system",
       "accentColor": "Accent color",
-      "accentColorHint": "Changes the colour of main buttons, focus rings, today and accent text. Backgrounds and sidebars stay as they are.",
+      "accentColorHint": "Changes the colour of main buttons, focus rings, today and accent text, and tints backgrounds and sidebars slightly toward it. Only the hue of the picked colour is used.",
       "accentColorAria": "Accent color {color}",
       "customAccentColor": "Custom color",
       "customAccentColorAria": "Custom accent color",
