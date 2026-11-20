@@ -81,14 +81,19 @@
 
 :root {
   /*
-   * Accent hue. The accent setting changes only this; it tints primary, ring,
-   * accent-foreground (croffle-primary-strong) and croffle-today-bg. Every other token is fixed.
+   * Accent hue (default 70). The accent setting changes only this.
+   * - Accent family: primary, ring, accent-foreground (croffle-primary-strong), croffle-today-bg.
+   * - Neutrals follow its hue only: oklch(L C calc(hue + d)) with the system's L and C and a fixed
+   *   offset d per token (light: the token's system hue - 70; dark: the light partner's d, so both
+   *   themes lean the same way). At 70 the light values are the system's hex.
+   * - Fixed: status colors and their foregrounds, primary-foreground, shadows, day-select fill,
+   *   and colors without chroma (light card and popover).
    */
   --croffle-accent-hue: 70;
 
   /* Croffle Light */
-  --background: #faf7f1;
-  --foreground: #221d13;
+  --background: oklch(0.9768 0.0086 calc(var(--croffle-accent-hue) + 14.6));
+  --foreground: oklch(0.2332 0.0196 calc(var(--croffle-accent-hue) + 14.4));
   --card: #ffffff;
   --card-foreground: var(--foreground);
   --popover: #ffffff;
@@ -102,22 +107,22 @@
       var(--croffle-accent-hue)
   );
   --primary-foreground: #fffaf0;
-  --secondary: #f3eee2;
-  --secondary-foreground: #3a3327;
-  --muted: #f3eee2;
-  --muted-foreground: #5c5546;
-  --accent: #ece5d5;
+  --secondary: oklch(0.9497 0.0168 calc(var(--croffle-accent-hue) + 18));
+  --secondary-foreground: oklch(0.3247 0.0225 calc(var(--croffle-accent-hue) + 11.1));
+  --muted: oklch(0.9497 0.0168 calc(var(--croffle-accent-hue) + 18));
+  --muted-foreground: oklch(0.4517 0.0252 calc(var(--croffle-accent-hue) + 15.9));
+  --accent: oklch(0.9231 0.0226 calc(var(--croffle-accent-hue) + 17.2));
   --accent-foreground: oklch(0.5109 0.0998 var(--croffle-accent-hue));
   --destructive: #bf3d40;
   --destructive-foreground: #fffaf0;
   --success: #2a7c52;
   --success-foreground: #fffaf0;
-  --warning: #b05519;
+  --warning: #af5519;
   --warning-foreground: #fffaf0;
   --info: #3c6ea5;
   --info-foreground: #fffaf0;
-  --border: #e4dcc9;
-  --input: #968a72; /* system #988c74 is 2.97:1 on --sidebar */
+  --border: oklch(0.8957 0.0269 calc(var(--croffle-accent-hue) + 17.9));
+  --input: oklch(0.6341 0.0373 calc(var(--croffle-accent-hue) + 14.5));
   --ring: var(--primary);
   --chart-1: var(--primary);
   --chart-2: var(--info);
@@ -125,7 +130,7 @@
   --chart-4: var(--warning);
   --chart-5: var(--muted-foreground);
   --radius: 0.75rem;
-  --sidebar: #f6f2e9;
+  --sidebar: oklch(0.9618 0.0127 calc(var(--croffle-accent-hue) + 16.8));
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -163,19 +168,19 @@
 
 .dark {
   /* Croffle Dark. The accent hues are offset so the default hue gives the system values. */
-  --background: #15171b;
-  --foreground: #ece7dd;
-  --card: #1c1f25;
+  --background: oklch(0.2042 0.0086 calc(var(--croffle-accent-hue) + 14.6));
+  --foreground: oklch(0.9291 0.0144 calc(var(--croffle-accent-hue) + 14.4));
+  --card: oklch(0.2388 0.0124 calc(var(--croffle-accent-hue) + 14.6));
   --card-foreground: var(--foreground);
-  --popover: #1c1f25;
+  --popover: oklch(0.2388 0.0124 calc(var(--croffle-accent-hue) + 14.6));
   --popover-foreground: var(--foreground);
   --primary: oklch(0.7506 0.1163 calc(var(--croffle-accent-hue) + 5));
   --primary-foreground: #241703;
-  --secondary: #23262d;
-  --secondary-foreground: #ece7dd;
-  --muted: #23262d;
-  --muted-foreground: #a9a294;
-  --accent: #292d35;
+  --secondary: oklch(0.2685 0.0137 calc(var(--croffle-accent-hue) + 18));
+  --secondary-foreground: oklch(0.9291 0.0144 calc(var(--croffle-accent-hue) + 11.1));
+  --muted: oklch(0.2685 0.0137 calc(var(--croffle-accent-hue) + 18));
+  --muted-foreground: oklch(0.7142 0.0215 calc(var(--croffle-accent-hue) + 15.9));
+  --accent: oklch(0.2965 0.0156 calc(var(--croffle-accent-hue) + 17.2));
   --accent-foreground: oklch(0.8314 0.1023 calc(var(--croffle-accent-hue) + 8.6));
   --destructive: #e3676a;
   --destructive-foreground: #1a0d0d;
@@ -185,21 +190,21 @@
   --warning-foreground: #1f1105;
   --info: #6fa8dc;
   --info-foreground: #0d1620;
-  --border: #2b2f37;
-  --input: #6a707c;
+  --border: oklch(0.3046 0.0155 calc(var(--croffle-accent-hue) + 17.9));
+  --input: oklch(0.5442 0.0201 calc(var(--croffle-accent-hue) + 14.5));
   --ring: var(--accent-foreground);
   --chart-1: var(--primary);
   --chart-2: var(--info);
   --chart-3: var(--success);
   --chart-4: var(--warning);
   --chart-5: var(--muted-foreground);
-  --sidebar: #181b20;
+  --sidebar: oklch(0.2212 0.0108 calc(var(--croffle-accent-hue) + 16.8));
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: #23262d;
+  --sidebar-accent: oklch(0.2685 0.0137 calc(var(--croffle-accent-hue) + 18));
   --sidebar-accent-foreground: var(--accent-foreground);
-  --sidebar-border: #23262d;
+  --sidebar-border: oklch(0.2685 0.0137 calc(var(--croffle-accent-hue) + 18));
   --sidebar-ring: var(--ring);
   --elevation-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --elevation-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);

@@ -36,7 +36,7 @@ or an `rgba()`.
 | Status                                        | `success`, `warning`, `info`, `destructive` (+ `-foreground`) |
 
 - **Contrast.** Every text pair holds 4.5:1 in both themes and control edges 3:1;
-  `test/tokens-contrast.test.ts` checks it from `index.css`. Labels on `primary` are
+  `test/tokens-contrast.test.ts` checks it from `index.css` for every accent hue. Labels on `primary` are
   `primary-foreground`, never white. Status colors used as lettering go on `background`, `card` or
   `sidebar` (not on `muted`, where `warning` falls under 4.5:1).
 - **Error text** is `text-destructive`. `destructive-foreground` is only for text placed over a
@@ -58,14 +58,30 @@ or remove one; add a new one only with an alias. New screen code uses the semant
 
 ### Accent color setting
 
-Settings › General › Accent color changes only `--croffle-accent-hue`, which tints the accent
-family: `primary`, `ring`, `accent-foreground` (= `croffle-primary-strong`) and
-`croffle-today-bg`, at fixed chroma. Every other token (backgrounds, sidebars, borders, hover)
-stays fixed. The default hue is 70, where every value equals the design system's. The dark theme
-adds a small hue offset so the default gives the system's dark values. Light `primary` and
-`croffle-today-bg` keep the system's lightness 0.5469 except near hue 185, where it dips by up to
-0.0095 (`0.5469 - 0.0095 * max(0, cos(hue - 185°))`, the same formula as the settings preview's
-`accentLightness`) so `primary-foreground` keeps 4.5:1 for every hue.
+Settings › General › Accent color changes only `--croffle-accent-hue` (default 70; a picked color
+gives only its hue). Three groups of tokens:
+
+- **Accent family** — `primary`, `ring`, `accent-foreground` (= `croffle-primary-strong`) and
+  `croffle-today-bg` follow the hue at their own lightness and chroma. Dark adds a small hue offset
+  so the default gives the system's dark values. Light `primary` and `croffle-today-bg` keep the
+  system's lightness 0.5469 except near hue 185, where it dips by up to 0.0095
+  (`0.5469 - 0.0095 * max(0, cos(hue - 185°))`, the same formula as the settings preview's
+  `accentLightness`) so `primary-foreground` keeps 4.5:1 for every hue.
+- **Neutrals** follow the hue only: `oklch(L C calc(var(--croffle-accent-hue) + d))`, with the
+  system's L and C and a fixed offset `d` per token. Light: `background`, `foreground`,
+  `secondary(-foreground)`, `muted(-foreground)`, `accent`, `border`, `input`, `sidebar`, with
+  `d` = the token's system hue − 70, so the default gives the system's hex. Dark: the same tokens
+  plus `card`, `popover`, `sidebar-accent`, `sidebar-border`, at the system's dark L and C with
+  the light partner's `d` (`card`/`popover` → `background`, `sidebar-accent`/`sidebar-border` →
+  `muted`), so both themes lean toward the accent the same way. Their chroma is low (0.009–0.04),
+  so the tint is slight and contrast barely moves.
+- **Fixed** — `destructive`, `success`, `warning`, `info` and their `-foreground`,
+  `primary-foreground`, the shadows, `croffle-day-select-bg`, and colors without chroma (light
+  `card`, `popover`).
+
+`test/tokens-contrast.test.ts` checks the groups, the system values at hue 70, and every text pair
+and control edge for every hue 0–359. To reuse the rule elsewhere, change the base hue, each
+token's L, C and `d`, and the fixed list.
 
 ## Controls
 

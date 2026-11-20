@@ -1,7 +1,8 @@
 /**
  * Checks the colour tokens in src/renderer/src/index.css against the rules of the design system
  * "croffle" (apps/desktop/DESIGN.md): text pairs hold 4.5:1, control edges 3:1, the accent hue
- * setting keeps both for every hue, and the extension-visible `--croffle-*` names stay defined.
+ * setting keeps both for every hue (neutrals follow its hue only), and the extension-visible
+ * `--croffle-*` names stay defined.
  */
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
@@ -11,42 +12,23 @@ import { describe, test } from 'node:test';
 import {
   contrast,
   DIP,
+  hexToRgb,
   lightnessOf,
-  oklchToSrgb,
+  srgbToOklch,
   srgbToOklchL,
-  type Rgb,
+  to8bit,
 } from './support/color.ts';
+import { base, block, followsHue, neutralParts, resolve, type Vars } from './support/css-tokens.ts';
+import {
+  DARK_PARTNER,
+  SYSTEM_DARK_NEUTRALS,
+  SYSTEM_LIGHT_NEUTRALS,
+} from './support/system-tokens.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 /** Loaded at run time (a renderer module; the node type-check project has no DOM types). */
 const APPEARANCE_MODULE = join(ROOT, 'src/renderer/src/utils/appearance.ts');
 const CSS = readFileSync(join(ROOT, 'src/renderer/src/index.css'), 'utf8');
-
-type Vars = Map<string, string>;
-
-/** One line, single spaces, no space just inside parentheses (the formatter wraps long values). */
-const normalize = (v: string) =>
-  v.replace(/\s+/g, ' ').replace(/\( /g, '(').replace(/ \)/g, ')').trim();
-
-/** Declarations of the first top-level block whose selector is exactly `selector`. */
-function block(selector: string): Vars {
-  const re = new RegExp(`(^|\\n)${selector.replace('.', '\\.')}\\s*\\{([\\s\\S]*?)\\n\\}`);
-  const m = re.exec(CSS);
-  assert.ok(m, `block ${selector} not found`);
-  const body = m[2]!.replace(/\/\*[\s\S]*?\*\//g, '');
-  const vars: Vars = new Map();
-  for (const d of body.split(';')) {
-    const i = d.indexOf(':');
-    if (i < 0) {
-      continue;
-    }
-    const name = d.slice(0, i).trim();
-    if (name.startsWith('--')) {
-      vars.set(name, normalize(d.slice(i + 1)));
-    }
-  }
-  return vars;
-}
 
 const THEME_INLINE = (() => {
   const m = /@theme inline\s*\{([\s\S]*?)\n\}/.exec(CSS);
@@ -54,42 +36,10 @@ const THEME_INLINE = (() => {
   return m[1]!;
 })();
 
-const LIGHT = block(':root');
-const DARK_OWN = block('.dark');
+const LIGHT = block(CSS, ':root');
+const DARK_OWN = block(CSS, '.dark');
 /** `.dark` overrides `:root`; anything it does not set comes from `:root`. */
 const DARK: Vars = new Map([...LIGHT, ...DARK_OWN]);
-
-/** Resolves a token to sRGB, following `var()` and evaluating `calc(var(--croffle-accent-hue) + n)`. */
-function resolve(vars: Vars, name: string, hue: number, depth = 0): Rgb {
-  assert.ok(depth < 10, `var loop at ${name}`);
-  const raw = vars.get(name);
-  assert.ok(raw !== undefined, `${name} is not defined`);
-  const v = raw.trim();
-  const ref = /^var\((--[\w-]+)\)$/.exec(v);
-  if (ref) {
-    return resolve(vars, ref[1]!, hue, depth + 1);
-  }
-  const hex = /^#([0-9a-f]{6})$/i.exec(v);
-  if (hex) {
-    return [0, 2, 4].map((i) => Number.parseInt(hex[1]!.slice(i, i + 2), 16) / 255) as Rgb;
-  }
-  const ok = /^oklch\(\s*(calc\(.+?\)\)\)|[\d.]+)\s+([\d.]+)\s+(.+?)\s*(\/\s*[\d.]+)?\)$/.exec(v);
-  if (ok) {
-    return oklchToSrgb(lightnessOf(ok[1]!, hue), Number(ok[2]), hueOf(ok[3]!, hue));
-  }
-  throw new Error(`cannot resolve ${name}: ${v}`);
-}
-
-function hueOf(expr: string, hue: number): number {
-  if (expr === 'var(--croffle-accent-hue)') {
-    return hue;
-  }
-  const m = /^calc\(var\(--croffle-accent-hue\)\s*([+-])\s*([\d.]+)\)$/.exec(expr);
-  if (m) {
-    return hue + (m[1] === '+' ? 1 : -1) * Number(m[2]);
-  }
-  return Number(expr);
-}
 
 const DEFAULT_HUE = Number(LIGHT.get('--croffle-accent-hue'));
 
@@ -163,28 +113,13 @@ const CROFFLE_ALIASES: Record<string, string> = {
   '--croffle-disabled': '--muted',
 };
 
-/** Tokens allowed to follow the accent hue, directly or through an alias. */
-const ACCENT_FAMILY = new Set([
-  '--primary',
-  '--ring',
-  '--accent-foreground',
-  '--croffle-today-bg',
-  '--croffle-primary',
-  '--croffle-primary-strong',
-  '--sidebar-primary',
-  '--sidebar-ring',
-  '--sidebar-accent-foreground',
-  '--chart-1',
-]);
+/** The accent family: tokens that follow the accent hue with their own lightness and chroma. */
+const ACCENT_FAMILY = new Set(['--primary', '--ring', '--accent-foreground', '--croffle-today-bg']);
 
-function followsHue(vars: Vars, name: string, depth = 0): boolean {
-  const v = vars.get(name) ?? '';
-  if (v.includes('--croffle-accent-hue')) {
-    return true;
-  }
-  const ref = /^var\((--[\w-]+)\)$/.exec(v.trim());
-  return ref !== null && depth < 10 && followsHue(vars, ref[1]!, depth + 1);
-}
+const NEUTRALS: Record<string, Record<string, string>> = {
+  light: SYSTEM_LIGHT_NEUTRALS,
+  dark: SYSTEM_DARK_NEUTRALS,
+};
 
 describe('design system tokens', () => {
   test('text pairs hold 4.5:1 in both themes', () => {
@@ -218,15 +153,48 @@ describe('design system tokens', () => {
     }
   });
 
-  test('non-accent tokens do not use the accent hue', () => {
+  test('neutral tokens follow the accent hue with system L and C', () => {
     for (const [theme, vars] of THEMES) {
+      const neutrals = NEUTRALS[theme]!;
       const tinted = [...vars.keys()].filter(
         (n) => n !== '--croffle-accent-hue' && followsHue(vars, n),
       );
-      const stray = tinted.filter((n) => !ACCENT_FAMILY.has(n));
+      const stray = tinted.filter(
+        (n) => !ACCENT_FAMILY.has(base(vars, n)) && !(base(vars, n) in neutrals),
+      );
       assert.deepEqual(stray, [], `${theme}: ${stray.join(', ')} follow the accent hue`);
-      for (const n of ['--primary', '--ring', '--accent-foreground', '--croffle-today-bg']) {
-        assert.ok(tinted.includes(n), `${theme}: ${n} does not follow the accent hue`);
+      for (const n of [...ACCENT_FAMILY, ...Object.keys(neutrals)]) {
+        assert.ok(followsHue(vars, n), `${theme}: ${n} does not follow the accent hue`);
+      }
+      for (const [n, hex] of Object.entries(neutrals)) {
+        const own = neutralParts(
+          DARK_OWN.has(n) && theme === 'dark' ? DARK_OWN.get(n) : LIGHT.get(n),
+        );
+        assert.ok(own, `${theme}: ${n} is not oklch(L C calc(var(--croffle-accent-hue) + d))`);
+        if (theme === 'light') {
+          // At the default hue the light neutrals are the system's hex.
+          assert.deepEqual(to8bit(resolve(vars, n, DEFAULT_HUE)), to8bit(hexToRgb(hex)), n);
+        } else {
+          const [l, c] = srgbToOklch(hexToRgb(hex));
+          assert.ok(Math.abs(own[0] - l) < 1e-4 && Math.abs(own[1] - c) < 1e-4, `dark ${n} L C`);
+          const partner = neutralParts(LIGHT.get(DARK_PARTNER[n] ?? n));
+          assert.equal(own[2], partner?.[2], `dark ${n} leans like its light partner`);
+        }
+      }
+    }
+  });
+
+  test('every text pair holds for every hue 0..359', () => {
+    for (const [theme, vars] of THEMES) {
+      for (let hue = 0; hue < 360; hue++) {
+        for (const [fg, bg] of TEXT_PAIRS) {
+          const r = ratio(vars, fg, bg, hue);
+          assert.ok(r >= 4.5, `${theme} hue ${hue}: ${fg} on ${bg} is ${r.toFixed(2)}:1`);
+        }
+        for (const bg of ['--background', '--card', '--sidebar']) {
+          const r = ratio(vars, '--input', bg, hue);
+          assert.ok(r >= 3, `${theme} hue ${hue}: --input on ${bg} is ${r.toFixed(2)}:1`);
+        }
       }
     }
   });
