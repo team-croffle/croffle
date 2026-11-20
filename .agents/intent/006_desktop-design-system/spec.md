@@ -5,6 +5,7 @@ approvals:
   - { role: user, by: bluenyang, at: "2026-11-19", words: "1. gemini한데 요청해. 2. 수정했어. 다시 봐줘 3. PM 해석: ㅇㅋ 재확인 후 진행", rev: "6f50d7b", kind: summary, note: "진행 on condition of the recheck; the recheck (qa-designer review, design system 1795075960-81fe) is folded into 4238b83" }
   - { role: user, by: bluenyang, at: "2026-11-20", words: "F-7. 승인", rev: "84e9404", kind: change, note: "S-16 and V-8 9: adding is right-click menu or the add button; double-clicking a date opens that day (review1 F-7, PM wrote the spec wrongly)" }
   - { role: user, by: bluenyang, at: "2026-11-20", words: "정정 3건은 승인", rev: "383c2bf", kind: change, note: "V-4 c regex, V-8 run conditions (isolated dev run), V-9 log location and evidence file names; judged on the same raw output (test/judgement.md)" }
+  - { role: user, by: bluenyang, at: "2026-11-20", words: "spec 경로를 정정. 경로만 일치하면 추가 리뷰 없음", rev: "a854b7d", kind: change, note: "V-8 evidence paths to the ones used (first audit A-4); path-only change, no further review by the user's word" }
 summary_for_user: |
   1.3.2 를 8개 작업 단위로 나눕니다: W-1 토큰(시스템 값, `--croffle-*` 별칭 유지, 강조 색조는 4개 토큰만, 기본 70, Pretendard 500·600 선언) → W-2 대비·색 규칙(화면 코드 + `components/ui` 6개 파일) → W-3 테마 좌클릭 저장·부제·다가오는 일정 → W-4 알림 팝오버 → W-5 업데이트 확인(기존 호스트 전용 `window.checkForUpdates` 를 고침, 확인할 수 없는 설치는 바로 "확인할 수 없음")·버전 타일 → W-6 설정 바로 적용·확장 삭제 확인 창 → W-7 ko 영어 값·도움말 4단계 → W-8 DESIGN.md.
   검증은 V-1~V-11 입니다(V-11 릴리스 노트는 release 단계). qa-designer(gemini) 검토로 빠진 검사(S-1~S-4·S-16), grep 정규식, `components/ui` 의 오류 글자·스위치, Linux unpack 의 업데이트 확인 동작을 보강했습니다.
@@ -173,8 +174,8 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
   - 실패: `✖` 또는 이름 없음.
   - 사전 실행: 구현 뒤. 이 모듈들은 Electron · DOM 없이 불러올 수 있어야 합니다(설계).
 - **V-8 화면 확인 (S-5 · S-7 ~ S-14 · S-16, W-2 ~ W-7)** — `pnpm dev` 와 같은 개발 실행(렌더러는 프로젝트 설정의 Vite 개발 서버, 메인은 미패키지 실행)을 격리된 cwd · user-data 로 띄운 앱에서 라이트와 다크 각각 아래 9개를 확인합니다(2026-11-20 정정: `pnpm dev` 는 실제 `~/.config/Croffle` 과 작업 폴더를 쓰고 화면에 창을 띄움).
-  - PM 이 Playwright `_electron` 으로 하거나 사용자가 하며, 누가 무엇으로 했는지와 조건별 결과를 `v8-screens.txt` 에 적습니다.
-  - 스크린샷 18장(`screens/1-light.png` … `9-dark.png`)을 남기고 `ls -l .loctx/reports/1.3.2/test/screens/` 를 `v8-screens-ls.txt` 에 남깁니다.
+  - PM 이 Playwright `_electron` 으로 하거나 사용자가 하며, 누가 무엇으로 했는지와 조건별 결과를 `v8-light.txt` · `v8-dark.txt` 에 적습니다.
+  - 스크린샷 18장(`v8/screens/1-light.png` … `9-dark.png`)을 남기고 `ls -l .loctx/reports/1.3.2/test/v8/screens/` 를 `v8-screens-ls.txt` 에 남깁니다(2026-11-20 경로 정정, 1차 감사 A-4).
   1. 종(S-7):
      - 알림이 없을 때 팝오버에 "새 알림이 없습니다"가 보입니다.
      - 2분 뒤 일정에 1분 전 알림을 걸면, 울리기 전에는 "곧 울릴 알림"에 보입니다.
