@@ -63,7 +63,7 @@
     :id="props.id"
     :class="
       cn(
-        'border-input focus-within:border-ring focus-within:ring-ring/50 dark:bg-input/30 flex h-9 items-center gap-1 rounded-md border bg-transparent px-2 shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]',
+        'border-input focus-within:border-ring focus-within:ring-ring/50 dark:bg-input/30 flex h-9 items-center gap-1 rounded-md border bg-card px-2 shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]',
         props.class,
       )
     "
