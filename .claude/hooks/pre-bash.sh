@@ -21,6 +21,11 @@ case "$1" in
     if [ "$3" = master ] || [ "$3" = refs/heads/master ]; then
       sh "$hooks/premerge-review-check.sh" master "$3" || exit 2
     fi
+    # Commits that change DESIGN.md name the spec items they were compared with (amended and
+    # rebased commits too, which the commit-msg hook does not see).
+    if [ -f scripts/check-design-commit-msg.mjs ]; then
+      node scripts/check-design-commit-msg.mjs --range "origin/master..$3" || exit 2
+    fi
     sh .agents/harness/run-gates.sh pre-push >/dev/null 2>&1 ||
       refuse "gates failed before push: see .loctx/reports/gates/$(git rev-parse HEAD^{tree}).log" ;;
   *) refuse "unexpected answer from the command check: $verdict" ;;
