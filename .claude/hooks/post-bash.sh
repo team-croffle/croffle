@@ -4,13 +4,11 @@
 # The gates check HEAD only, so make one commit per command. Every commit of the branch (since
 # origin/master) without a clean passing run is named, so that it can be filled with
 # `sh .agents/harness/run-gates.sh audit` on that commit.
-command -v jq >/dev/null 2>&1 || { echo "hook: jq is missing; the post-commit gates did not run" >&2; exit 2; }
-cmd=$(jq -er '.tool_input.command | strings' 2>/dev/null) ||
-  { echo "hook: cannot read the Bash command; the post-commit gates did not run" >&2; exit 2; }
-# Quotes and backslashes are removed first, so a quoted path or word does not hide the commit.
-printf '%s\n' "$cmd" | tr -d "'\"\\\\" | grep -qE '(^|[^[:alnum:]_-])git([[:space:]]+-[^;&|]*)?[[:space:]]+commit([[:space:]]|$)' || exit 0
+command -v python3 >/dev/null 2>&1 || { echo "hook: python3 is missing; the post-commit gates did not run" >&2; exit 2; }
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$root" || exit 0
+verdict=$(python3 .claude/hooks/bash_command.py) || { echo "hook: the command check failed to run" >&2; exit 2; }
+[ "$verdict" = commit ] || exit 0
 sh .agents/harness/run-gates.sh post-commit >/dev/null 2>&1 || {
   echo "hook: gates failed on the new commit: see .loctx/reports/gates/$(git rev-parse HEAD^{tree}).log" >&2
   exit 2
