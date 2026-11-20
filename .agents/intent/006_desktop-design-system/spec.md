@@ -89,16 +89,16 @@ summary_for_user: |
 - **브랜치** — `feat/desktop-1.3.2-design-system`. W 마다 커밋하고, 커밋 제목에 W 번호를 씁니다.
 
 ## 작업 단위
-- [x] W-1 토큰 — `index.css` 를 시스템 토큰으로(S-1 · S-2 · S-3 · S-4), `@theme` 연결, `appearance.ts` · `setting-service.ts` 기본 색조 70 · 미리보기 L/C, Pretendard 500 · 600 `@font-face`. 토큰 대비 검사 테스트(`test/tokens-contrast.test.ts`: `index.css` 를 읽어 글자 쌍 4.5:1, `input` 3:1, 강조 색조 0–359°)를 이 단위에 넣습니다. — a91eafd
-- [x] W-2 대비 · 색 규칙 — 화면 코드와 위 `components/ui` 6개 파일의 오류 글자(S-6), 스위치(S-5), 우선순위 점 + 글자, `amber-*` → `warning`, 팔레트 색 · hex · `rgba(` · 강조색 위 흰 글자 정리(S-5), 달력 강조 글자(`calendar.vue` 의 `var(--croffle-primary)` 글자색) · 설정 · 도움말의 강조 글자 → `croffle-primary-strong`. — 4458a7e
-- [x] W-3 셸: 테마 · 부제 · 다가오는 일정 — S-9, S-10, S-8(+ `src/common/upcoming.ts` 와 테스트). — 0f1ce63
-- [x] W-4 알림 팝오버 — S-7 (메인 메모리 목록 `src/main/notification/notification-list.ts` · IPC · preload · store · popover · 종의 수, `test/notification-list.test.ts`). — cd17d8a
-- [x] W-5 업데이트 확인 · 버전 타일 — S-11 · S-12 (IPC · 상태 `src/common/update-status.ts` · store · 버전 타일 Popover · 설정 › 일반 › 업데이트 행, `test/update-status.test.ts`). — 0fe0860
-- [x] W-6 설정 바로 적용 · 확장 삭제 확인 — S-13 · S-14 (저장 · 되돌리기 순수 함수 `src/common/settings-apply.ts`, `test/settings-apply.test.ts`, 확장 구성 폼의 blur · Enter 적용, `dataHint` 정리). — c80a644
-- [x] W-7 문구 — S-15 (ko 영어 값, `test/i18n-catalogs.test.ts`), S-16 (도움말 4단계). — 1c1ba1b
-- [x] W-8 문서 — S-17 (`DESIGN.md`). — 5eb9a5d
-- [x] W-9 중립색 색조 — S-3 변경 (`index.css` `:root` · `.dark`, `test/tokens-contrast.test.ts`, DESIGN.md 의 강조 색조 절). — 845d998
-- [x] W-10 라이트 컨트롤 바탕 — S-18 (`components/ui` 의 `input/Input.vue` · `select/SelectTrigger.vue` · `textarea/Textarea.vue` · `button/index.ts`, DESIGN.md). — 94305e6
+- [x] W-1 토큰 — `index.css` 를 시스템 토큰으로(S-1 · S-2 · S-3 · S-4), `@theme` 연결, `appearance.ts` · `setting-service.ts` 기본 색조 70 · 미리보기 L/C, Pretendard 500 · 600 `@font-face`. 토큰 대비 검사 테스트(`test/tokens-contrast.test.ts`: `index.css` 를 읽어 글자 쌍 4.5:1, `input` 3:1, 강조 색조 0–359°)를 이 단위에 넣습니다. — 0cff20a
+- [x] W-2 대비 · 색 규칙 — 화면 코드와 위 `components/ui` 6개 파일의 오류 글자(S-6), 스위치(S-5), 우선순위 점 + 글자, `amber-*` → `warning`, 팔레트 색 · hex · `rgba(` · 강조색 위 흰 글자 정리(S-5), 달력 강조 글자(`calendar.vue` 의 `var(--croffle-primary)` 글자색) · 설정 · 도움말의 강조 글자 → `croffle-primary-strong`. — fc01103
+- [x] W-3 셸: 테마 · 부제 · 다가오는 일정 — S-9, S-10, S-8(+ `src/common/upcoming.ts` 와 테스트). — 5c3c29a
+- [x] W-4 알림 팝오버 — S-7 (메인 메모리 목록 `src/main/notification/notification-list.ts` · IPC · preload · store · popover · 종의 수, `test/notification-list.test.ts`). — 698e139
+- [x] W-5 업데이트 확인 · 버전 타일 — S-11 · S-12 (IPC · 상태 `src/common/update-status.ts` · store · 버전 타일 Popover · 설정 › 일반 › 업데이트 행, `test/update-status.test.ts`). — b7b84af
+- [x] W-6 설정 바로 적용 · 확장 삭제 확인 — S-13 · S-14 (저장 · 되돌리기 순수 함수 `src/common/settings-apply.ts`, `test/settings-apply.test.ts`, 확장 구성 폼의 blur · Enter 적용, `dataHint` 정리). — 7694915
+- [x] W-7 문구 — S-15 (ko 영어 값, `test/i18n-catalogs.test.ts`), S-16 (도움말 4단계). — 98700f2
+- [x] W-8 문서 — S-17 (`DESIGN.md`). — 2d92e8a
+- [x] W-9 중립색 색조 — S-3 변경 (`index.css` `:root` · `.dark`, `test/tokens-contrast.test.ts`, DESIGN.md 의 강조 색조 절). — 71d59aa
+- [x] W-10 라이트 컨트롤 바탕 — S-18 (`components/ui` 의 `input/Input.vue` · `select/SelectTrigger.vue` · `textarea/Textarea.vue` · `button/index.ts`, DESIGN.md). — de5b1f3
 - [x] W-11 디자인 시스템 · 캔버스 — S-19 (아티팩트 두 개; 저장소 파일 없음). — 시스템 버전 `1795164178-9247`(tokens.json · README · Input/Select/Button README · bundle.css · design-system.json), 캔버스 버전 `1795164205-d996`(croffle-theme.css · ds/croffle/tokens.json · ds/croffle/components/bundle.css). A-24 · A-25 의 값도 시스템에 넣었습니다.
 
 W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 독립이라 각각 되돌릴 수 있습니다(S-10 의 "Calendar" 부제는 W-3, 그 밖의 ko 영어 값은 W-7). W-8 은 마지막입니다. 새 테스트 파일은 모두 `apps/desktop/test/` 바로 아래에 둡니다(`test/**/*.test.ts` 는 셸 glob 이라 하위 폴더를 찾지 않음).
@@ -284,6 +284,7 @@ W-1 이 먼저이고, W-2 는 W-1 위에 올라갑니다. W-3 ~ W-7 은 서로 �
   - 받아들이지 않은 것: V-5 의 "help 에 합쇼체 0건" 은 받아들였지만 제목(`title`)은 명사라 검사에서 뺍니다. V-1 의 `All matched files use the correct format.` 문자열은 사전 실행 원본에서 확인한 뒤 씁니다.
 
 ## 조정 기록
+- (2026-11-21, 회고) 작업 단위의 완료 표시를 master SHA 로 고쳤습니다(rebase 머지; 대응표는 `.agents/audit/1.3.2.md` 의 SHA 대응). 조정 기록(A-n)의 SHA 는 브랜치 SHA 그대로이며 같은 표로 찾습니다.
 - A-1 (2026-11-19, W-1, A-20 으로 대체) 라이트 `--primary` 의 oklch 명도를 시스템 #98641b 의 0.547 에서 0.534 로 낮췄습니다 · 0.547 이면 색조 192° 부근에서 `primary-foreground` 대비가 4.39:1 로 떨어져 S-3 · V-3 의 "모든 색조 4.5:1" 을 지키지 못합니다. 0.534 면 최저 4.61:1 입니다. 기본 색조 70° 에서는 거의 같은 색(#93601a 부근)입니다. `--croffle-today-bg` · 설정 미리보기도 같은 명도를 씁니다.
 - A-2 (2026-11-19, W-1) 다크의 강조색은 설정 색조에 차이를 더합니다(`primary` +5°, `accent-foreground` · `ring` +8.6°) · 시스템 다크 값(#d9a353 75°, #ecc079 78.6°)이 라이트(70°)와 색조가 달라, 색조 하나로 두 테마를 맞추려면 차이가 필요합니다. 기본 70° 에서 시스템 hex 와 같습니다.
 - A-3 (2026-11-19, W-1) 라이트 `--input` 을 #988c74 에서 #968a72 로 한 단계 진하게 했습니다 · 시스템 값은 `--sidebar`(#f6f2e9) 위에서 2.97:1 로 S-5 · V-3 의 3:1 에 못 미칩니다. #968a72 는 sidebar 3.04 · background · card 그 이상입니다. 시스템도 사용자 지시("A-3. 고쳐.", 2026-11-20)로 같은 값으로 고쳤습니다(디자인 시스템 버전 `1795105637-a094`, `tokens.json` 의 `input` light 값과 usage 문장).
