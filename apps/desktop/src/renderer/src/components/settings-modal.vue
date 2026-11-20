@@ -553,6 +553,8 @@
   };
 
   const isAccentPresetSelected = (hex: string) => huesMatch(hexToHue(hex), currentAccentHue.value);
+  /** A hue picked by hand (no preset matches) is shown in the custom swatch. */
+  const isCustomAccent = computed(() => !ACCENT_COLOR_PRESETS.some(isAccentPresetSelected));
 
   const onReminderMinutesChange = (v: unknown) => {
     if (v === null) {
@@ -831,16 +833,27 @@
                         @click="onAccentHexChange(color)"
                       />
                       <label
-                        class="hover:bg-muted/50 relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed"
+                        class="relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full transition-transform hover:scale-105"
+                        :class="
+                          isCustomAccent
+                            ? 'border-foreground scale-105 border-2'
+                            : 'hover:bg-muted/50 border border-dashed'
+                        "
+                        :style="isCustomAccent ? { backgroundColor: accentPreviewHex } : undefined"
                         :title="$t('settings.general.customAccentColor')"
                       >
-                        <Icon icon="lucide:palette" class="text-muted-foreground size-3.5" />
+                        <Icon
+                          v-if="!isCustomAccent"
+                          icon="lucide:palette"
+                          class="text-muted-foreground size-3.5"
+                        />
                         <input
                           type="color"
                           class="absolute inset-0 cursor-pointer opacity-0"
                           :value="accentPreviewHex"
                           :aria-label="$t('settings.general.customAccentColorAria')"
                           @input="onAccentColorInput"
+                          @change="onAccentColorInput"
                         />
                       </label>
                     </div>

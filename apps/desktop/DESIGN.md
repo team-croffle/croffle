@@ -97,6 +97,9 @@ adds a small hue offset so the default gives the system's dark values. Light `pr
 - Clickable badge-like things (tag suggestions) look like `Badge`, not like a small button.
 - Selectors that are not single-line controls (the priority picker, color swatches) are outside
   the height rule.
+- A row of color swatches ends with a custom swatch (`<input type="color">`). While the value is
+  not one of the presets, the custom swatch is filled with it and drawn as selected; otherwise it
+  is a dashed circle with a palette icon.
 
 ### Buttons
 
@@ -190,7 +193,9 @@ One set, tinted with the ink color in light and deep black in dark (`--elevation
 - **Updates** can be checked by hand from the version tile and Settings › General › Updates; both
   show the same state: checking, 최신 버전, 새 버전 (opens the update dialog), 실패, or "cannot
   check" for a development build or an install that cannot update. A check started by hand shows
-  its result in place, without a toast.
+  its result in place, without a toast. The version tile sits at the bottom of the right sidebar:
+  expanded, a row (info icon, `CROFFLE v<version>`, an info dot when a new version is known);
+  collapsed, a ghost icon button. Its bottom lines up with the left sidebar's rail buttons.
 - **The theme button** saves on left-click (light ↔ dark); right-click offers 라이트 / 다크 / 시스템.
 - **Nav subtitles** add information ("오늘 일정 3개"); they never repeat the title in another
   language.
