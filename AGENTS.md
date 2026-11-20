@@ -56,6 +56,7 @@ Root, unless noted. The gates in `.agents/harness/gates.yaml` are the ones CI ru
 
 - Formatting is owned by oxfmt (`.oxfmtrc.json`): 2 spaces, single quotes, semicolons, trailing commas, print width 100, LF. Lint rules in `.oxlintrc.json`. Don't hand-format; run `pnpm format`. oxfmt ignores the reins-generated files (`.agents/**`, `.claude/skills/**`, `.claude/settings.json`) and `AGENTS.md`, so the formatter never rewrites managed content.
 - Run the gates that cover what you touched before finishing. The pre-commit hook (husky) runs typecheck + lint-staged; don't bypass it.
+- A check (V-n) added to a spec carries `- 설계: <qa-designer task and answer path>` and `- 사전 실행: <raw output path | 구현 뒤 — reason>` inside it; the pre-commit hook (`scripts/check-spec-checks.mjs`) refuses a commit that adds a V-n without them. A commit that changes `apps/desktop/DESIGN.md` has a `Spec-check: <S-n / A-n> — <result>` line; the commit-msg hook (`scripts/check-design-commit-msg.mjs`) refuses it otherwise.
 - Publishable package change (`packages/types`, `packages/cli`) → add a Changeset (`pnpm changeset`). Desktop is ignored by Changesets.
 - Keep changes package-scoped when practical. Renderer must not use Node APIs; go through preload/IPC.
 - Renderer UI follows `apps/desktop/DESIGN.md` (control heights, radius, button variants, input widths, tokens). Read it before adding or changing a screen; when a screen needs something it does not cover, extend that file in the same change.
