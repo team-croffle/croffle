@@ -49,3 +49,6 @@ dist
 
 # reins local workspace
 .loctx/
+
+# Python bytecode (Claude Code hooks)
+__pycache__/
