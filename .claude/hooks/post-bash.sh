@@ -8,7 +8,11 @@ command -v python3 >/dev/null 2>&1 || { echo "hook: python3 is missing; the post
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$root" || exit 0
 verdict=$(python3 .claude/hooks/bash_command.py) || { echo "hook: the command check failed to run" >&2; exit 2; }
-[ "$verdict" = commit ] || exit 0
+case "$verdict" in
+  commit) ;;
+  none | push\ * | merge\ *) exit 0 ;;
+  *) echo "hook: the post-commit check could not read the command: $verdict" >&2; exit 2 ;;
+esac
 sh .agents/harness/run-gates.sh post-commit >/dev/null 2>&1 || {
   echo "hook: gates failed on the new commit: see .loctx/reports/gates/$(git rev-parse HEAD^{tree}).log" >&2
   exit 2
