@@ -2,9 +2,10 @@
 id: "007"
 slug: desktop-todo
 version: "1.3.3"
-status: draft
+status: approved
 origin: user
-approvals: []
+approvals:
+  - { role: user, by: bluenyang, at: "2026-11-22", words: "승인", rev: "4df2fca" }
 waivers: []
 supersedes: null
 ---
