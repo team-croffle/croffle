@@ -36,6 +36,12 @@ const at = (offsetMs: number) => new Date(NOW.getTime() + offsetMs);
 const titles = (list: { schedule: Schedule }[]) => list.map((o) => o.schedule.title);
 
 describe('upcoming schedules', () => {
+  test('excludes todos even when due within 7 days', () => {
+    const event = schedule('event', at(DAY), at(DAY + HOUR));
+    const todo = schedule('todo', at(2 * DAY), at(2 * DAY), { kind: 'todo', completedAt: null });
+    assert.deepEqual(titles(selectUpcoming([event, todo], NOW)), ['event']);
+  });
+
   test('keeps schedules starting within 7 days', () => {
     const inside = schedule('inside', at(7 * DAY - HOUR), at(7 * DAY));
     const outside = schedule('outside', at(7 * DAY + 60_000), at(7 * DAY + HOUR));

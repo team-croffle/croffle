@@ -45,7 +45,10 @@ export const useUpcomingStore = defineStore('upcoming', () => {
   const upcoming = computed<UpcomingOccurrence[]>(() => selectUpcoming(schedules.value, now.value));
 
   const todayCount = computed(
-    () => schedules.value.flatMap((schedule) => occurrencesOnDate(schedule, now.value)).length,
+    () =>
+      schedules.value
+        .filter((schedule) => schedule.kind !== 'todo')
+        .flatMap((schedule) => occurrencesOnDate(schedule, now.value)).length,
   );
 
   const start = () => {

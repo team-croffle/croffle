@@ -216,7 +216,13 @@
     "versionTile": {
       "title": "About",
       "version": "Version {version}"
-    }
+    },
+    "todos": "To-Dos",
+    "emptyTodos": "No To-Dos",
+    "overdue": "Overdue",
+    "todoOpenHint": "Double-click to open the To-Do",
+    "todosLoading": "Loading To-Dos",
+    "todosError": "Could not load To-Dos"
   },
   "titleBar": {
     "toggleTheme": "Toggle theme",
@@ -322,6 +328,22 @@
     "occurrence": {
       "rescheduled": "Rescheduled",
       "editSeriesHint": "Changes here apply to every occurrence. To move only this one, drag it on the calendar."
+    },
+    "todo": {
+      "kindLabel": "Kind",
+      "kindEvent": "Event",
+      "kindTodo": "To-Do",
+      "dueDate": "Due date",
+      "dueTime": "Due time",
+      "noRecurrence": "A To-Do cannot repeat.",
+      "dueLabel": "To-Do · due {when}",
+      "status": "Completion",
+      "open": "Not done yet",
+      "doneAt": "Done on {when}",
+      "complete": "Done",
+      "reopen": "Not done",
+      "toggleAria": "Mark {title} as done",
+      "allDayHint": "Turn off to set the due time"
     }
   },
   "recurrenceSummary": {

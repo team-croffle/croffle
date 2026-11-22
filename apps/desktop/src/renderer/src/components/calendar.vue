@@ -14,6 +14,7 @@
   import { useI18n } from 'vue-i18n';
 
   import { Button } from '@/components/ui/button';
+  import { Checkbox } from '@/components/ui/checkbox';
   import { Icon } from '@/components/ui/icon';
   import {
     Select,
@@ -26,6 +27,7 @@
   import { useScheduleDrag } from '@/composables/use-schedule-drag';
   import { useAppSettingsStore } from '@/stores/app-settings-store';
   import { useScheduleStore } from '@/stores/schedule-store';
+  import { useTodoStore } from '@/stores/todo-store';
   import { useUiStore } from '@/stores/ui-store';
   import type { SelectedOccurrence } from '@/stores/ui-store';
   import {
@@ -41,6 +43,7 @@
   const scheduleStore = useScheduleStore();
   const appSettingsStore = useAppSettingsStore();
   const { events } = storeToRefs(scheduleStore);
+  const todoStore = useTodoStore();
   const { settings } = storeToRefs(appSettingsStore);
 
   // 캘린더 ref
@@ -322,6 +325,15 @@
     unsubscribeSettings?.();
   });
 
+  /** The check box of a To-Do on the calendar: done / not done, without opening the viewer. */
+  const toggleTodo = (event: EventApi, done: boolean) => {
+    const scheduleId = (event.extendedProps.scheduleId as string | undefined) || event.id;
+    const schedule = scheduleId ? scheduleStore.getScheduleById(scheduleId) : undefined;
+    if (schedule) {
+      void todoStore.setCompleted(schedule, done);
+    }
+  };
+
   // 스토어의 일정 데이터가 변경될 때마다 캘린더에 반영
   watch(
     () => events.value,
@@ -375,7 +387,29 @@
         </Button>
       </div>
     </div>
-    <FullCalendar ref="fullCalendarRef" :options="calendarOptions" class="h-full w-full flex-1" />
+    <FullCalendar ref="fullCalendarRef" :options="calendarOptions" class="h-full w-full flex-1">
+      <template #eventContent="arg">
+        <!-- A To-Do: a check box before the title (1.3.3). Its clicks do not open the viewer or
+             start a drag. Other events keep FullCalendar's own title markup. -->
+        <div v-if="arg.event.extendedProps.kind === 'todo'" class="croffle-todo-content">
+          <Checkbox
+            :model-value="arg.event.extendedProps.completed === true"
+            :aria-label="t('schedule.todo.toggleAria', { title: arg.event.title })"
+            @click.stop
+            @mousedown.stop
+            @pointerdown.stop
+            @touchstart.stop
+            @update:model-value="toggleTodo(arg.event, $event === true)"
+          />
+          <span class="croffle-todo-title">{{ arg.event.title }}</span>
+        </div>
+        <div v-else class="fc-event-main-frame">
+          <div class="fc-event-title-container">
+            <div class="fc-event-title fc-sticky">{{ arg.event.title }}</div>
+          </div>
+        </div>
+      </template>
+    </FullCalendar>
   </div>
 </template>
 
@@ -387,6 +421,30 @@
     border: 1px solid var(--croffle-border);
     border-radius: var(--radius-3xl);
     box-shadow: var(--shadow-surface);
+  }
+
+  /* 할 일: 체크 상자 + 제목, 끝낸 할 일은 취소선 · 흐린 글자 (DESIGN.md "To-Dos") */
+  .croffle-todo-content {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: calc(var(--spacing) * 1);
+    padding: 0 calc(var(--spacing) * 0.5);
+  }
+
+  .croffle-todo-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :deep(.croffle-todo-done) {
+    opacity: 0.6;
+  }
+
+  :deep(.croffle-todo-done .croffle-todo-title) {
+    text-decoration: line-through;
   }
 
   /* FullCalendar 본체 */
