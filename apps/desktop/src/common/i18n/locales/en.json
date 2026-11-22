@@ -422,7 +422,9 @@
   },
   "reminder": {
     "bodyAllDay": "{minutes} minutes before · All-day",
-    "bodyTimed": "Starts in {minutes} min · {time}"
+    "bodyTimed": "Starts in {minutes} min · {time}",
+    "bodyTodoAllDay": "{minutes} minutes before · All-day To-Do due",
+    "bodyTodoTimed": "Due in {minutes} min · {time}"
   },
   "calendar": {
     "today": "Today",
