@@ -222,6 +222,15 @@ One set, tinted with the ink color in light and deep black in dark (`--elevation
   calm sentence.
 - **Help text** describes what the app actually does and changes in the same change as the
   behaviour.
+- **To-Dos** (1.3.3). The schedule dialog picks the kind with two outline toggles (`aria-pressed`,
+  일정 / 할 일) at the top of 기본 정보. A To-Do has one 마감 field (the date, and the time unless
+  it is all-day); the recurrence select is disabled and its hint says 할 일은 반복할 수 없습니다.
+  Wherever a To-Do is listed — a calendar event, the selected day, the right sidebar's 할 일 list —
+  the `Checkbox` part sits before its title, and ticking it marks the To-Do done without opening
+  the viewer. A done To-Do stays where it was, struck through (`line-through`) and muted
+  (`text-muted-foreground`; 60% opacity on a colored calendar event). An overdue deadline is
+  `text-destructive` with 지남. The 할 일 list holds every open To-Do, earliest deadline first;
+  다가오는 일정 and the 오늘 일정 count leave To-Dos out.
 
 ## Type
 

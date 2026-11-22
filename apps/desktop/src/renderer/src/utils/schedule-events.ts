@@ -35,8 +35,14 @@ function toSeriesEvent(schedule: Schedule): EventInput {
     borderColor: schedule.colorLabel,
     textColor: '#FFFFFF',
     display: schedule.isAllDay ? 'auto' : 'block',
+    classNames:
+      schedule.kind === 'todo'
+        ? ['croffle-todo', ...(schedule.completedAt ? ['croffle-todo-done'] : [])]
+        : [],
     extendedProps: {
       scheduleId: schedule.id,
+      kind: schedule.kind ?? 'event',
+      completed: Boolean(schedule.completedAt),
       description: schedule.description,
       location: schedule.location,
       tags: schedule.tags,

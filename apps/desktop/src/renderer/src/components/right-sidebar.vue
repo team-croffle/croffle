@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { UpcomingOccurrence } from '@croffledev/common';
+  import type { Schedule, UpcomingOccurrence } from '@croffledev/common';
   import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
   import { computed } from 'vue';
@@ -9,6 +9,7 @@
   import { Badge } from '@/components/ui/badge';
   import { Button } from '@/components/ui/button';
   import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+  import { Checkbox } from '@/components/ui/checkbox';
   import { Icon } from '@/components/ui/icon';
   import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
   import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
@@ -16,6 +17,7 @@
   import { SHORTCUT_RIGHT_SIDEBAR } from '@/composables/use-global-shortcuts';
   import { cn } from '@/lib/utils';
   import { useScheduleStore } from '@/stores/schedule-store';
+  import { useTodoStore } from '@/stores/todo-store';
   import { useUiStore } from '@/stores/ui-store';
   import { useUpcomingStore } from '@/stores/upcoming-store';
   import { useUpdateStore } from '@/stores/update-store';
@@ -27,6 +29,8 @@
   const scheduleStore = useScheduleStore();
   const upcomingStore = useUpcomingStore();
   upcomingStore.start();
+  const todoStore = useTodoStore();
+  todoStore.start();
   const { t, locale } = useI18n();
 
   /** "11월 20일 (금) 오후 3:00", all-day: date only (app language). */
@@ -48,6 +52,29 @@
       scheduleStore.upsertSchedule(occurrence.schedule);
     }
     uiStore.openScheduleModal('view', occurrence.schedule.id, detail);
+  };
+
+  /** "11월 25일 (수) 오전 9:00", all-day: date only (app language). */
+  const dueLabel = (schedule: Schedule) =>
+    new Intl.DateTimeFormat(locale.value === 'ko' ? 'ko-KR' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+      ...(schedule.isAllDay ? {} : { hour: 'numeric', minute: '2-digit' }),
+    }).format(new Date(schedule.endDate));
+
+  /** Past its deadline: an all-day To-Do is overdue from the next day on. */
+  const isOverdue = (schedule: Schedule) => {
+    const due = dayjs(schedule.endDate);
+    return schedule.isAllDay ? due.endOf('day').isBefore(dayjs()) : due.isBefore(dayjs());
+  };
+
+  const openTodo = (schedule: Schedule) => {
+    // The viewer reads the calendar's store, which holds only the month on screen.
+    if (!scheduleStore.getScheduleById(schedule.id)) {
+      scheduleStore.upsertSchedule(schedule);
+    }
+    uiStore.openScheduleModal('view', schedule.id);
   };
 
   const { rightSidebarOpen, selectedDate } = storeToRefs(uiStore);
@@ -198,9 +225,23 @@
                 class="flex cursor-pointer items-center gap-2 rounded-md p-2 transition-colors hover:bg-accent"
                 @click="handleEditTodo(occurrence)"
               >
-                <Icon icon="lucide:square-check" class="text-muted-foreground size-4 shrink-0" />
+                <Checkbox
+                  v-if="occurrence.schedule.kind === 'todo'"
+                  :model-value="Boolean(occurrence.schedule.completedAt)"
+                  :aria-label="$t('schedule.todo.toggleAria', { title: occurrence.schedule.title })"
+                  @click.stop
+                  @update:model-value="todoStore.setCompleted(occurrence.schedule, $event === true)"
+                />
+                <Icon v-else icon="lucide:calendar" class="text-muted-foreground size-4 shrink-0" />
 
-                <span class="text-foreground flex-1 truncate text-sm">
+                <span
+                  class="flex-1 truncate text-sm"
+                  :class="
+                    occurrence.schedule.completedAt
+                      ? 'text-muted-foreground line-through'
+                      : 'text-foreground'
+                  "
+                >
                   {{ occurrence.schedule.title }}
                 </span>
 
@@ -222,6 +263,65 @@
                 </Badge>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card class="bg-croffle-sidebar-content overflow-hidden">
+          <CardHeader class="space-y-0 px-4 pt-0 pb-2">
+            <CardTitle class="flex items-center gap-2 text-sm font-bold">
+              <Icon icon="lucide:square-check" class="size-4" />
+              <span>{{ $t('rightSidebar.todos') }}</span>
+              <Badge v-if="todoStore.openTodos.length > 0" variant="secondary" class="ml-auto">
+                {{ todoStore.openTodos.length }}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent
+            v-if="todoStore.openTodos.length === 0"
+            class="flex min-h-25 items-center justify-center text-sm"
+            :class="todoStore.status === 'error' ? 'text-destructive' : 'text-croffle-text'"
+          >
+            <template v-if="todoStore.status === 'loading'">
+              {{ $t('rightSidebar.todosLoading') }}
+            </template>
+            <template v-else-if="todoStore.status === 'error'">
+              {{ $t('rightSidebar.todosError') }}
+            </template>
+            <template v-else>{{ $t('rightSidebar.emptyTodos') }}</template>
+          </CardContent>
+          <CardContent v-else class="px-2 pb-2">
+            <ul class="flex flex-col gap-0.5">
+              <li v-for="todo in todoStore.openTodos" :key="todo.id">
+                <div
+                  role="button"
+                  tabindex="0"
+                  class="hover:bg-croffle-hover focus-visible:ring-ring/50 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 outline-none focus-visible:ring-[3px]"
+                  :title="$t('rightSidebar.todoOpenHint')"
+                  @dblclick="openTodo(todo)"
+                  @keydown.enter="openTodo(todo)"
+                >
+                  <Checkbox
+                    :model-value="false"
+                    :aria-label="$t('schedule.todo.toggleAria', { title: todo.title })"
+                    @click.stop
+                    @dblclick.stop
+                    @update:model-value="todoStore.setCompleted(todo, $event === true)"
+                  />
+                  <span class="min-w-0 flex-1">
+                    <span class="text-foreground block truncate text-sm">{{ todo.title }}</span>
+                    <span
+                      class="block text-xs"
+                      :class="isOverdue(todo) ? 'text-destructive' : 'text-muted-foreground'"
+                    >
+                      {{ dueLabel(todo) }}
+                      <template v-if="isOverdue(todo)">
+                        · {{ $t('rightSidebar.overdue') }}</template
+                      >
+                    </span>
+                  </span>
+                </div>
+              </li>
+            </ul>
           </CardContent>
         </Card>
 

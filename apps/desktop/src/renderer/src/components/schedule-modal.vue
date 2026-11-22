@@ -158,6 +158,8 @@
   };
 
   const form = reactive({
+    /** 'todo' = a To-Do: a deadline only, no recurrence (1.3.3). */
+    kind: 'event' as 'event' | 'todo',
     title: '',
     description: '',
     location: '',
@@ -216,6 +218,7 @@
   };
 
   const resetForm = () => {
+    form.kind = 'event';
     form.title = '';
     form.description = '';
     form.location = '';
@@ -234,6 +237,7 @@
   const fillFormFromSchedule = (schedule: Schedule) => {
     const cloned = structuredClone(toRaw(schedule));
 
+    form.kind = cloned.kind ?? 'event';
     form.title = cloned.title ?? '';
     form.description = cloned.description ?? '';
     form.location = cloned.location ?? '';
@@ -295,8 +299,11 @@
    * 시작을 종료보다 뒤로 옮기면 종료를 시작 + 1h로 따라오게 한다.
    * 시작을 앞으로 당길 때는 사용자가 정한 종료를 그대로 둔다. 종일 일정은 시각을 쓰지 않으므로 제외.
    */
+  const isTodo = computed(() => form.kind === 'todo');
+
   const ensureEndAfterStart = () => {
-    if (form.isAllDay || !startDate.value || !endDate.value) {
+    // A To-Do has only a deadline (the end fields); its start follows it on save.
+    if (isTodo.value || form.isAllDay || !startDate.value || !endDate.value) {
       return;
     }
     if (endDate.value.compare(startDate.value) < 0) {
@@ -312,6 +319,11 @@
   watch([startTime, startDate], ensureEndAfterStart);
 
   const handleSave = async () => {
+    if (isTodo.value && endDate.value) {
+      // The deadline is the only date of a To-Do.
+      startDate.value = endDate.value;
+      startTime.value = endTime.value;
+    }
     if (!form.title.trim() || !startDate.value || !endDate.value) {
       return;
     }
@@ -352,8 +364,14 @@
       toast.error(t('schedule.invalidRule'));
       return;
     }
+    if (isTodo.value) {
+      // A To-Do does not repeat: a rule left from an event is cleared ('' replaces it on update).
+      start = end;
+      recurrenceRule = '';
+    }
 
     const payload: Partial<Schedule> = {
+      kind: form.kind,
       title: form.title.trim(),
       description: form.description.trim(),
       location: form.location.trim(),
@@ -396,6 +414,25 @@
       }
     } catch (error) {
       toast.error(t('schedule.deleteFailed', { error: JSON.stringify(error) }));
+    }
+  };
+
+  const setKind = (kind: 'event' | 'todo') => {
+    form.kind = kind;
+  };
+
+  /** Viewer: mark the To-Do done (now) or open again. */
+  const toggleViewedCompleted = async () => {
+    const schedule = viewedSchedule.value;
+    if (!schedule || schedule.kind !== 'todo') {
+      return;
+    }
+    try {
+      await scheduleStore.updateScheduleById(schedule.id, {
+        completedAt: schedule.completedAt ? null : new Date(),
+      });
+    } catch (error) {
+      toast.error(t('schedule.saveFailed', { error: JSON.stringify(error) }));
     }
   };
 
@@ -667,9 +704,31 @@
     return `${formatViewDate(start)} ${formatTimeFromDate(start)} – ${formatViewDate(end)} ${formatTimeFromDate(end)}`;
   });
 
-  const viewRecurrence = computed(() => {
+  const viewIsTodo = computed(() => viewedSchedule.value?.kind === 'todo');
+
+  /** "할 일 · 마감 11월 25일 (수) 09:00", all-day: the date only. */
+  const viewDueLabel = computed(() => {
     const schedule = viewedSchedule.value;
     if (!schedule) {
+      return '';
+    }
+    const due = new Date(schedule.endDate);
+    const when = schedule.isAllDay
+      ? formatViewDate(due)
+      : `${formatViewDate(due)} ${formatTimeFromDate(due)}`;
+    return t('schedule.todo.dueLabel', { when });
+  });
+
+  const viewCompletedLabel = computed(() => {
+    const completedAt = viewedSchedule.value?.completedAt;
+    return completedAt
+      ? t('schedule.todo.doneAt', { when: formatViewDate(completedAt) })
+      : t('schedule.todo.open');
+  });
+
+  const viewRecurrence = computed(() => {
+    const schedule = viewedSchedule.value;
+    if (!schedule || schedule.kind === 'todo') {
       return null;
     }
     return describeRecurrence(
@@ -800,7 +859,7 @@
               <div class="min-w-0">
                 <dt class="sr-only">{{ $t('schedule.dateTime') }}</dt>
                 <dd class="text-foreground flex flex-wrap items-center gap-2">
-                  <span>{{ viewDateLabel }}</span>
+                  <span>{{ viewIsTodo ? viewDueLabel : viewDateLabel }}</span>
                   <Badge v-if="selectedOccurrence?.isOverride" variant="outline">
                     <Icon icon="lucide:calendar-clock" class="size-3" />
                     {{ $t('schedule.occurrence.rescheduled') }}
@@ -809,6 +868,17 @@
                 <dd v-if="viewedSchedule.isAllDay" class="text-muted-foreground text-xs">
                   {{ $t('schedule.allDay') }}
                 </dd>
+              </div>
+            </div>
+
+            <div v-if="viewIsTodo" class="flex items-start gap-3">
+              <Icon
+                :icon="viewedSchedule.completedAt ? 'lucide:circle-check' : 'lucide:circle'"
+                class="text-muted-foreground mt-0.5 size-4 shrink-0"
+              />
+              <div class="min-w-0">
+                <dt class="sr-only">{{ $t('schedule.todo.status') }}</dt>
+                <dd class="text-foreground">{{ viewCompletedLabel }}</dd>
               </div>
             </div>
 
@@ -899,6 +969,31 @@
                 {{ $t('schedule.basics') }}
               </FieldLegend>
 
+              <div
+                role="group"
+                class="grid grid-cols-2 gap-2"
+                :aria-label="$t('schedule.todo.kindLabel')"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  :aria-pressed="!isTodo"
+                  @click="setKind('event')"
+                >
+                  <Icon icon="lucide:calendar" />
+                  {{ $t('schedule.todo.kindEvent') }}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  :aria-pressed="isTodo"
+                  @click="setKind('todo')"
+                >
+                  <Icon icon="lucide:square-check" />
+                  {{ $t('schedule.todo.kindTodo') }}
+                </Button>
+              </div>
+
               <Field>
                 <FieldLabel for="schedule-title">
                   {{ $t('schedule.title') }} <span class="text-destructive">*</span>
@@ -957,7 +1052,7 @@
                     {{ $t('schedule.allDay') }}
                   </FieldLabel>
                   <FieldDescription class="text-xs">
-                    {{ $t('schedule.allDayHint') }}
+                    {{ isTodo ? $t('schedule.todo.allDayHint') : $t('schedule.allDayHint') }}
                   </FieldDescription>
                 </div>
                 <Switch
@@ -968,8 +1063,8 @@
                 />
               </Field>
 
-              <div class="grid grid-cols-2 gap-3">
-                <Field>
+              <div class="grid gap-3" :class="isTodo ? 'grid-cols-1' : 'grid-cols-2'">
+                <Field v-if="!isTodo">
                   <FieldLabel>
                     {{ $t('schedule.startDate') }}
                   </FieldLabel>
@@ -1005,7 +1100,7 @@
 
                 <Field>
                   <FieldLabel>
-                    {{ $t('schedule.endDate') }}
+                    {{ isTodo ? $t('schedule.todo.dueDate') : $t('schedule.endDate') }}
                   </FieldLabel>
                   <Popover v-model:open="isEndCalendarOpen">
                     <PopoverTrigger as-child>
@@ -1040,9 +1135,10 @@
 
               <div
                 v-if="!form.isAllDay"
-                class="grid grid-cols-2 gap-3 duration-200 animate-in fade-in-0 slide-in-from-top-1"
+                class="grid gap-3 duration-200 animate-in fade-in-0 slide-in-from-top-1"
+                :class="isTodo ? 'grid-cols-1' : 'grid-cols-2'"
               >
-                <Field>
+                <Field v-if="!isTodo">
                   <FieldLabel for="schedule-start-time">
                     {{ $t('schedule.startTime') }}
                   </FieldLabel>
@@ -1050,7 +1146,7 @@
                 </Field>
                 <Field>
                   <FieldLabel for="schedule-end-time">
-                    {{ $t('schedule.endTime') }}
+                    {{ isTodo ? $t('schedule.todo.dueTime') : $t('schedule.endTime') }}
                   </FieldLabel>
                   <TimeField id="schedule-end-time" v-model="endTime" />
                 </Field>
@@ -1303,7 +1399,8 @@
               <Field>
                 <FieldLabel for="schedule-recurrence">{{ $t('schedule.recurrence') }}</FieldLabel>
                 <Select
-                  :model-value="recurrence.preset"
+                  :model-value="isTodo ? 'none' : recurrence.preset"
+                  :disabled="isTodo"
                   @update:model-value="onRecurrencePresetChange"
                 >
                   <SelectTrigger id="schedule-recurrence" class="w-full">
@@ -1320,11 +1417,11 @@
                   </SelectContent>
                 </Select>
                 <FieldDescription>
-                  {{ $t('schedule.recurrenceHint') }}
+                  {{ isTodo ? $t('schedule.todo.noRecurrence') : $t('schedule.recurrenceHint') }}
                 </FieldDescription>
               </Field>
 
-              <Field v-if="showInterval">
+              <Field v-if="showInterval && !isTodo">
                 <FieldLabel for="schedule-recurrence-interval">
                   {{ $t('schedule.interval') }}
                 </FieldLabel>
@@ -1346,7 +1443,7 @@
                 </div>
               </Field>
 
-              <Field v-if="showWeekdays">
+              <Field v-if="showWeekdays && !isTodo">
                 <FieldLabel>{{ $t('schedule.weekdays') }}</FieldLabel>
                 <div class="flex flex-wrap gap-1.5">
                   <Button
@@ -1364,7 +1461,7 @@
                 </div>
               </Field>
 
-              <template v-if="recurrence.preset !== 'none'">
+              <template v-if="recurrence.preset !== 'none' && !isTodo">
                 <Field>
                   <FieldLabel for="schedule-recurrence-end">
                     {{ $t('schedule.recurrenceEnd') }}
@@ -1435,7 +1532,7 @@
                 </Field>
               </template>
 
-              <Field v-if="recurrence.preset === 'custom'">
+              <Field v-if="recurrence.preset === 'custom' && !isTodo">
                 <FieldLabel for="schedule-recurrence-raw">
                   {{ $t('schedule.customRrule') }}
                 </FieldLabel>
@@ -1468,6 +1565,20 @@
         </div>
 
         <div v-if="isViewMode" class="flex shrink-0 gap-2">
+          <Button
+            v-if="viewIsTodo"
+            type="button"
+            variant="outline"
+            class="min-w-20"
+            @click="toggleViewedCompleted"
+          >
+            <Icon :icon="viewedSchedule?.completedAt ? 'lucide:rotate-ccw' : 'lucide:check'" />
+            {{
+              viewedSchedule?.completedAt
+                ? $t('schedule.todo.reopen')
+                : $t('schedule.todo.complete')
+            }}
+          </Button>
           <Button
             type="button"
             variant="outline"

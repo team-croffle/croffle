@@ -35,6 +35,10 @@ export function selectUpcoming(
   const result: UpcomingOccurrence[] = [];
 
   for (const schedule of schedules) {
+    // To-Dos have their own list (right sidebar); upcoming is for events (1.3.3).
+    if (schedule.kind === 'todo') {
+      continue;
+    }
     const seriesStart = toDate(schedule.startDate);
     const duration = Math.max(toDate(schedule.endDate).getTime() - seriesStart.getTime(), 0);
     const recurring = Boolean(schedule.recurrenceRule?.trim());

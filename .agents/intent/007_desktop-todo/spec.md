@@ -67,7 +67,7 @@ summary_for_user: |
 - [x] W-3 동기화 스위치 유지 — `sync-config.ts` 와 그 테스트. (S-5)
 - [x] W-4 할 일 데이터 — 공개 타입 · 데스크톱 사본 · Changeset, 마이그레이션 0009, 매퍼 · 서비스 검증, 와이어 · 픽스처, `getOpenTodos` + 내부 IPC · preload, 테스트. (S-6 ~ S-9, S-13 의 IPC)
 - [x] W-5 할 일 리마인더 — 후보 제외 · 본문 문구 · 테스트. (S-10)
-- [ ] W-6 할 일 화면 — 일정 모달 전환 · 마감 칸 · 반복 안내 · 보기 화면 완료 버튼, 캘린더 체크 상자 · 취소선 · 드래그 확인, 오른쪽 사이드바 "할 일" 칸, 다가오는 일정 · 오늘 개수 제외, ko · en, DESIGN.md. (S-11 ~ S-15)
+- [x] W-6 할 일 화면 — 일정 모달 전환 · 마감 칸 · 반복 안내 · 보기 화면 완료 버튼, 캘린더 체크 상자 · 취소선 · 드래그 확인, 오른쪽 사이드바 "할 일" 칸, 다가오는 일정 · 오늘 개수 제외, ko · en, DESIGN.md. (S-11 ~ S-15)
 - [ ] W-7 문서 — README · README.ko, `packages/types/README.md`. (S-16, 릴리스 노트는 release 단계)
 
 ## 검증 기준
@@ -254,6 +254,7 @@ summary_for_user: |
 - A-1 (2026-11-22, W-1 · W-2) 루트 테스트 실행 명령을 `node --test scripts/test/` 에서 `node --test 'scripts/test/*.test.mjs'` 로 · Node 24 의 `node --test` 는 디렉터리 인자를 파일로 읽어 `Cannot find module …/scripts/test` 로 실패함(사전 실행 `dryrun/v1-test-repo.txt` 는 디렉터리가 없어서 난 다른 오류라 놓침). S-4 · 설계는 바꿈. V-1 ⑦ · V-5 b · c 의 명령 · 기대 문자열 정정은 test 전에 사용자 승인(`kind: change`)을 받음 · W-1 커밋
 - A-2 (2026-11-22, W-4) 미완료 할 일 내부 API 를 `croffleInternal.todos.listOpen()` 대신 기존 내부 일정 API 옆 `croffleInternal.calendar.schedules.listOpenTodos()`(IPC `schedule:listOpenTodos`)로 · 내부 일정 API(`InternalSchedulesApi`)가 이미 있어 새 묶음을 만들 이유가 없음. 공유 픽스처 12 에 완료한 할 일 사례(case 2, `row-3`)를 더함 — 뒤 사례들의 번호가 하나씩 밀림(V-8 이 이름으로 부르는 case 0 · 1 은 그대로) · W-4 커밋
 - A-3 (2026-11-22, W-5) `formatReminderBody` 를 `src/common/reminder-format.ts` 로 옮기고, `reminder.ts` 에는 본문의 카탈로그 키 · 값을 고르는 순수 함수 `reminderBody` 를 둠 · `reminder.ts` 가 i18n 을 부르면 i18n 이 TypeScript enum(`AppSettingLanguage`)을 불러 `node --test`(strip-only)에서 읽히지 않음. V-9 의 네 번째 테스트는 `reminderBody` 와 ko · en 카탈로그 파일로 앱과 같은 본문을 만들어 대조함(이름 · 기대는 그대로) · W-5 커밋
+- A-4 (2026-11-22, W-6) 화면의 작은 조정 세 가지 · ① 오른쪽 사이드바 "할 일" 칸에 불러오는 중 · 오류 상태를 둠(DESIGN.md "Every panel that loads data has a loading, an error and an empty state"), ② 고른 날 목록에서 일정(할 일이 아닌 것)의 아이콘을 체크 표시 대신 달력으로(체크 상자와 헷갈리지 않게), ③ 할 일일 때 "하루 종일" 안내를 "끄면 마감 시각을 정합니다"로(시작 · 종료 시각이 없으므로) · W-6 커밋
 
 ## 우려
 - **1.3.2 이하 기기와 섞인 동기화** — 그 기기가 할 일을 고치면 `kind` · `completedAt` 없이 올라가 모든 기기에서 일반 일정이 됩니다(intent 에이전트가 정한 것). S-9 는 적용 실패만 막고 이 손실은 막지 못합니다. 릴리스 노트로 알립니다.
