@@ -68,7 +68,7 @@ summary_for_user: |
 - [x] W-4 할 일 데이터 — 공개 타입 · 데스크톱 사본 · Changeset, 마이그레이션 0009, 매퍼 · 서비스 검증, 와이어 · 픽스처, `getOpenTodos` + 내부 IPC · preload, 테스트. (S-6 ~ S-9, S-13 의 IPC)
 - [x] W-5 할 일 리마인더 — 후보 제외 · 본문 문구 · 테스트. (S-10)
 - [x] W-6 할 일 화면 — 일정 모달 전환 · 마감 칸 · 반복 안내 · 보기 화면 완료 버튼, 캘린더 체크 상자 · 취소선 · 드래그 확인, 오른쪽 사이드바 "할 일" 칸, 다가오는 일정 · 오늘 개수 제외, ko · en, DESIGN.md. (S-11 ~ S-15)
-- [ ] W-7 문서 — README · README.ko, `packages/types/README.md`. (S-16, 릴리스 노트는 release 단계)
+- [x] W-7 문서 — README · README.ko, `packages/types/README.md`. (S-16, 릴리스 노트는 release 단계)
 
 ## 검증 기준
 - **V-1 게이트 (S-1 ~ S-16, W-1 ~ W-7)** — 저장소 루트에서 아래 일곱 명령을 각각 따로 실행해 `.loctx/reports/1.3.3/test/` 아래 지정한 원본 파일(첫 줄 `$ 명령`, 본문 stdout · stderr 전체, 끝 줄 `exit=N`)에 남깁니다: ① `pnpm typecheck` → `v1-typecheck.txt`, ② `pnpm lint` → `v1-lint.txt`, ③ `pnpm format:check` → `v1-format.txt`, ④ `pnpm -r test` → `v1-test.txt`, ⑤ `pnpm build` → `v1-build.txt`, ⑥ `pnpm --filter @croffledev/croffle-cli build` → `v1-build-cli.txt`, ⑦ `node --test scripts/test/` → `v1-test-repo.txt`.

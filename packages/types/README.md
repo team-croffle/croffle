@@ -93,6 +93,8 @@ Items appear only after `onContextMenu` attaches an action. `onContextMenu(id, h
 | `storage`, `session`, `configuration` | Context only; already bound to your extension id                                                 |
 | `ui`                                  | Context only; `registerView`, `registerConfigurationTab`, `onContextMenu`, `registerContextMenu` |
 
+**To-Dos.** A `Schedule` with `kind: 'todo'` is a To-Do (desktop 1.3.3): its `endDate` is the deadline and its `startDate` equals it, it has no `recurrenceRule`, and `completedAt` is when it was done (`null` or missing = not done). `kind` missing means `'event'`, which never has `completedAt`. Both fields are optional, so schedules from older hosts read as events.
+
 **Events.** `context.event.emit('ping')` is delivered as `<extensionId>:ping`; a name that already starts with your id is sent as is. Core events (`AppEventType`) and other extensions' prefixes cannot be emitted — they are dropped with a console warning. `on(name)` subscribes to anything, core events included.
 
 ### Migrating from 1.x to 2.0
