@@ -19,8 +19,8 @@ summary_for_user: |
   - `bash-command.test.mjs`: 기대 결과 표의 모든 행을 `classify` 로, JSON 이 아닌 입력은 CLI 로 시험합니다.
   - `post-bash.test.mjs`: 임시 저장소에서 `post-bash.sh` 를 돌려 S-3 을 시험합니다(오래된 `HEAD` → exit 0, 방금 커밋한 `HEAD` → 게이트 단계로 감).
   - `check-spec-checks.test.mjs`, `check-design-commit-msg.test.mjs`: 인계 문서의 두 표 전체. 임시 저장소(`mkdtemp` + `git init`, 사용자 이름 · 메일은 저장소 로컬 설정)에서 스크립트를 실행합니다.
-  - 루트 `package.json` 에 `"test:repo": "node --test scripts/test/"`.
-  - CI(`.github/workflows/ci.yml`): 경로 필터에 `repo`(`scripts/**`, `.claude/hooks/**`, 그리고 root 필터가 잡는 파일)를 더하고, Node 만 설치해 `node --test scripts/test/` 를 돌리는 작업 `repo-scripts` 를 둡니다(pnpm 설치 없음). `CI result` 의 `needs` 에 넣습니다.
+  - 루트 `package.json` 에 `"test:repo": "node --test 'scripts/test/*.test.mjs'"`.
+  - CI(`.github/workflows/ci.yml`): 경로 필터에 `repo`(`scripts/**`, `.claude/hooks/**`, 그리고 root 필터가 잡는 파일)를 더하고, Node 만 설치해 `node --test 'scripts/test/*.test.mjs'` 를 돌리는 작업(A-1) `repo-scripts` 를 둡니다(pnpm 설치 없음). `CI result` 의 `needs` 에 넣습니다.
 
 ### 동기화 스위치
 - S-5 (바라는 결과 "로그아웃했다가 다시 로그인하면 동기화 스위치가 로그아웃 전 상태로") — 로그아웃(`resetBinding`)은 `enabled` 를 건드리지 않습니다. 로그아웃 중에는 계정 · 토큰이 없어 동기화가 돌지 않고(`sync-service.ts:85`), 다시 로그인하면 남은 `enabled` 대로 돕니다. 서버 주소를 바꾸는 것(`setServer`)은 새 연결이므로 지금처럼 `enabled` 를 끕니다. 서버를 지우면(`removeServer`) 행이 없어집니다. 설정 화면의 스위치는 로그아웃 중에 남은 값을 보이되 지금처럼 비활성입니다.
@@ -62,7 +62,7 @@ summary_for_user: |
 - **테스트(데스크톱)** — `test/todo.test.ts`(할 일 규칙을 DB 없는 `src/main/calendar/schedule-kind.ts` 로 빼서 서비스가 쓰게 하고: 잘못된 `kind` 거절, 할 일 + 반복 거절, 할 일의 시작 = 마감, 일정 + `completedAt` 거절, 고치기에서 빠진 필드 유지, 매퍼 왕복 · `kind` 없는 가져오기 = 일정, 0009 의 열 · 기본값. 미완료 할 일 조회는 V-11 화면 검사로 봄), `test/reminder.test.ts`(완료한 할 일 제외, 미완료 할 일의 알림 시각 = 마감 − 분, 종일 할 일 = 0시 − 분, 일정은 그대로), `test/sync-protocol.test.ts` 는 픽스처로 두 열 + `kind` 없는 와이어 행 사례, `test/upcoming.test.ts` 에 할 일 제외 사례, `test/outbox-triggers.test.ts` 는 0009 적용 뒤 트리거 유지를 그대로 봄.
 
 ## 작업 단위
-- [ ] W-1 hook 판별기 Node 이전 — `bash-command.mjs` · `scripts/test/bash-command.test.mjs` · 파이썬 기준 출력, 그다음 `pre-bash.sh` · `post-bash.sh` 호출 줄 · 주석, `bash_command.py` 삭제, S-3 신선도와 `post-bash.test.mjs`. (S-1 · S-2 · S-3)
+- [x] W-1 hook 판별기 Node 이전 — `bash-command.mjs` · `scripts/test/bash-command.test.mjs` · 파이썬 기준 출력, 그다음 `pre-bash.sh` · `post-bash.sh` 호출 줄 · 주석, `bash_command.py` 삭제, S-3 신선도와 `post-bash.test.mjs`. (S-1 · S-2 · S-3)
 - [ ] W-2 검사 스크립트 테스트와 실행 경로 — `check-spec-checks.test.mjs` · `check-design-commit-msg.test.mjs`, 루트 `test:repo`, CI `repo` 필터 · `repo-scripts` 작업. (S-4)
 - [ ] W-3 동기화 스위치 유지 — `sync-config.ts` 와 그 테스트. (S-5)
 - [ ] W-4 할 일 데이터 — 공개 타입 · 데스크톱 사본 · Changeset, 마이그레이션 0009, 매퍼 · 서비스 검증, 와이어 · 픽스처, `getOpenTodos` + 내부 IPC · preload, 테스트. (S-6 ~ S-9, S-13 의 IPC)
@@ -251,7 +251,7 @@ summary_for_user: |
   - 사전 실행: release 단계 — 릴리스 노트가 아직 없음. 파일 이름은 기존 `.loctx/release/1.3.2-rc.2_Pre-Release.md` 의 형식
 
 ## 조정 기록
-—
+- A-1 (2026-11-22, W-1 · W-2) 루트 테스트 실행 명령을 `node --test scripts/test/` 에서 `node --test 'scripts/test/*.test.mjs'` 로 · Node 24 의 `node --test` 는 디렉터리 인자를 파일로 읽어 `Cannot find module …/scripts/test` 로 실패함(사전 실행 `dryrun/v1-test-repo.txt` 는 디렉터리가 없어서 난 다른 오류라 놓침). S-4 · 설계는 바꿈. V-1 ⑦ · V-5 b · c 의 명령 · 기대 문자열 정정은 test 전에 사용자 승인(`kind: change`)을 받음 · W-1 커밋
 
 ## 우려
 - **1.3.2 이하 기기와 섞인 동기화** — 그 기기가 할 일을 고치면 `kind` · `completedAt` 없이 올라가 모든 기기에서 일반 일정이 됩니다(intent 에이전트가 정한 것). S-9 는 적용 실패만 막고 이 손실은 막지 못합니다. 릴리스 노트로 알립니다.
