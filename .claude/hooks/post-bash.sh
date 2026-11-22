@@ -4,15 +4,22 @@
 # The gates check HEAD only, so make one commit per command. Every commit of the branch (since
 # origin/master) without a clean passing run is named, so that it can be filled with
 # `sh .agents/harness/run-gates.sh audit` on that commit.
-command -v python3 >/dev/null 2>&1 || { echo "hook: python3 is missing; the post-commit gates did not run" >&2; exit 2; }
+# Tests: scripts/test/post-bash.test.mjs.
+command -v node >/dev/null 2>&1 || { echo "hook: node is missing; the post-commit gates did not run" >&2; exit 2; }
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$root" || exit 0
-verdict=$(python3 .claude/hooks/bash_command.py) || { echo "hook: the command check failed to run" >&2; exit 2; }
+verdict=$(node .claude/hooks/bash-command.mjs) || { echo "hook: the command check failed to run" >&2; exit 2; }
 case "$verdict" in
   commit) ;;
   none | push\ * | merge\ *) exit 0 ;;
   *) echo "hook: the post-commit check could not read the command: $verdict" >&2; exit 2 ;;
 esac
+# A commit made in another repository (`cd /tmp/x && git commit …`) leaves this repository's HEAD
+# as it was: if HEAD is older than 120 seconds, the commit was not made here and the gates do not
+# run. Limit: a commit elsewhere within 120 seconds of one here still runs them (harmless).
+now=$(date +%s)
+committed=$(git log -1 --format=%ct 2>/dev/null) || exit 0
+[ $((now - committed)) -gt 120 ] && exit 0
 sh .agents/harness/run-gates.sh post-commit >/dev/null 2>&1 || {
   echo "hook: gates failed on the new commit: see .loctx/reports/gates/$(git rev-parse HEAD^{tree}).log" >&2
   exit 2
