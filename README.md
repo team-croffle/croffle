@@ -23,6 +23,7 @@ We provide a **powerful extension system** that lets you build your own producti
 
 - **Calendar views**: Day, week, month, and year, switched from the toolbar dropdown, with a default view, week-start and time-format preferences. **Today** jumps back to today from any date.
 - **Rich schedules**: Priorities, recurrence, color labels, tags, multiple reminders per schedule, and JSON import/export.
+- **To-Dos**: Switch a new schedule to a To-Do: it has a due date (and time) instead of a start and end, and reminds you before the deadline. Tick it on the calendar to mark it done; done To-Dos stay, struck through. The right sidebar lists every open To-Do by deadline and marks overdue ones. To-Dos do not repeat.
 - **Drag to reschedule**: Drag a schedule to another day; its time and length stay. For a repeating schedule, move just that occurrence or the whole series. Moved occurrences are marked as rescheduled.
 - **View, then edit**: Clicking a schedule opens a read-only view of that occurrence with a recurrence summary; switch to the editor with one click.
 - **Desktop optimized**: Built for large screens and keyboard-driven use.
