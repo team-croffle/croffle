@@ -7,6 +7,7 @@ export * from './models';
 export * from './recurrence';
 export * from './recurrence-exceptions';
 export * from './reminder';
+export * from './reminder-format';
 export * from './upcoming';
 export * from './update-status';
 export * from './settings-apply';

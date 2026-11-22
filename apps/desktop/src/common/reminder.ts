@@ -1,4 +1,3 @@
-import { t } from './i18n';
 import type { ScheduleException } from './models/schedule';
 import { listOccurrenceStarts } from './occurrences';
 
@@ -17,6 +16,10 @@ export type ReminderScheduleInput = {
   reminders?: number[];
   /** Per-occurrence overrides (recurring schedules only). */
   exceptions?: Pick<ScheduleException, 'occurrenceStart' | 'startDate' | 'cancelled'>[];
+  /** 'todo': start = deadline, so the reminder counts from the deadline (1.3.3). Missing = event. */
+  kind?: 'event' | 'todo';
+  /** A done To-Do does not remind. */
+  completedAt?: Date | null;
 };
 
 export type ReminderCandidate = {
@@ -26,6 +29,8 @@ export type ReminderCandidate = {
   remindAt: Date;
   reminderMinutes: number;
   isAllDay: boolean;
+  /** A To-Do: the occurrence start is its deadline. */
+  isTodo: boolean;
 };
 
 export const MAX_REMINDER_MINUTES = 10_080;
@@ -75,6 +80,9 @@ export function buildReminderCandidates(
   const candidates: ReminderCandidate[] = [];
 
   for (const schedule of schedules) {
+    if (schedule.kind === 'todo' && schedule.completedAt) {
+      continue;
+    }
     const minutesList = resolveReminderMinutesList(schedule, defaultReminderMinutes);
     if (minutesList.length === 0) {
       continue;
@@ -98,6 +106,7 @@ export function buildReminderCandidates(
           remindAt,
           reminderMinutes: minutes,
           isAllDay: schedule.isAllDay,
+          isTodo: schedule.kind === 'todo',
         });
       }
     }
@@ -124,16 +133,26 @@ export function legacyReminderDedupKey(scheduleId: string, occurrenceStart: Date
   return `${scheduleId}|${occurrenceStart.getTime()}`;
 }
 
-export function formatReminderBody(candidate: ReminderCandidate, locale?: string | null): string {
+/** Catalog key and values of a reminder's body; `formatReminderBody` (reminder-format.ts) fills it. */
+export function reminderBody(candidate: ReminderCandidate): {
+  key:
+    | 'reminder.bodyAllDay'
+    | 'reminder.bodyTimed'
+    | 'reminder.bodyTodoAllDay'
+    | 'reminder.bodyTodoTimed';
+  values: Record<string, string | number>;
+} {
   if (candidate.isAllDay) {
-    return t('reminder.bodyAllDay', locale, { minutes: candidate.reminderMinutes });
+    return {
+      key: candidate.isTodo ? 'reminder.bodyTodoAllDay' : 'reminder.bodyAllDay',
+      values: { minutes: candidate.reminderMinutes },
+    };
   }
-
   const start = candidate.occurrenceStart;
   const hh = String(start.getHours()).padStart(2, '0');
   const mm = String(start.getMinutes()).padStart(2, '0');
-  return t('reminder.bodyTimed', locale, {
-    minutes: candidate.reminderMinutes,
-    time: `${hh}:${mm}`,
-  });
+  return {
+    key: candidate.isTodo ? 'reminder.bodyTodoTimed' : 'reminder.bodyTimed',
+    values: { minutes: candidate.reminderMinutes, time: `${hh}:${mm}` },
+  };
 }

@@ -422,7 +422,9 @@
   },
   "reminder": {
     "bodyAllDay": "{minutes}분 전 · 종일 일정",
-    "bodyTimed": "{minutes}분 후 시작 · {time}"
+    "bodyTimed": "{minutes}분 후 시작 · {time}",
+    "bodyTodoAllDay": "{minutes}분 전 · 종일 할 일 마감",
+    "bodyTodoTimed": "{minutes}분 후 마감 · {time}"
   },
   "calendar": {
     "today": "오늘",
