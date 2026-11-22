@@ -2,7 +2,7 @@
   import type { Schedule, UpcomingOccurrence } from '@croffledev/common';
   import dayjs from 'dayjs';
   import { storeToRefs } from 'pinia';
-  import { computed } from 'vue';
+  import { computed, onBeforeUnmount, ref } from 'vue';
   import { useI18n } from 'vue-i18n';
 
   import logoImg from '@/assets/logo-only.png';
@@ -63,10 +63,17 @@
       ...(schedule.isAllDay ? {} : { hour: 'numeric', minute: '2-digit' }),
     }).format(new Date(schedule.endDate));
 
+  /** "Now" for the overdue marks, moved on every minute so a deadline that passes shows up. */
+  const now = ref(dayjs());
+  const nowTimer = setInterval(() => {
+    now.value = dayjs();
+  }, 60_000);
+  onBeforeUnmount(() => clearInterval(nowTimer));
+
   /** Past its deadline: an all-day To-Do is overdue from the next day on. */
   const isOverdue = (schedule: Schedule) => {
     const due = dayjs(schedule.endDate);
-    return schedule.isAllDay ? due.endOf('day').isBefore(dayjs()) : due.isBefore(dayjs());
+    return schedule.isAllDay ? due.endOf('day').isBefore(now.value) : due.isBefore(now.value);
   };
 
   const openTodo = (schedule: Schedule) => {

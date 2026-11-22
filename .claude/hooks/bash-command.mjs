@@ -41,9 +41,15 @@ function normalize(cmd) {
   return cmd.replace(/\\\n/g, '').replace(/['"\\]/g, '');
 }
 
-/** Python's str.strip(): leading and trailing whitespace. */
+// Python's str.isspace() characters, the set str.strip() removes. JavaScript's \s differs: it has
+// U+FEFF and lacks U+001C..U+001F and U+0085.
+const PY_SPACE =
+  '\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000';
+const EDGE_SPACE = new RegExp(`^[${PY_SPACE}]+|[${PY_SPACE}]+$`, 'g');
+
+/** Python's str.strip(): leading and trailing whitespace as Python counts it. */
 function strip(text) {
-  return text.replace(/^\s+|\s+$/g, '');
+  return text.replace(EDGE_SPACE, '');
 }
 
 /** One-line verdict for a Bash command (see the header). */

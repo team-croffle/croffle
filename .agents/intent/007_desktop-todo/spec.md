@@ -255,6 +255,7 @@ summary_for_user: |
 - A-2 (2026-11-22, W-4) 미완료 할 일 내부 API 를 `croffleInternal.todos.listOpen()` 대신 기존 내부 일정 API 옆 `croffleInternal.calendar.schedules.listOpenTodos()`(IPC `schedule:listOpenTodos`)로 · 내부 일정 API(`InternalSchedulesApi`)가 이미 있어 새 묶음을 만들 이유가 없음. 공유 픽스처 12 에 완료한 할 일 사례(case 2, `row-3`)를 더함 — 뒤 사례들의 번호가 하나씩 밀림(V-8 이 이름으로 부르는 case 0 · 1 은 그대로) · W-4 커밋
 - A-3 (2026-11-22, W-5) `formatReminderBody` 를 `src/common/reminder-format.ts` 로 옮기고, `reminder.ts` 에는 본문의 카탈로그 키 · 값을 고르는 순수 함수 `reminderBody` 를 둠 · `reminder.ts` 가 i18n 을 부르면 i18n 이 TypeScript enum(`AppSettingLanguage`)을 불러 `node --test`(strip-only)에서 읽히지 않음. V-9 의 네 번째 테스트는 `reminderBody` 와 ko · en 카탈로그 파일로 앱과 같은 본문을 만들어 대조함(이름 · 기대는 그대로) · W-5 커밋
 - A-4 (2026-11-22, W-6) 화면의 작은 조정 세 가지 · ① 오른쪽 사이드바 "할 일" 칸에 불러오는 중 · 오류 상태를 둠(DESIGN.md "Every panel that loads data has a loading, an error and an empty state"), ② 고른 날 목록에서 일정(할 일이 아닌 것)의 아이콘을 체크 표시 대신 달력으로(체크 상자와 헷갈리지 않게), ③ 할 일일 때 "하루 종일" 안내를 "끄면 마감 시각을 정합니다"로(시작 · 종료 시각이 없으므로) · W-6 커밋
+- A-5 (2026-11-22, W-1 · W-6) 리뷰 1(FAIL) 지적 R-1 ~ R-4 수정 · R-1 캘린더의 일반 일정 내용을 FullCalendar 기본 렌더러(시간 글자 `fc-event-time`, 빈 제목은 공백)와 같게, R-2 판별기의 앞뒤 공백 제거를 Python `str.strip()` 의 문자 집합으로(U+FEFF · U+001C · U+0085 회귀 사례 추가, Python · Node 를 공백 문자 96개 사례로 대조해 차이 0), R-3 할 일 목록은 마지막 요청의 답만 반영, R-4 "지남" 표시가 1분마다 갱신되는 현재 시각을 씀 · 리뷰 1 수정 커밋
 
 ## 우려
 - **1.3.2 이하 기기와 섞인 동기화** — 그 기기가 할 일을 고치면 `kind` · `completedAt` 없이 올라가 모든 기기에서 일반 일정이 됩니다(intent 에이전트가 정한 것). S-9 는 적용 실패만 막고 이 손실은 막지 못합니다. 릴리스 노트로 알립니다.

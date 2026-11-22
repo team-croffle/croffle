@@ -403,9 +403,12 @@
           />
           <span class="croffle-todo-title">{{ arg.event.title }}</span>
         </div>
+        <!-- FullCalendar's default inner content (core StandardEvent renderInnerContent). The
+             app draws every event as a block (schedule-events.ts), never as a dot. -->
         <div v-else class="fc-event-main-frame">
+          <div v-if="arg.timeText" class="fc-event-time">{{ arg.timeText }}</div>
           <div class="fc-event-title-container">
-            <div class="fc-event-title fc-sticky">{{ arg.event.title }}</div>
+            <div class="fc-event-title fc-sticky">{{ arg.event.title || '\u00A0' }}</div>
           </div>
         </div>
       </template>

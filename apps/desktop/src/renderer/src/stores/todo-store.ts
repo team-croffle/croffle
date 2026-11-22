@@ -19,14 +19,22 @@ export const useTodoStore = defineStore('todo', () => {
   /** 'loading' until the first answer; 'error' when the last read failed. */
   const status = ref<'loading' | 'ready' | 'error'>('loading');
   let started = false;
+  /** Number of the latest read; an answer to an older one is dropped (reads can overlap). */
+  let latest = 0;
 
   const load = async () => {
+    const request = ++latest;
     try {
-      openTodos.value = await croffleInternal.calendar.schedules.listOpenTodos();
-      status.value = 'ready';
+      const todos = await croffleInternal.calendar.schedules.listOpenTodos();
+      if (request === latest) {
+        openTodos.value = todos;
+        status.value = 'ready';
+      }
     } catch {
       // Keep the last list; the next schedule change reloads it.
-      status.value = 'error';
+      if (request === latest) {
+        status.value = 'error';
+      }
     }
   };
 
