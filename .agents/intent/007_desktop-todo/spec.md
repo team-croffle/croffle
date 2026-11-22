@@ -64,7 +64,7 @@ summary_for_user: |
 ## 작업 단위
 - [x] W-1 hook 판별기 Node 이전 — `bash-command.mjs` · `scripts/test/bash-command.test.mjs` · 파이썬 기준 출력, 그다음 `pre-bash.sh` · `post-bash.sh` 호출 줄 · 주석, `bash_command.py` 삭제, S-3 신선도와 `post-bash.test.mjs`. (S-1 · S-2 · S-3)
 - [x] W-2 검사 스크립트 테스트와 실행 경로 — `check-spec-checks.test.mjs` · `check-design-commit-msg.test.mjs`, 루트 `test:repo`, CI `repo` 필터 · `repo-scripts` 작업. (S-4)
-- [ ] W-3 동기화 스위치 유지 — `sync-config.ts` 와 그 테스트. (S-5)
+- [x] W-3 동기화 스위치 유지 — `sync-config.ts` 와 그 테스트. (S-5)
 - [ ] W-4 할 일 데이터 — 공개 타입 · 데스크톱 사본 · Changeset, 마이그레이션 0009, 매퍼 · 서비스 검증, 와이어 · 픽스처, `getOpenTodos` + 내부 IPC · preload, 테스트. (S-6 ~ S-9, S-13 의 IPC)
 - [ ] W-5 할 일 리마인더 — 후보 제외 · 본문 문구 · 테스트. (S-10)
 - [ ] W-6 할 일 화면 — 일정 모달 전환 · 마감 칸 · 반복 안내 · 보기 화면 완료 버튼, 캘린더 체크 상자 · 취소선 · 드래그 확인, 오른쪽 사이드바 "할 일" 칸, 다가오는 일정 · 오늘 개수 제외, ko · en, DESIGN.md. (S-11 ~ S-15)
