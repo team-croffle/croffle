@@ -3,6 +3,7 @@ intent: "007"
 status: accepted
 approvals:
   - { role: user, by: bluenyang, at: "2026-11-22", words: "진행", rev: "5867f47", kind: summary }
+  - { role: user, by: bluenyang, at: "2026-11-22", words: "승인한다", rev: "d20504f", kind: change, note: "check wording: V-1 ⑦, V-5 b · c (node --test takes a glob, A-1), V-7 b (any quote in the Changeset front matter); judged on the same raw output (test/judgement.md)" }
 summary_for_user: |
   1.3.3 을 7개 작업 단위로 나눕니다. W-1 hook 판별기를 Node 로(파이썬과 60개 사례 출력 대조, 다른 저장소 커밋은 HEAD 가 120초보다 오래면 게이트 생략) → W-2 두 검사 스크립트 테스트 · 루트 `test:repo` · CI `repo-scripts` 작업 → W-3 로그아웃해도 동기화 스위치 유지(서버 주소를 바꾸면 끔) → W-4 할 일 데이터(공개 타입 `kind?` · `completedAt?` minor, 마이그레이션 0009, 저장할 때 시작 = 마감, 할 일 + 반복 · 일정 + 완료 시각 거절, 동기화 와이어 · 픽스처, `kind` 없는 옛 기기 행은 일정으로) → W-5 리마인더(완료한 할 일 제외, "마감" 문구) → W-6 화면(모달의 일정/할 일 전환 · 마감 칸 · 반복 안내, 캘린더 체크 상자 · 취소선, 오른쪽 사이드바 "할 일" 칸, 다가오는 일정 · 오늘 개수에서 할 일 제외) → W-7 문서.
   검사는 V-1~V-13 입니다. qa-designer(gemini)가 설계했고, 지금 트리에서 돌릴 수 있는 명령은 모두 미리 돌려 기대 문자열을 실제 출력과 맞췄습니다(`.loctx/reports/1.3.3/dryrun/`). 사전 실행 뒤 PM 이 고친 것: V-3 사례 60개(읽을 수 없는 입력 3개는 앞부분만 대조), V-6 · V-8 은 Electron · DB 없는 모듈로 빼서 시험(지금 코드는 테스트에서 직접 불러올 수 없음), V-13 찾는 문구.
@@ -71,7 +72,7 @@ summary_for_user: |
 - [x] W-7 문서 — README · README.ko, `packages/types/README.md`. (S-16, 릴리스 노트는 release 단계)
 
 ## 검증 기준
-- **V-1 게이트 (S-1 ~ S-16, W-1 ~ W-7)** — 저장소 루트에서 아래 일곱 명령을 각각 따로 실행해 `.loctx/reports/1.3.3/test/` 아래 지정한 원본 파일(첫 줄 `$ 명령`, 본문 stdout · stderr 전체, 끝 줄 `exit=N`)에 남깁니다: ① `pnpm typecheck` → `v1-typecheck.txt`, ② `pnpm lint` → `v1-lint.txt`, ③ `pnpm format:check` → `v1-format.txt`, ④ `pnpm -r test` → `v1-test.txt`, ⑤ `pnpm build` → `v1-build.txt`, ⑥ `pnpm --filter @croffledev/croffle-cli build` → `v1-build-cli.txt`, ⑦ `node --test scripts/test/` → `v1-test-repo.txt`.
+- **V-1 게이트 (S-1 ~ S-16, W-1 ~ W-7)** — 저장소 루트에서 아래 일곱 명령을 각각 따로 실행해 `.loctx/reports/1.3.3/test/` 아래 지정한 원본 파일(첫 줄 `$ 명령`, 본문 stdout · stderr 전체, 끝 줄 `exit=N`)에 남깁니다: ① `pnpm typecheck` → `v1-typecheck.txt`, ② `pnpm lint` → `v1-lint.txt`, ③ `pnpm format:check` → `v1-format.txt`, ④ `pnpm -r test` → `v1-test.txt`, ⑤ `pnpm build` → `v1-build.txt`, ⑥ `pnpm --filter @croffledev/croffle-cli build` → `v1-build-cli.txt`, ⑦ `node --test 'scripts/test/*.test.mjs'` → `v1-test-repo.txt` (2026-11-22 정정, A-1 · 사용자 "승인한다").
   - 기대:
     1. 일곱 개 원본 파일 모두 끝 줄이 `exit=0` 입니다.
     2. `v1-typecheck.txt` 에 `packages/types typecheck: Done`, `packages/cli typecheck: Done`, `apps/desktop typecheck: Done` 줄이 모두 있습니다.
@@ -119,8 +120,8 @@ summary_for_user: |
 
 - **V-5 루트 스크립트 테스트와 CI 작업 (S-1 · S-3 · S-4, W-1 · W-2)** — 구현 뒤 저장소 루트에서 아래 명령을 각각 실행해 `.loctx/reports/1.3.3/test/` 에 남깁니다:
   - a) `node --test scripts/test/bash-command.test.mjs scripts/test/post-bash.test.mjs scripts/test/check-spec-checks.test.mjs scripts/test/check-design-commit-msg.test.mjs` → `v5-repo-tests.txt`
-  - b) `grep -n '"test:repo": "node --test scripts/test/"' package.json` → `v5-package-json.txt`
-  - c) `grep -nE "repo:|repo-scripts|scripts/\*\*|\.claude/hooks/\*\*|node --test scripts/test/" .github/workflows/ci.yml` → `v5-ci-yml.txt`
+  - b) `grep -nF '"test:repo": "node --test '"'"'scripts/test/*.test.mjs'"'"'"' package.json` → `v5-package-json.txt` (2026-11-22 정정, A-1 · 사용자 "승인한다")
+  - c) `grep -nE 'repo:|repo-scripts|scripts/\*\*|\.claude/hooks/\*\*|node --test '"'"'scripts/test/\*\.test\.mjs' .github/workflows/ci.yml` → `v5-ci-yml.txt` (2026-11-22 정정, A-1 · 사용자 "승인한다")
   - d) (merge 단계, PR 을 연 뒤 1차 감사 전) `gh pr checks <PR번호>` → `v5-pr-checks.txt`
   - 기대:
     1. `v5-repo-tests.txt` 가 `exit=0`, `ℹ fail 0` 이고 아래 14개 테스트 이름이 모두 `✔ <이름>` 줄로 나타납니다:
@@ -142,8 +143,8 @@ summary_for_user: |
          - `rejects malformed or commented Spec-check lines in commit-msg mode`
          - `accepts a valid Spec-check line and detects staged rename of DESIGN.md`
          - `checks commit ranges including amended commits merge commits and root commits`
-    2. `v5-package-json.txt` 에 `"test:repo": "node --test scripts/test/"` 줄이 1줄 있고 `exit=0` 입니다.
-    3. `v5-ci-yml.txt` 가 `exit=0` 이고, `changes` 작업의 `repo` 출력과 필터(`scripts/**`, `.claude/hooks/**`), `pnpm` 설치 없이 `node --test scripts/test/` 를 돌리는 `repo-scripts` 작업, `ci-ok`(`CI result`)의 `needs` 목록에 포함된 `repo-scripts` 가 모두 나타납니다.
+    2. `v5-package-json.txt` 에 `"test:repo": "node --test 'scripts/test/*.test.mjs'"` 줄이 1줄 있고 `exit=0` 입니다.
+    3. `v5-ci-yml.txt` 가 `exit=0` 이고, `changes` 작업의 `repo` 출력과 필터(`scripts/**`, `.claude/hooks/**`), `pnpm` 설치 없이 `node --test 'scripts/test/*.test.mjs'` 를 돌리는 `repo-scripts` 작업, `ci-ok`(`CI result`)의 `needs` 목록에 포함된 `repo-scripts` 가 모두 나타납니다.
     4. `v5-pr-checks.txt` 가 `exit=0` 이고, PR 의 실제 GitHub Actions 실행에서 `repo-scripts`(또는 그 작업의 `name`)와 `CI result` 줄이 모두 `pass` 입니다.
   - 실패: `v5-repo-tests.txt` 에 `ℹ fail 0` 또는 14개 `✔` 줄 중 하나라도 없거나, `package.json` · `ci.yml` 에 해당 줄이 없거나, PR 의 CI 실행에서 `repo-scripts` 작업이 빠졌거나 실패합니다.
   - 설계: qa-designer(gemini-4-argon-high) — 과제 `.loctx/reports/1.3.3/qa/task-1.md`, 답 `.loctx/reports/1.3.3/qa/answer-1.md`
@@ -161,12 +162,12 @@ summary_for_user: |
 
 - **V-7 공개 타입 · Changeset · 마이그레이션 0009 · outbox 트리거 (S-6 · S-7, W-4)** — 구현 뒤 아래 네 명령을 각각 실행해 `.loctx/reports/1.3.3/test/` 에 남깁니다:
   - a) 저장소 루트에서 `grep -nE "kind\?: 'event' \| 'todo';|completedAt\?: Date \| null;" packages/types/models/schedule.d.ts apps/desktop/src/common/models/schedule.ts` → `v7-types.txt`
-  - b) 저장소 루트에서 `git diff --name-only origin/master...HEAD -- '.changeset/*.md'` → `v7-changeset-files.txt`, 그리고 `grep -nH '^"@croffledev/croffle-types": minor$' .changeset/*.md` → `v7-changeset-body.txt`
+  - b) 저장소 루트에서 `git diff --name-only origin/master...HEAD -- '.changeset/*.md'` → `v7-changeset-files.txt`, 그리고 `grep -nHE '^["'"'"']@croffledev/croffle-types["'"'"']: minor$' .changeset/*.md` → `v7-changeset-body.txt`
   - c) 저장소 루트에서 `pnpm --filter @croffledev/desktop db:generate` → `v7-db-generate.txt`
   - d) `apps/desktop` 에서 `node --test --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON test/outbox-triggers.test.ts` → `v7-outbox.txt`
   - 기대:
     1. `v7-types.txt` 가 `exit=0` 이고, `packages/types/models/schedule.d.ts` 와 `apps/desktop/src/common/models/schedule.ts` 두 파일 모두에서 선택 필드 `kind?: 'event' | 'todo';` 와 `completedAt?: Date | null;` 가 각 1줄씩 총 4줄 출력됩니다.
-    2. `v7-changeset-files.txt` 가 `exit=0` 이고 `.changeset/README.md` 가 아닌 새 `.changeset/<이름>.md` 파일 경로가 정확히 1줄 출력되며, `v7-changeset-body.txt` 가 `exit=0` 이고 그 파일의 `"@croffledev/croffle-types": minor` 1줄만 출력됩니다.
+    2. `v7-changeset-files.txt` 가 `exit=0` 이고 `.changeset/README.md` 가 아닌 새 `.changeset/<이름>.md` 파일 경로가 정확히 1줄 출력되며, `v7-changeset-body.txt` 가 `exit=0` 이고 그 파일의 머리말 `@croffledev/croffle-types: minor` 줄(따옴표 종류는 묻지 않음 — 2026-11-22 정정: oxfmt 가 YAML 을 작은따옴표로 바꿈, 사용자 "승인한다") 1줄만 출력됩니다.
     3. `v7-db-generate.txt` 가 `exit=0` 이고 `schedule 20 columns 0 indexes 0 fks` 줄과 `No schema changes, nothing to migrate` 줄이 있습니다(스키마와 마이그레이션 0009 가 일치해 새 파일이 더 생기지 않음).
     4. `v7-outbox.txt` 가 `exit=0`, `ℹ fail 0`, `ℹ pass 9` 이고 기존 9개 트리거 테스트가 모두 `✔` 입니다.
   - 실패: 두 모델 파일 중 한쪽에라도 선택 필드가 없거나 필수 필드로 들어갔거나, 새 Changeset 파일이 1개가 아니거나 `minor` 가 아니거나, `db:generate` 가 새 마이그레이션을 만들거나 `schedule 20 columns` 가 아니거나, `v7-outbox.txt` 에서 실패가 납니다.
