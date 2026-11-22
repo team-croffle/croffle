@@ -28,6 +28,8 @@ export type ScheduleEntityInput = {
   colorLabel?: string;
   priority?: 'low' | 'medium' | 'high';
   useDefaultReminder?: boolean;
+  kind?: 'event' | 'todo';
+  completedAt?: Date | null;
   reminders?: number[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -96,6 +98,8 @@ export const scheduleMapper = {
       colorLabel: entity.colorLabel,
       priority: entity.priority,
       reminders,
+      kind: entity.kind,
+      completedAt: entity.completedAt ?? null,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       tags: entity.tags.map(toTagDto),
@@ -144,6 +148,12 @@ export const scheduleMapper = {
         entity.useDefaultReminder = false;
         entity.reminders = normalizeReminders(data.reminders);
       }
+    }
+    if (data.kind !== undefined) {
+      entity.kind = data.kind;
+    }
+    if (data.completedAt !== undefined) {
+      entity.completedAt = data.completedAt === null ? null : toDate(data.completedAt);
     }
     if (data.createdAt !== undefined) {
       entity.createdAt = toDate(data.createdAt);

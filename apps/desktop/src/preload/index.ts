@@ -92,6 +92,7 @@ const internalApi = {
     schedules: {
       exportSchedulesToFile: scheduleApi.exportSchedulesToFile,
       importScheduleFromFile: scheduleApi.importScheduleFromFile,
+      listOpenTodos: scheduleApi.listOpenTodos,
     },
   },
   sync: syncApi,

@@ -7,6 +7,7 @@ import { importScheduleFromFile } from '../calendar/import-schedule';
 import { moveOccurrence } from '../calendar/schedule-exceptions';
 import {
   getSchedules,
+  getOpenTodos,
   createSchedule,
   updateSchedule,
   deleteSchedule,
@@ -26,6 +27,11 @@ export const registerScheduleIpcHandlers = (): void => {
       return schedules.map(scheduleMapper.toInterface);
     },
   );
+
+  ipcMain.handle('schedule:listOpenTodos', async (): Promise<Schedule[]> => {
+    const todos = await getOpenTodos();
+    return todos.map(scheduleMapper.toInterface);
+  });
 
   ipcMain.handle('schedule:create', async (_, data: Partial<Schedule>): Promise<Schedule> => {
     const entityData = scheduleMapper.toEntity(data);

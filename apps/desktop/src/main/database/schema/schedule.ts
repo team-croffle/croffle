@@ -28,6 +28,12 @@ export const schedules = sqliteTable('schedule', {
     .default('medium'),
   /** true = follow notifications.defaultReminderMinutes; false = use schedule_reminder rows */
   useDefaultReminder: integer('useDefaultReminder', { mode: 'boolean' }).notNull().default(true),
+  /** 'todo' = a To-Do: endDate is the deadline, startDate equals it (1.3.3). */
+  kind: text('kind', { enum: ['event', 'todo'] })
+    .notNull()
+    .default('event'),
+  /** When a To-Do was done (seconds); null for an event or an open To-Do. */
+  completedAt: integer('completedAt', { mode: 'timestamp' }),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
   ...syncColumns(),

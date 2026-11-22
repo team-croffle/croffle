@@ -29,6 +29,10 @@ export type ScheduleEntity = WithSync<{
   priority: 'low' | 'medium' | 'high';
   /** true = follow notifications.defaultReminderMinutes; false = use schedule_reminder rows */
   useDefaultReminder: boolean;
+  /** `'todo'`: `endDate` is the deadline, `startDate` equals it (1.3.3). */
+  kind: 'event' | 'todo';
+  /** When a To-Do was done; null for an event or an open To-Do. */
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }>;

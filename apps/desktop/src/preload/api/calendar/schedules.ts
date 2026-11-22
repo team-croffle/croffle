@@ -26,6 +26,10 @@ export const scheduleApi = {
     return ipcRenderer.invoke('schedule:moveOccurrence', id, occurrenceStart, newStart);
   },
 
+  listOpenTodos: async (): Promise<Schedule[]> => {
+    return ipcRenderer.invoke('schedule:listOpenTodos');
+  },
+
   exportSchedulesToFile: async (period?: {
     start: string;
     end: string;

@@ -65,7 +65,7 @@ summary_for_user: |
 - [x] W-1 hook 판별기 Node 이전 — `bash-command.mjs` · `scripts/test/bash-command.test.mjs` · 파이썬 기준 출력, 그다음 `pre-bash.sh` · `post-bash.sh` 호출 줄 · 주석, `bash_command.py` 삭제, S-3 신선도와 `post-bash.test.mjs`. (S-1 · S-2 · S-3)
 - [x] W-2 검사 스크립트 테스트와 실행 경로 — `check-spec-checks.test.mjs` · `check-design-commit-msg.test.mjs`, 루트 `test:repo`, CI `repo` 필터 · `repo-scripts` 작업. (S-4)
 - [x] W-3 동기화 스위치 유지 — `sync-config.ts` 와 그 테스트. (S-5)
-- [ ] W-4 할 일 데이터 — 공개 타입 · 데스크톱 사본 · Changeset, 마이그레이션 0009, 매퍼 · 서비스 검증, 와이어 · 픽스처, `getOpenTodos` + 내부 IPC · preload, 테스트. (S-6 ~ S-9, S-13 의 IPC)
+- [x] W-4 할 일 데이터 — 공개 타입 · 데스크톱 사본 · Changeset, 마이그레이션 0009, 매퍼 · 서비스 검증, 와이어 · 픽스처, `getOpenTodos` + 내부 IPC · preload, 테스트. (S-6 ~ S-9, S-13 의 IPC)
 - [ ] W-5 할 일 리마인더 — 후보 제외 · 본문 문구 · 테스트. (S-10)
 - [ ] W-6 할 일 화면 — 일정 모달 전환 · 마감 칸 · 반복 안내 · 보기 화면 완료 버튼, 캘린더 체크 상자 · 취소선 · 드래그 확인, 오른쪽 사이드바 "할 일" 칸, 다가오는 일정 · 오늘 개수 제외, ko · en, DESIGN.md. (S-11 ~ S-15)
 - [ ] W-7 문서 — README · README.ko, `packages/types/README.md`. (S-16, 릴리스 노트는 release 단계)
@@ -252,6 +252,7 @@ summary_for_user: |
 
 ## 조정 기록
 - A-1 (2026-11-22, W-1 · W-2) 루트 테스트 실행 명령을 `node --test scripts/test/` 에서 `node --test 'scripts/test/*.test.mjs'` 로 · Node 24 의 `node --test` 는 디렉터리 인자를 파일로 읽어 `Cannot find module …/scripts/test` 로 실패함(사전 실행 `dryrun/v1-test-repo.txt` 는 디렉터리가 없어서 난 다른 오류라 놓침). S-4 · 설계는 바꿈. V-1 ⑦ · V-5 b · c 의 명령 · 기대 문자열 정정은 test 전에 사용자 승인(`kind: change`)을 받음 · W-1 커밋
+- A-2 (2026-11-22, W-4) 미완료 할 일 내부 API 를 `croffleInternal.todos.listOpen()` 대신 기존 내부 일정 API 옆 `croffleInternal.calendar.schedules.listOpenTodos()`(IPC `schedule:listOpenTodos`)로 · 내부 일정 API(`InternalSchedulesApi`)가 이미 있어 새 묶음을 만들 이유가 없음. 공유 픽스처 12 에 완료한 할 일 사례(case 2, `row-3`)를 더함 — 뒤 사례들의 번호가 하나씩 밀림(V-8 이 이름으로 부르는 case 0 · 1 은 그대로) · W-4 커밋
 
 ## 우려
 - **1.3.2 이하 기기와 섞인 동기화** — 그 기기가 할 일을 고치면 `kind` · `completedAt` 없이 올라가 모든 기기에서 일반 일정이 됩니다(intent 에이전트가 정한 것). S-9 는 적용 실패만 막고 이 손실은 막지 못합니다. 릴리스 노트로 알립니다.
