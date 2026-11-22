@@ -17,6 +17,10 @@ const EXACT = [
   ['git push -q -u origin feat/x', 'push origin feat/x'],
   ['git push origin master', 'push origin master'],
   ['  git push origin feat/x  ', 'push origin feat/x'],
+  // Edges are stripped the way Python's str.strip() does (review 1 R-2): U+001C and U+0085 are
+  // whitespace there, U+FEFF is not (it falls to the word check below).
+  ['\x1cgit push origin feat/x\x1c', 'push origin feat/x'],
+  ['\x85git push origin feat/x\x85', 'push origin feat/x'],
   [`gh pr merge 5 --rebase --delete-branch --match-head-commit ${A}`, `merge 5 ${A}`],
   [`gh pr merge 7 --squash --match-head-commit ${A}`, `merge 7 ${A}`],
   ['gh pr merge 8', 'merge 8'],
@@ -75,6 +79,7 @@ const REFUSED = [
   ['gh pr comment 146 --body "please gh pr merge later"', "'merge'"],
   ['echo ";" git push origin master', "'push'"],
   ['echo "unbalanced push', "'push'"],
+  ['﻿git push origin feat/x﻿', "'push'"],
 ];
 
 const cli = (input) => execFileSync(process.execPath, [CLI], { input, encoding: 'utf8' });
