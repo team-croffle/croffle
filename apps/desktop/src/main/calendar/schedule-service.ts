@@ -32,6 +32,12 @@ import {
   shiftExceptionKeys,
   tombstoneExceptionsOf,
 } from './schedule-exceptions';
+import {
+  alignTodoDates,
+  kindForCreate,
+  mergeKindFields,
+  validateKindFields,
+} from './schedule-kind';
 import { findScheduleWithTags, mapScheduleWithTags, withLiveChildren } from './schedule-query';
 
 /** Upper bound for a single reminder offset: 7 days. */
@@ -40,6 +46,8 @@ const MAX_REMINDER_MINUTES = 7 * 24 * 60;
 const MAX_REMINDERS_PER_SCHEDULE = 5;
 
 export function validateScheduleData(schedule: ScheduleEntityInput) {
+  validateKindFields(schedule);
+
   if (schedule.title !== undefined && !stringValidation(schedule.title, false, 100, 1)) {
     throw new Error('Title must be between 1 and 100 characters');
   }
@@ -133,6 +141,17 @@ export async function getSchedules(period: {
   });
 }
 
+/** Every To-Do not done yet, whatever its deadline (overdue ones too), earliest deadline first. */
+export async function getOpenTodos(): Promise<ScheduleWithTags[]> {
+  const db = databaseManager.getDb();
+  const rows = await db.query.schedules.findMany({
+    where: and(alive(schedules), eq(schedules.kind, 'todo'), isNull(schedules.completedAt)),
+    orderBy: [asc(schedules.endDate), asc(schedules.title)],
+    with: withLiveChildren,
+  });
+  return rows.map(mapScheduleWithTags);
+}
+
 export async function createSchedule(data: ScheduleEntityInput): Promise<ScheduleWithTags> {
   if (!data.title) {
     throw new Error('Title is required');
@@ -141,17 +160,19 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
     throw new Error('Date range is required');
   }
 
-  validateScheduleData(data);
+  // A To-Do starts at its deadline.
+  const input = alignTodoDates({ ...data, kind: kindForCreate(data) });
+  validateScheduleData(input);
 
   const now = new Date();
-  const id = data.id ?? randomUUID();
+  const id = input.id ?? randomUUID();
   const {
     tags: inputTags,
     reminders: inputReminders,
     exceptions: inputExceptions,
     ...scheduleFields
-  } = data;
-  const startDate = data.startDate;
+  } = input;
+  const startDate = input.startDate ?? data.startDate;
   const endDate = data.endDate;
 
   const values: NewSchedule = {
@@ -166,6 +187,8 @@ export async function createSchedule(data: ScheduleEntityInput): Promise<Schedul
     colorLabel: scheduleFields.colorLabel ?? '#E1E1E1',
     priority: scheduleFields.priority ?? 'medium',
     useDefaultReminder: scheduleFields.useDefaultReminder ?? true,
+    kind: kindForCreate(scheduleFields),
+    completedAt: scheduleFields.completedAt ?? null,
     createdAt: scheduleFields.createdAt ?? now,
     updatedAt: scheduleFields.updatedAt ?? now,
     version: 1,
@@ -202,7 +225,7 @@ export async function updateSchedule(
     exceptions: inputExceptions,
     ...scheduleFields
   } = data;
-  const merged: ScheduleEntityInput = {
+  const merged: ScheduleEntityInput = alignTodoDates({
     id: existing.id,
     title: scheduleFields.title ?? existing.title,
     description:
@@ -222,7 +245,8 @@ export async function updateSchedule(
     updatedAt: scheduleFields.updatedAt ?? existing.updatedAt,
     tags: inputTags ?? existing.tags,
     reminders: inputReminders ?? existing.reminders,
-  };
+    ...mergeKindFields(existing, scheduleFields),
+  });
 
   validateScheduleData(merged);
 
@@ -241,6 +265,8 @@ export async function updateSchedule(
       colorLabel: merged.colorLabel,
       priority: merged.priority ?? 'medium',
       useDefaultReminder: merged.useDefaultReminder ?? true,
+      kind: merged.kind ?? 'event',
+      completedAt: merged.completedAt ?? null,
       updatedAt: now,
       version: bumpVersion(schedules),
       ...touch(now),

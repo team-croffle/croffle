@@ -87,6 +87,27 @@ describe('shared fixtures', () => {
 });
 
 // The fixtures cover `schedule` only; these pin the other four tables.
+describe('row codec, schedule kind (1.3.3)', () => {
+  const scheduleCases = scenarios
+    .flatMap((s) => s.rowCodec?.cases ?? [])
+    .filter((c) => c.table === 'schedule');
+
+  test('schedule decode defaults missing or null kind from an older client to event', () => {
+    const { kind: _kind, completedAt: _completedAt, ...older } = scheduleCases[0].wire;
+    const fromOlder = decodeRow('schedule', older);
+    assert.equal(fromOlder.kind, 'event');
+    assert.equal(fromOlder.completedAt, null);
+    assert.equal(decodeRow('schedule', { ...scheduleCases[0].wire, kind: null }).kind, 'event');
+
+    const todo = scheduleCases.find((c) => c.wire.kind === 'todo');
+    assert.ok(todo, 'the fixture has a To-Do case');
+    const local = decodeRow('schedule', todo.wire);
+    assert.equal(local.kind, 'todo');
+    assert.deepEqual(local.completedAt, new Date(todo.wire.completedAt as number));
+    assert.equal(encodeRow('schedule', local).completedAt, todo.wire.completedAt);
+  });
+});
+
 describe('row codec, remaining tables', () => {
   const sync = {
     updatedAtMs: 1700000000123,

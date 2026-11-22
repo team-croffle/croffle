@@ -22,6 +22,8 @@
           "colorLabel": "#E1E1E1",
           "priority": "medium",
           "useDefaultReminder": true,
+          "kind": "event",
+          "completedAt": null,
           "createdAt": 1699999000,
           "updatedAt": 1700000000,
           "updatedAtMs": 1700000000000,
@@ -42,6 +44,8 @@
           "colorLabel": "#E1E1E1",
           "priority": "medium",
           "useDefaultReminder": 1,
+          "kind": "event",
+          "completedAt": null,
           "createdAt": 1699999000000,
           "updatedAt": 1700000000000,
           "updatedAtMs": 1700000000000,
@@ -66,6 +70,8 @@
           "colorLabel": "#E1E1E1",
           "priority": "high",
           "useDefaultReminder": false,
+          "kind": "event",
+          "completedAt": null,
           "createdAt": 1699999000,
           "updatedAt": 1700000005,
           "updatedAtMs": 1700000005000,
@@ -86,6 +92,8 @@
           "colorLabel": "#E1E1E1",
           "priority": "high",
           "useDefaultReminder": 0,
+          "kind": "event",
+          "completedAt": null,
           "createdAt": 1699999000000,
           "updatedAt": 1700000005000,
           "updatedAtMs": 1700000005000,
@@ -94,25 +102,91 @@
           "lastWriterId": "device:client-1",
           "ownerId": "acct-1"
         }
+      },
+      {
+        "table": "schedule",
+        "comment": "A completed To-Do (desktop 1.3.3): kind travels as text; completedAt is a second-resolution column like the dates, so the wire carries milliseconds. startDate equals endDate (the deadline).",
+        "row": {
+          "id": "row-3",
+          "title": "file taxes",
+          "description": null,
+          "location": null,
+          "startDate": 1700003600,
+          "endDate": 1700003600,
+          "isAllDay": false,
+          "recurrenceRule": null,
+          "colorLabel": "#E1E1E1",
+          "priority": "medium",
+          "useDefaultReminder": true,
+          "kind": "todo",
+          "completedAt": 1700000500,
+          "createdAt": 1699999000,
+          "updatedAt": 1700000000,
+          "updatedAtMs": 1700000000000,
+          "version": 1,
+          "deletedAt": null,
+          "lastWriterId": "device:client-1",
+          "ownerId": null
+        },
+        "wire": {
+          "id": "row-3",
+          "title": "file taxes",
+          "description": null,
+          "location": null,
+          "startDate": 1700003600000,
+          "endDate": 1700003600000,
+          "isAllDay": 0,
+          "recurringRule": null,
+          "colorLabel": "#E1E1E1",
+          "priority": "medium",
+          "useDefaultReminder": 1,
+          "kind": "todo",
+          "completedAt": 1700000500000,
+          "createdAt": 1699999000000,
+          "updatedAt": 1700000000000,
+          "updatedAtMs": 1700000000000,
+          "version": 1,
+          "deletedAt": null,
+          "lastWriterId": "device:client-1",
+          "ownerId": null
+        }
       }
     ],
     "lww": [
       {
         "comment": "The newer wall clock wins.",
-        "a": { "updatedAtMs": 1700000002000, "lastWriterId": "device:a" },
-        "b": { "updatedAtMs": 1700000001000, "lastWriterId": "device:b" },
+        "a": {
+          "updatedAtMs": 1700000002000,
+          "lastWriterId": "device:a"
+        },
+        "b": {
+          "updatedAtMs": 1700000001000,
+          "lastWriterId": "device:b"
+        },
         "winner": "a"
       },
       {
         "comment": "On an equal clock the writer id breaks the tie, so both sides pick the same winner without talking.",
-        "a": { "updatedAtMs": 1700000002000, "lastWriterId": "device:a" },
-        "b": { "updatedAtMs": 1700000002000, "lastWriterId": "device:b" },
+        "a": {
+          "updatedAtMs": 1700000002000,
+          "lastWriterId": "device:a"
+        },
+        "b": {
+          "updatedAtMs": 1700000002000,
+          "lastWriterId": "device:b"
+        },
         "winner": "b"
       },
       {
         "comment": "A server write beats a device write at the same instant, because 'server' sorts after 'device:'.",
-        "a": { "updatedAtMs": 1700000002000, "lastWriterId": "device:a" },
-        "b": { "updatedAtMs": 1700000002000, "lastWriterId": "server" },
+        "a": {
+          "updatedAtMs": 1700000002000,
+          "lastWriterId": "device:a"
+        },
+        "b": {
+          "updatedAtMs": 1700000002000,
+          "lastWriterId": "server"
+        },
         "winner": "b"
       }
     ]

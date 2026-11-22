@@ -40,6 +40,13 @@ export type Schedule = {
    * `occurrenceStart`, and add `startDate`..`endDate` unless `cancelled`.
    */
   exceptions?: ScheduleException[];
+  /**
+   * `'todo'` = a To-Do (1.3.3): `endDate` is the deadline and `startDate` equals it; a To-Do does
+   * not repeat. Missing = `'event'`.
+   */
+  kind?: 'event' | 'todo';
+  /** When a To-Do was done; `null` or missing = not done. Always empty for an event. */
+  completedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };

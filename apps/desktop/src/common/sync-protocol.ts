@@ -152,6 +152,8 @@ export const TABLE_COLUMNS: Record<string, ColumnSpec[]> = {
     col('colorLabel', 'text'),
     col('priority', 'text'),
     col('useDefaultReminder', 'bool'),
+    col('kind', 'text'),
+    col('completedAt', 'sec'),
     col('createdAt', 'sec'),
     col('updatedAt', 'sec'),
     ...SYNC_COLUMN_SPECS,
@@ -266,12 +268,17 @@ export function encodeRow(table: string, row: LocalRow): WireRow {
 
 /**
  * Wire row → local row. Fields the server adds that have no local column (such as `teamId`
- * before sharing exists) are dropped.
+ * before sharing exists) are dropped; a schedule without `kind` is an event.
  */
 export function decodeRow(table: string, wire: WireRow): LocalRow {
   const row: LocalRow = {};
   for (const spec of columnsOf(table)) {
     row[spec.key] = decodeValue(wire[spec.column], spec);
+  }
+  // A schedule written by desktop 1.3.2 or earlier has no `kind`: it is an event (the column is
+  // NOT NULL, so a null would fail to apply).
+  if (table === 'schedule' && (row.kind === null || row.kind === undefined)) {
+    row.kind = 'event';
   }
   return row;
 }

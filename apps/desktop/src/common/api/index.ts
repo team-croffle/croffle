@@ -42,7 +42,10 @@ export interface CroffleInternalAPI {
     session: ExtensionSessionApi;
   };
   calendar: {
-    schedules: Pick<InternalSchedulesApi, 'exportSchedulesToFile' | 'importScheduleFromFile'>;
+    schedules: Pick<
+      InternalSchedulesApi,
+      'exportSchedulesToFile' | 'importScheduleFromFile' | 'listOpenTodos'
+    >;
   };
   sync: InternalSyncApi;
   notifications: InternalNotificationsApi;
