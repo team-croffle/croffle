@@ -8,6 +8,7 @@ import { app, safeStorage } from 'electron';
 import { databaseManager } from '../database';
 import { syncServer, type SyncServerRow } from '../database/schema';
 import { logger } from '../logger';
+import { NEW_SERVER_STATE, SIGNED_OUT_STATE } from './binding-state';
 
 const SERVER_ROW_ID = 'default';
 
@@ -26,20 +27,6 @@ export type SyncServerState = Partial<
     | 'lastError'
   >
 >;
-
-/** What a binding starts from: nothing pulled, nothing bootstrapped, signed out. */
-const UNBOUND_STATE = {
-  accountId: null,
-  teamId: null,
-  enabled: false,
-  lastPulledSeq: 0,
-  bootstrapCursor: null,
-  bootstrappedAt: null,
-  backfilledAt: null,
-  lastSyncedAt: null,
-  lastErrorKind: null,
-  lastError: null,
-} satisfies Partial<SyncServerRow>;
 
 export class InvalidServerUrlError extends Error {}
 
@@ -110,7 +97,7 @@ export function setServer(input: string): SyncServerRow {
   const db = databaseManager.getDb();
   if (current) {
     db.update(syncServer)
-      .set({ url, ...UNBOUND_STATE })
+      .set({ url, ...NEW_SERVER_STATE })
       .where(eq(syncServer.id, SERVER_ROW_ID))
       .run();
   } else {
@@ -127,13 +114,13 @@ export function removeServer(): void {
   clearToken();
 }
 
-/** Signs out: the token and the account binding go, the server URL and TLS choice stay. */
+/** Signs out: the token and the account binding go; the server URL, TLS choice and the sync switch stay. */
 export function resetBinding(): void {
   generation++;
   databaseManager
     .getDb()
     .update(syncServer)
-    .set(UNBOUND_STATE)
+    .set(SIGNED_OUT_STATE)
     .where(eq(syncServer.id, SERVER_ROW_ID))
     .run();
   clearToken();
