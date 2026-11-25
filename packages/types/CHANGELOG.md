@@ -1,5 +1,11 @@
 # @croffledev/croffle-types
 
+## 2.1.0
+
+### Minor Changes
+
+- b9de6a0: `Schedule` gains two optional fields for To-Dos (desktop 1.3.3): `kind` (`'event' | 'todo'`, missing means an event) and `completedAt` (when a To-Do was done; `null` or missing means not done). A To-Do's `endDate` is its deadline and its `startDate` equals it; a To-Do does not repeat.
+
 ## 2.0.1
 
 ### Patch Changes
